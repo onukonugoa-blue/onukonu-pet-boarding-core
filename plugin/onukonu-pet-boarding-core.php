@@ -20,24 +20,53 @@ define( 'OPB_PLUGIN_FILE', __FILE__ );
 define( 'OPB_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
 define( 'OPB_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
 
-// Activation / deactivation hooks
-register_activation_hook( __FILE__,   [ 'OPB_Activator',   'activate'   ] );
-register_deactivation_hook( __FILE__, [ 'OPB_Deactivator', 'deactivate' ] );
+require_once OPB_PLUGIN_DIR . 'includes/class-opb-activator.php';
+require_once OPB_PLUGIN_DIR . 'includes/class-opb-deactivator.php';
+require_once OPB_PLUGIN_DIR . 'includes/class-opb-roles.php';
+require_once OPB_PLUGIN_DIR . 'includes/class-opb-pricing-engine.php';
+require_once OPB_PLUGIN_DIR . 'includes/class-opb-invoice-generator.php';
+require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-rest-base.php';
+require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-branches-api.php';
+require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-clients-api.php';
+require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-pets-api.php';
+require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-bookings-api.php';
+require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-invoices-api.php';
+require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-payments-api.php';
+require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-tasks-api.php';
+require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-expenses-api.php';
+require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-settings-api.php';
+require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-dashboard-api.php';
+require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-import-api.php';
+require_once OPB_PLUGIN_DIR . 'admin/class-opb-admin-page.php';
 
-// Autoload includes
-foreach ( [
-    'includes/class-opb-activator.php',
-    'includes/class-opb-deactivator.php',
-    'includes/class-opb-loader.php',
-] as $file ) {
-    require_once OPB_PLUGIN_DIR . $file;
+register_activation_hook( __FILE__,   [ OPB_Activator::class,   'activate'   ] );
+register_deactivation_hook( __FILE__, [ OPB_Deactivator::class, 'deactivate' ] );
+
+add_action( 'rest_api_init',      'opb_register_rest_routes' );
+add_action( 'admin_menu',         'opb_register_admin_menu'  );
+add_action( 'admin_enqueue_scripts', 'opb_enqueue_admin_assets' );
+
+function opb_register_rest_routes(): void {
+    ( new OPB_Branches_API()  )->register_routes();
+    ( new OPB_Clients_API()   )->register_routes();
+    ( new OPB_Pets_API()      )->register_routes();
+    ( new OPB_Bookings_API()  )->register_routes();
+    ( new OPB_Invoices_API()  )->register_routes();
+    ( new OPB_Payments_API()  )->register_routes();
+    ( new OPB_Tasks_API()     )->register_routes();
+    ( new OPB_Expenses_API()  )->register_routes();
+    ( new OPB_Settings_API()  )->register_routes();
+    ( new OPB_Dashboard_API() )->register_routes();
+    ( new OPB_Import_API()    )->register_routes();
 }
 
-/**
- * Begin plugin execution.
- */
-function opb_run(): void {
-    $loader = new OPB_Loader();
-    $loader->run();
+function opb_register_admin_menu(): void {
+    OPB_Admin_Page::register_menu();
 }
-opb_run();
+
+function opb_enqueue_admin_assets( string $hook ): void {
+    if ( ! str_contains( $hook, 'opb' ) ) {
+        return;
+    }
+    OPB_Admin_Page::enqueue_assets();
+}
