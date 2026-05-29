@@ -1,0 +1,28 @@
+Catalogue Name,Boarding Type Split Factor,Min Age (Months),Max Age (Months),Pet Type Split Factor,Row Type,Amount,Discount Type,Breed Size,Kennel Category,Meal Name,Meal Type,Price Type,Modifies Base Bill,Min Pets,Days,Breed,Extra Info
+H2 Cat Day Boarding ,DAY,,,CAT,FLAGS,,,,,,,,,,,,"longevity=false, breed=false, spayedNeutered=false, adopted=false, multiPet=false, meal=false, breedSize=false, kennelCategory=false, clientTag=false, differential=false, overnightCheckoutMealInclusive=false, addKennelInStayLineItem=false, longevityModifiesBaseBill=false"
+H2 Cat Day Boarding ,DAY,,,CAT,DAY_BASE,600,,,,,,,,,,,dayBoardingExtendToOvernightCharge=
+H2 Cat Day Boarding ,DAY,,,CAT,BREED_SIZE,0,,Large,,,,,,,,,
+H2 Cat Day Boarding ,DAY,,,CAT,BREED_SIZE,0,,Medium,,,,,,,,,
+H2 Cat Day Boarding ,DAY,,,CAT,BREED_SIZE,0,,Small,,,,,,,,,
+ H2 Cat Overnight Boarding,OVERNIGHT,,,CAT,FLAGS,,,,,,,,,,,,"longevity=true, breed=false, spayedNeutered=false, adopted=false, multiPet=true, meal=false, breedSize=false, kennelCategory=false, clientTag=false, differential=false, overnightCheckoutMealInclusive=false, addKennelInStayLineItem=false, longevityModifiesBaseBill=true"
+ H2 Cat Overnight Boarding,OVERNIGHT,,,CAT,BASE,700,,,,,,,,,,,
+ H2 Cat Overnight Boarding,OVERNIGHT,,,CAT,BREED_SIZE,0,,Large,,,,,,,,,
+ H2 Cat Overnight Boarding,OVERNIGHT,,,CAT,BREED_SIZE,0,,Medium,,,,,,,,,
+ H2 Cat Overnight Boarding,OVERNIGHT,,,CAT,BREED_SIZE,0,,Small,,,,,,,,,
+ H2 Cat Overnight Boarding,OVERNIGHT,,,CAT,MULTI_PET_DISCOUNT,10,PERCENTAGE,,,,,,,2,,,
+ H2 Cat Overnight Boarding,OVERNIGHT,,,CAT,LONGEVITY_DISCOUNT,10,PERCENTAGE,,,,,,,,15,,
+H2 Dog Day boarding ,DAY,,,DOG,FLAGS,,,,,,,,,,,,"longevity=false, breed=false, spayedNeutered=false, adopted=false, multiPet=false, meal=false, breedSize=false, kennelCategory=false, clientTag=false, differential=false, overnightCheckoutMealInclusive=false, addKennelInStayLineItem=false, longevityModifiesBaseBill=true"
+H2 Dog Day boarding ,DAY,,,DOG,BASE,0,,,,,,,,,,,
+H2 Dog Day boarding ,DAY,,,DOG,DAY_BASE,700,,,,,,,,,,,dayBoardingExtendToOvernightCharge=
+H2 Dog Day boarding ,DAY,,,DOG,BREED_SIZE,0,,Large,,,,,,,,,
+H2 Dog Day boarding ,DAY,,,DOG,BREED_SIZE,0,,Medium,,,,,,,,,
+H2 Dog Day boarding ,DAY,,,DOG,BREED_SIZE,0,,Small,,,,,,,,,
+H2 Dog Day boarding ,DAY,,,DOG,MULTI_PET_DISCOUNT,12.5,PERCENTAGE,,,,,,,2,,,
+H2 Dog Day boarding ,DAY,,,DOG,LONGEVITY_DISCOUNT,12.5,PERCENTAGE,,,,,,,,15,,
+H2 Dog  Overnight Boarding,OVERNIGHT,,,DOG,FLAGS,,,,,,,,,,,,"longevity=true, breed=false, spayedNeutered=false, adopted=false, multiPet=true, meal=false, breedSize=false, kennelCategory=false, clientTag=false, differential=false, overnightCheckoutMealInclusive=false, addKennelInStayLineItem=false, longevityModifiesBaseBill=true"
+H2 Dog  Overnight Boarding,OVERNIGHT,,,DOG,BASE,900,,,,,,,,,,,
+H2 Dog  Overnight Boarding,OVERNIGHT,,,DOG,BREED_SIZE,0,,Large,,,,,,,,,
+H2 Dog  Overnight Boarding,OVERNIGHT,,,DOG,BREED_SIZE,0,,Medium,,,,,,,,,
+H2 Dog  Overnight Boarding,OVERNIGHT,,,DOG,BREED_SIZE,0,,Small,,,,,,,,,
+H2 Dog  Overnight Boarding,OVERNIGHT,,,DOG,MULTI_PET_DISCOUNT,10,PERCENTAGE,,,,,,,2,,,
+H2 Dog  Overnight Boarding,OVERNIGHT,,,DOG,LONGEVITY_DISCOUNT,10,PERCENTAGE,,,,,,,,15,,
