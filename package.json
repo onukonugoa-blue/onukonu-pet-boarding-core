@@ -1,0 +1,13 @@
+{
+  "name": "onukonu-pet-boarding-core",
+  "version": "1.0.0",
+  "description": "Onukonu Pet Boarding Core - WordPress Plugin Development Environment",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "marked": "^12.0.0"
+  }
+}
