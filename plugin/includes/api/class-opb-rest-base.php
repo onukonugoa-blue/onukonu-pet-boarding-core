@@ -4,7 +4,7 @@
  */
 abstract class OPB_REST_Base extends WP_REST_Controller {
 
-    protected string $namespace = 'opb/v1';
+    protected $namespace = 'opb/v1';
 
     protected function permission_check( WP_REST_Request $request ): bool|WP_Error {
         if ( ! is_user_logged_in() ) {
