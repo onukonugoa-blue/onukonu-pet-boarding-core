@@ -12,3 +12,9 @@ id = "wxjt0FYgGe1hv6FcN0SL2"
 uri = "file://onukonu-pet-boarding-core-v1.0.1.zip"
 type = "unspecified"
 title = "onukonu-pet-boarding-core-v1.0.1.zip"
+
+[[outputs]]
+id = "PMz9ASOY6HR3i3hiTde6g"
+uri = "file://onukonu-pet-boarding-core-v1.0.2.zip"
+type = "unspecified"
+title = "onukonu-pet-boarding-core-v1.0.2.zip"

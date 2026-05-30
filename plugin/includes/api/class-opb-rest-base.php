@@ -6,7 +6,7 @@ abstract class OPB_REST_Base extends WP_REST_Controller {
 
     protected $namespace = 'opb/v1';
 
-    protected function permission_check( WP_REST_Request $request ): bool|WP_Error {
+    public function permission_check( WP_REST_Request $request ): bool|WP_Error {
         if ( ! is_user_logged_in() ) {
             return new WP_Error( 'rest_forbidden', 'You must be logged in.', [ 'status' => 401 ] );
         }
@@ -16,7 +16,7 @@ abstract class OPB_REST_Base extends WP_REST_Controller {
         return true;
     }
 
-    protected function permission_manage( string $cap, WP_REST_Request $request ): bool|WP_Error {
+    public function permission_manage( string $cap, WP_REST_Request $request ): bool|WP_Error {
         $check = $this->permission_check( $request );
         if ( is_wp_error( $check ) ) return $check;
         if ( ! current_user_can( $cap ) && ! current_user_can( 'manage_options' ) ) {
