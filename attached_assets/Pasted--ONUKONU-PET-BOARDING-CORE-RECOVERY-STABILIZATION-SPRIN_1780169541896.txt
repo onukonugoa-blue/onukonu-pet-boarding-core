@@ -1,0 +1,192 @@
+# ONUKONU PET BOARDING CORE — RECOVERY & STABILIZATION SPRINT
+
+IMPORTANT:
+
+This repository already contains generated code.
+
+Do NOT redesign the application.
+
+Do NOT regenerate architecture.
+
+Do NOT regenerate database schemas.
+
+Do NOT generate planning documents.
+
+Do NOT create roadmaps.
+
+Do NOT create implementation plans.
+
+The goal is to stabilize and repair the existing codebase.
+
+---
+
+## CONTEXT
+
+The repository already contains:
+
+* Architecture
+* Analysis
+* Generated WordPress plugin
+* React frontend
+* REST API layer
+* Database migrations
+
+The plugin has already been deployed to a real WordPress installation.
+
+We are now in runtime debugging mode.
+
+---
+
+## CURRENT STATUS
+
+Plugin activation succeeds.
+
+WordPress admin menu entries appear.
+
+Plugin pages render.
+
+However:
+
+1. No OPB database tables were created.
+2. Dashboard is blank.
+3. Clients page is blank.
+4. Bookings page is blank.
+5. Imports page is blank.
+
+---
+
+## CONFIRMED RUNTIME ERROR
+
+Browser console reports:
+
+Uncaught SyntaxError:
+
+redeclaration of non-configurable global property wp
+
+File:
+
+assets/dist/assets/index.js
+
+The React bundle crashes before mounting.
+
+This must be fixed.
+
+Audit:
+
+* Vite configuration
+* React bootstrap
+* WordPress externals
+* window.wp usage
+* bundle output
+
+The React application must successfully mount.
+
+---
+
+## DATABASE ISSUE
+
+No OPB tables exist in MySQL.
+
+Audit:
+
+* register_activation_hook
+* plugin bootstrap
+* activator loading
+* dbDelta execution
+* migration execution
+
+Verify all required tables are created.
+
+---
+
+## REQUIRED FIRST TASK
+
+Perform a full code audit.
+
+Generate:
+
+PROJECT_AUDIT.md
+
+Include:
+
+1. Implemented modules
+2. Missing modules
+3. Placeholder modules
+4. Broken modules
+5. Activation issues
+6. Frontend issues
+7. Database issues
+8. REST API issues
+9. Build issues
+10. Deployment issues
+
+Be brutally honest.
+
+Do not claim functionality that does not work.
+
+---
+
+## REQUIRED SECOND TASK
+
+Create:
+
+FIX_PLAN.md
+
+Prioritize fixes in this order:
+
+1. Database creation
+2. React startup
+3. Dashboard rendering
+4. Clients module
+5. Pets module
+6. Bookings module
+7. Occupancy board
+8. Invoices
+9. Payments
+10. Import engine
+
+---
+
+## REQUIRED THIRD TASK
+
+Apply fixes.
+
+Commit code changes directly into the repository.
+
+Do not generate new architecture.
+
+Do not redesign.
+
+Repair existing implementation.
+
+---
+
+## ACCEPTANCE CRITERIA
+
+The sprint is successful only if:
+
+✓ OPB tables are created
+
+✓ Dashboard renders
+
+✓ React application mounts
+
+✓ Clients screen loads
+
+✓ REST endpoints respond
+
+✓ No JavaScript startup errors remain
+
+---
+
+## OUTPUT
+
+At completion provide:
+
+1. PROJECT_AUDIT.md
+2. FIX_PLAN.md
+3. CHANGELOG.md
+4. Git commit hash
+5. Summary of fixes applied
+
+Begin with repository audit.

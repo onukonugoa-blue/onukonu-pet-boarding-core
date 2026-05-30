@@ -9,7 +9,7 @@ class OPB_Activator {
         self::create_tables();
     }
 
-    private static function create_tables(): void {
+    public static function create_tables(): void {
         global $wpdb;
 
         $charset = $wpdb->get_charset_collate();

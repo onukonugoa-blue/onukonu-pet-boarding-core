@@ -71,13 +71,12 @@ class OPB_Dashboard_API extends OPB_REST_Base {
         ),ARRAY_A);
 
         // Open tasks
-        $open_tasks = $wpdb->get_results($wpdb->prepare(
-            "SELECT t.id, t.title, t.priority, t.due_date, t.assignee, t.status
+        $open_tasks_sql = "SELECT t.id, t.title, t.priority, t.due_date, t.assignee, t.status
              FROM {$wpdb->prefix}opb_tasks t
              WHERE t.status!='Done'$task_where
              ORDER BY FIELD(t.priority,'High','Medium','Low'), t.due_date ASC
-             LIMIT 5",$today
-        ),ARRAY_A);
+             LIMIT 5";
+        $open_tasks = $wpdb->get_results( $open_tasks_sql, ARRAY_A );
 
         return $this->success([
             'kpis' => [

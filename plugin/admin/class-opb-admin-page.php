@@ -66,6 +66,13 @@ class OPB_Admin_Page {
             true
         );
 
+        add_filter( 'script_loader_tag', static function ( string $tag, string $handle ) use ( $dist, $js_file ): string {
+            if ( $handle === 'opb-app' ) {
+                $tag = str_replace( '<script ', '<script type="module" ', $tag );
+            }
+            return $tag;
+        }, 10, 2 );
+
         if ( $css_file ) {
             wp_enqueue_style( 'opb-app-style', $dist . $css_file, [], OPB_VERSION );
         }

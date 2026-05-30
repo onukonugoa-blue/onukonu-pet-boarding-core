@@ -13,7 +13,7 @@ export default defineConfig({
     emptyOutDir: true,
     manifest: true,
     rollupOptions: {
-      input: '/src/main.tsx',
+      input: path.resolve(__dirname, 'src/main.tsx'),
       output: {
         entryFileNames: 'assets/index.js',
         chunkFileNames: 'assets/[name]-[hash].js',

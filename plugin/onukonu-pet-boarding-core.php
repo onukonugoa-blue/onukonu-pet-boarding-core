@@ -43,9 +43,17 @@ require_once OPB_PLUGIN_DIR . 'admin/class-opb-admin-page.php';
 register_activation_hook( __FILE__,   [ OPB_Activator::class,   'activate'   ] );
 register_deactivation_hook( __FILE__, [ OPB_Deactivator::class, 'deactivate' ] );
 
-add_action( 'rest_api_init',      'opb_register_rest_routes' );
-add_action( 'admin_menu',         'opb_register_admin_menu'  );
-add_action( 'admin_enqueue_scripts', 'opb_enqueue_admin_assets' );
+add_action( 'init', 'opb_maybe_create_tables' );
+add_action( 'init', [ OPB_Roles::class, 'register' ] );
+add_action( 'rest_api_init',         'opb_register_rest_routes'  );
+add_action( 'admin_menu',            'opb_register_admin_menu'   );
+add_action( 'admin_enqueue_scripts', 'opb_enqueue_admin_assets'  );
+
+function opb_maybe_create_tables(): void {
+    if ( get_option( 'opb_db_version' ) !== OPB_VERSION ) {
+        OPB_Activator::activate();
+    }
+}
 
 function opb_register_rest_routes(): void {
     ( new OPB_Branches_API()  )->register_routes();

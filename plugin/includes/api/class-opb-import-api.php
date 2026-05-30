@@ -75,7 +75,15 @@ class OPB_Import_API extends OPB_REST_Base {
 
     private function parse_file( string $path, string $entity, bool $dry ): array {
         $ext = strtolower(pathinfo($path,PATHINFO_EXTENSION));
-        $rows = $ext==='csv' ? $this->read_csv($path) : $this->read_csv($path);
+        if ( $ext !== 'csv' ) {
+            return [
+                'error'    => 'XLSX import is not yet supported. Please export your spreadsheet as CSV (.csv) and re-upload.',
+                'imported' => 0,
+                'skipped'  => 0,
+                'errors'   => [],
+            ];
+        }
+        $rows = $this->read_csv($path);
 
         return match($entity) {
             'clients'  => $this->import_clients($rows,$dry),
