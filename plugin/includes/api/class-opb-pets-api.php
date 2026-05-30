@@ -15,7 +15,7 @@ class OPB_Pets_API extends OPB_REST_Base {
         ]);
     }
 
-    public function get_item( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    public function get_item( $r ) {
         $check = $this->permission_check($r); if(is_wp_error($check)) return $check;
         global $wpdb;
         $pet = $wpdb->get_row($wpdb->prepare(
@@ -33,7 +33,7 @@ class OPB_Pets_API extends OPB_REST_Base {
         return $this->success($pet);
     }
 
-    public function update_item( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    public function update_item( $r ) {
         $check = $this->permission_manage('opb_manage_pets',$r); if(is_wp_error($check)) return $check;
         global $wpdb;
         $d = $r->get_json_params();

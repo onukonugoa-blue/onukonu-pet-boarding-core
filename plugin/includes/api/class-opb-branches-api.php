@@ -12,14 +12,14 @@ class OPB_Branches_API extends OPB_REST_Base {
         ] );
     }
 
-    public function get_items( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    public function get_items( $r ) {
         $check = $this->permission_check($r); if(is_wp_error($check)) return $check;
         global $wpdb;
         $rows = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}opb_branches WHERE is_active=1 ORDER BY id", ARRAY_A);
         return $this->success($rows);
     }
 
-    public function get_item( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    public function get_item( $r ) {
         $check = $this->permission_check($r); if(is_wp_error($check)) return $check;
         global $wpdb;
         $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}opb_branches WHERE id=%d",$r['id']),ARRAY_A);
@@ -27,7 +27,7 @@ class OPB_Branches_API extends OPB_REST_Base {
         return $this->success($row);
     }
 
-    public function create_item( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    public function create_item( $r ) {
         $check = $this->permission_manage('opb_manage_settings',$r); if(is_wp_error($check)) return $check;
         global $wpdb;
         $data = $r->get_json_params();
@@ -43,7 +43,7 @@ class OPB_Branches_API extends OPB_REST_Base {
         return $this->success($wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}opb_branches WHERE id=%d",$wpdb->insert_id),ARRAY_A),201);
     }
 
-    public function update_item( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    public function update_item( $r ) {
         $check = $this->permission_manage('opb_manage_settings',$r); if(is_wp_error($check)) return $check;
         global $wpdb;
         $data = $r->get_json_params();

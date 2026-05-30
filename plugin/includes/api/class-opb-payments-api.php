@@ -10,7 +10,7 @@ class OPB_Payments_API extends OPB_REST_Base {
         ]);
     }
 
-    public function get_items( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    public function get_items( $r ) {
         $check = $this->permission_check($r); if(is_wp_error($check)) return $check;
         global $wpdb;
 
@@ -58,7 +58,7 @@ class OPB_Payments_API extends OPB_REST_Base {
                                'page'=>$page,'per_page'=>$per_page,'total_pages'=>(int)ceil($total/$per_page)]);
     }
 
-    public function delete_item( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    public function delete_item( $r ) {
         $check = $this->permission_manage('opb_manage_invoices',$r); if(is_wp_error($check)) return $check;
         global $wpdb;
         $id = (int)$r['id'];

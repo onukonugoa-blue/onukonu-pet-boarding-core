@@ -19,7 +19,7 @@ class OPB_Clients_API extends OPB_REST_Base {
         ]);
     }
 
-    public function get_items( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    public function get_items( $r ) {
         $check = $this->permission_check($r); if(is_wp_error($check)) return $check;
         global $wpdb;
 
@@ -69,7 +69,7 @@ class OPB_Clients_API extends OPB_REST_Base {
         return $this->success($this->paginate($rows,$total,$page,$per_page));
     }
 
-    public function get_item( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    public function get_item( $r ) {
         $check = $this->permission_check($r); if(is_wp_error($check)) return $check;
         global $wpdb;
         $row = $wpdb->get_row($wpdb->prepare(
@@ -82,7 +82,7 @@ class OPB_Clients_API extends OPB_REST_Base {
         return $this->success($row);
     }
 
-    public function create_item( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    public function create_item( $r ) {
         $check = $this->permission_manage('opb_manage_clients',$r); if(is_wp_error($check)) return $check;
         global $wpdb;
         $d = $r->get_json_params();
@@ -106,7 +106,7 @@ class OPB_Clients_API extends OPB_REST_Base {
         return $this->get_item( new WP_REST_Request('GET',"/opb/v1/clients/$id",['id'=>$id]) );
     }
 
-    public function update_item( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    public function update_item( $r ) {
         $check = $this->permission_manage('opb_manage_clients',$r); if(is_wp_error($check)) return $check;
         global $wpdb;
         $d = $r->get_json_params();

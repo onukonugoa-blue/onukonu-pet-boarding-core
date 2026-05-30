@@ -11,7 +11,7 @@ class OPB_Expenses_API extends OPB_REST_Base {
         ]);
     }
 
-    public function get_items( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    public function get_items( $r ) {
         $check = $this->permission_check($r); if(is_wp_error($check)) return $check;
         global $wpdb;
 
@@ -52,7 +52,7 @@ class OPB_Expenses_API extends OPB_REST_Base {
                                'page'=>$page,'per_page'=>$per_page,'total_pages'=>(int)ceil($total/$per_page)]);
     }
 
-    public function create_item( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    public function create_item( $r ) {
         $check = $this->permission_manage('opb_manage_expenses',$r); if(is_wp_error($check)) return $check;
         global $wpdb;
         $d=$r->get_json_params();
@@ -77,7 +77,7 @@ class OPB_Expenses_API extends OPB_REST_Base {
         return $this->success($row,201);
     }
 
-    public function delete_item( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    public function delete_item( $r ) {
         $check = $this->permission_manage('opb_manage_expenses',$r); if(is_wp_error($check)) return $check;
         global $wpdb;
         $wpdb->delete("{$wpdb->prefix}opb_expenses",['id'=>(int)$r['id']]);

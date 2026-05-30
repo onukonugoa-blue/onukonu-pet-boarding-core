@@ -16,7 +16,7 @@ class OPB_Invoices_API extends OPB_REST_Base {
         ]);
     }
 
-    public function get_items( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    public function get_items( $r ) {
         $check = $this->permission_check($r); if(is_wp_error($check)) return $check;
         global $wpdb;
 
@@ -58,7 +58,7 @@ class OPB_Invoices_API extends OPB_REST_Base {
         return $this->success($this->paginate($rows,$total,$page,$per_page));
     }
 
-    public function get_item( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    public function get_item( $r ) {
         $check = $this->permission_check($r); if(is_wp_error($check)) return $check;
         global $wpdb;
         $id = (int)$r['id'];
