@@ -93,12 +93,37 @@ class OPB_Import_API extends OPB_REST_Base {
         };
     }
 
+    /**
+     * Resolve a CSV column value from a prioritised list of possible header names.
+     * Handles legacy exports where column names differ from internal names.
+     */
+    private function col( array $row, array $keys, string $default = '' ): string {
+        foreach ( $keys as $key ) {
+            if ( isset( $row[ $key ] ) && trim( $row[ $key ] ) !== '' ) {
+                return trim( $row[ $key ] );
+            }
+        }
+        return $default;
+    }
+
     private function read_csv( string $path ): array {
         $rows=[];
         if(($h=fopen($path,'r'))!==false){
             $headers=null;
             while(($line=fgetcsv($h,0,','))!==false){
-                if(!$headers){ $headers=array_map('trim',$line); continue; }
+                if(!$headers){
+                    $headers = array_map('trim',$line);
+                    // Strip UTF-8 BOM (\xEF\xBB\xBF) from first header — common in
+                    // legacy Windows/Excel CSV exports and silently corrupts column names.
+                    if( isset($headers[0]) && str_starts_with($headers[0], "\xEF\xBB\xBF") ){
+                        $headers[0] = substr($headers[0], 3);
+                    }
+                    continue;
+                }
+                // Guard against rows with fewer columns than headers (blank trailing lines)
+                if( count($line) < count($headers) ){
+                    $line = array_pad($line, count($headers), '');
+                }
                 $rows[]=array_combine($headers,$line);
             }
             fclose($h);
@@ -110,53 +135,114 @@ class OPB_Import_API extends OPB_REST_Base {
         global $wpdb;
         $imported=0; $skipped=0; $errors=[];
 
+        // Pre-load all branch codes once to avoid N+1 queries and to give a
+        // clear error when branches haven't been seeded yet.
+        $branch_map = $wpdb->get_results(
+            "SELECT id, code FROM {$wpdb->prefix}opb_branches WHERE is_active=1",
+            OBJECT_K
+        ) ?: [];
+
+        if ( empty($branch_map) ) {
+            return [
+                'error'    => 'No branches found in the database. Please seed your branch records (H2, H3, H4) before importing clients.',
+                'imported' => 0,
+                'skipped'  => count($rows),
+                'errors'   => [],
+                'total'    => count($rows),
+                'dry_run'  => $dry,
+            ];
+        }
+
         foreach($rows as $i=>$row){
-            $phone = trim($row['Phone']??$row['phone']??'');
-            $name  = trim($row['Name']??$row['name']??'');
-            if(!$phone||!$name){ $errors[]="Row $i: missing name or phone"; $skipped++; continue; }
+            $row_num = $i + 2; // 1-based + header row
 
-            $branch_code = trim($row['Home Outlet']??$row['home_outlet']??'H2');
-            $branch_id   = (int)$wpdb->get_var($wpdb->prepare(
-                "SELECT id FROM {$wpdb->prefix}opb_branches WHERE code=%s",$branch_code
-            ));
-            if(!$branch_id){ $errors[]="Row $i: branch '$branch_code' not found"; $skipped++; continue; }
+            // ── Required fields ────────────────────────────────────────────────
+            // Legacy schema uses "Phone Number"; internal aliases also accepted.
+            $phone = $this->col($row, [
+                'Phone Number', 'phone number', 'Phone', 'phone', 'Mobile', 'mobile',
+            ]);
+            $name = $this->col($row, [
+                'Name', 'name', 'Client Name', 'client_name', 'Full Name', 'full_name',
+            ]);
 
+            if( !$phone ){
+                $errors[] = "Row $row_num: missing phone number (looked for: Phone Number, Phone, Mobile)";
+                $skipped++; continue;
+            }
+            if( !$name ){
+                $errors[] = "Row $row_num: missing name";
+                $skipped++; continue;
+            }
+
+            // ── Branch resolution ───────────────────────────────────────────────
+            $branch_code = $this->col($row, [
+                'Home Outlet', 'home_outlet', 'Branch', 'branch', 'Home Branch',
+            ], 'H2');
+            if( !isset($branch_map[$branch_code]) ){
+                $errors[] = "Row $row_num: branch code '$branch_code' not found (available: ".implode(', ',array_keys($branch_map)).")";
+                $skipped++; continue;
+            }
+            $branch_id = (int)$branch_map[$branch_code]->id;
+
+            // ── Duplicate check ─────────────────────────────────────────────────
             $existing = (int)$wpdb->get_var($wpdb->prepare(
-                "SELECT id FROM {$wpdb->prefix}opb_clients WHERE phone=%s",$phone
+                "SELECT id FROM {$wpdb->prefix}opb_clients WHERE phone=%s", $phone
             ));
-            if($existing){ $skipped++; continue; }
+            if( $existing ){ $skipped++; continue; }
 
-            if(!$dry){
+            if( !$dry ){
+                $legacy_id = $this->col($row, ['Pet ID','pet_id','Legacy ID','legacy_id']);
+
                 $wpdb->insert("{$wpdb->prefix}opb_clients",[
-                    'home_branch_id' => $branch_id,
-                    'name'           => sanitize_text_field($name),
-                    'phone'          => sanitize_text_field($phone),
-                    'email'          => sanitize_email($row['Email']??''),
-                    'address'        => sanitize_textarea_field($row['Address']??''),
-                    'onboarding_date'=> sanitize_text_field($row['Onboarding Date']??'') ?: null,
-                    'tc_accepted'    => 1,
-                    'legacy_id'      => isset($row['Pet ID'])?(int)$row['Pet ID']:null,
-                    'status'         => 'active',
+                    'home_branch_id'  => $branch_id,
+                    'name'            => sanitize_text_field($name),
+                    'phone'           => sanitize_text_field($phone),
+                    'email'           => sanitize_email($this->col($row,['Email','email'])),
+                    'address'         => sanitize_textarea_field($this->col($row,['Address','address'])),
+                    'onboarding_date' => sanitize_text_field($this->col($row,['Onboarding Date','onboarding_date'])) ?: null,
+                    'tc_accepted'     => 1,
+                    'legacy_id'       => $legacy_id !== '' ? (int)$legacy_id : null,
+                    'status'          => 'active',
                 ]);
-                // Create primary pet if pet name provided
-                $pet_name = trim($row['Pet Name']??'');
-                if($pet_name&&$wpdb->insert_id){
-                    $client_id=(int)$wpdb->insert_id;
+                $client_id = (int)$wpdb->insert_id;
+
+                // ── Primary pet ─────────────────────────────────────────────────
+                $pet_name = $this->col($row, ['Pet Name','pet_name']);
+                if( $pet_name && $client_id ){
+                    $pet_type = $this->col($row,['Pet Type','pet_type'],'Dog');
+                    // Normalise pet type to match ENUM('Dog','Cat','Other')
+                    $pet_type = match(strtolower($pet_type)){
+                        'dog'   => 'Dog',
+                        'cat'   => 'Cat',
+                        default => 'Other',
+                    };
+                    $gender = $this->col($row,['Gender','gender'],'Unknown');
+                    $gender = match(strtolower($gender)){
+                        'male','m'   => 'Male',
+                        'female','f' => 'Female',
+                        default      => 'Unknown',
+                    };
                     $wpdb->insert("{$wpdb->prefix}opb_pets",[
                         'client_id'  => $client_id,
                         'name'       => sanitize_text_field($pet_name),
-                        'pet_type'   => sanitize_text_field($row['Pet Type']??'Dog'),
-                        'breed'      => sanitize_text_field($row['Breed']??''),
-                        'breed_size' => sanitize_text_field($row['Breed Size']??''),
-                        'gender'     => sanitize_text_field($row['Gender']??'Unknown'),
-                        'legacy_id'  => isset($row['Pet ID'])?(int)$row['Pet ID']:null,
+                        'pet_type'   => $pet_type,
+                        'breed'      => sanitize_text_field($this->col($row,['Breed','breed'])),
+                        'breed_size' => sanitize_text_field($this->col($row,['Breed Size','breed_size'])),
+                        'gender'     => $gender,
+                        'legacy_id'  => $legacy_id !== '' ? (int)$legacy_id : null,
                     ]);
                 }
             }
             $imported++;
         }
 
-        return ['imported'=>$imported,'skipped'=>$skipped,'errors'=>array_slice($errors,0,50),'total'=>count($rows),'dry_run'=>$dry];
+        return [
+            'imported'  => $imported,
+            'skipped'   => $skipped,
+            'errors'    => array_slice($errors, 0, 50),
+            'total'     => count($rows),
+            'dry_run'   => $dry,
+        ];
     }
 
     private function import_bookings( array $rows, bool $dry ): array {
