@@ -37,6 +37,7 @@ require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-expenses-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-settings-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-dashboard-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-import-api.php';
+require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-reports-api.php';
 require_once OPB_PLUGIN_DIR . 'admin/class-opb-admin-page.php';
 
 register_activation_hook( __FILE__,   [ OPB_Activator::class,   'activate'   ] );
@@ -58,6 +59,7 @@ function opb_register_rest_routes(): void {
     ( new OPB_Settings_API()  )->register_routes();
     ( new OPB_Dashboard_API() )->register_routes();
     ( new OPB_Import_API()    )->register_routes();
+    ( new OPB_Reports_API()   )->register_routes();
 }
 
 function opb_register_admin_menu(): void {

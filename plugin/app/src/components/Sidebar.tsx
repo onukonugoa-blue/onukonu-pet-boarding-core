@@ -9,6 +9,7 @@ const links = [
   { to: '/invoices',  label: 'Invoices',   icon: '🧾' },
   { to: '/tasks',     label: 'Tasks',      icon: '✓'  },
   { to: '/expenses',  label: 'Expenses',   icon: '💰' },
+  { to: '/reports',   label: 'Reports',    icon: '📊' },
   { to: '/settings',  label: 'Settings',   icon: '⚙'  },
   { to: '/import',    label: 'Import',     icon: '📥' },
 ]

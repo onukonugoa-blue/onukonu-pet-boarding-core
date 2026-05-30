@@ -22,6 +22,7 @@ import Branches from './pages/settings/Branches'
 import Staff from './pages/settings/Staff'
 import BoardingCatalogue from './pages/settings/BoardingCatalogue'
 import AddonCatalogue from './pages/settings/AddonCatalogue'
+import Reports from './pages/Reports'
 
 export default function App() {
   return (
@@ -51,6 +52,7 @@ export default function App() {
         <Route path="/settings/boarding"       element={<BoardingCatalogue />} />
         <Route path="/settings/addons"         element={<AddonCatalogue />} />
         <Route path="/settings/staff"          element={<Staff />} />
+        <Route path="/reports"                 element={<Reports />} />
         <Route path="*"                        element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
