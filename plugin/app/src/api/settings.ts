@@ -101,20 +101,37 @@ export interface ImportResult {
   total: number
   dry_run?: boolean
   diagnostics?: ImportDiagnostics
+  error?: string
+}
+
+export interface MigrationHistoryEntry {
+  entity: string
+  timestamp: string
+  user_id: number
+  context: Record<string, unknown>
+  imported: number
+  skipped: number
+  total: number
+  errors: string[]
 }
 
 export const importApi = {
-  status: () => api.get<Record<string, number>>('/import/status'),
-  dryRun: (entity: string, file: File) => {
+  status:  () => api.get<Record<string, number>>('/import/status'),
+  history: () => api.get<MigrationHistoryEntry[]>('/import/history'),
+
+  dryRun: (entity: string, file: File, branch?: string) => {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('entity', entity)
+    if (branch) fd.append('branch', branch)
     return api.upload<ImportResult>('/import/dry-run', fd)
   },
-  run: (entity: string, file: File) => {
+
+  run: (entity: string, file: File, branch?: string) => {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('entity', entity)
+    if (branch) fd.append('branch', branch)
     return api.upload<ImportResult>('/import/run', fd)
   },
 }

@@ -1,0 +1,7 @@
+Name,Description,Type,Base Amount,Visibility Status,Applicable Services,Distance Up To,Distance Slab Amount
+Bath,Pet bath for shorter stays on request,FLAT,500,PUBLIC,,,
+Daily Grooming,"Brushing of hair,Cleaning of eyes and ears,brushing of teeth (if dog amenable to it)(pet parent to provide toothbrush and cream),checking of paws,daily checks for ticks and fleas",FLAT,0,PUBLIC,,,
+EXIT BATH    ,Bath given after stay for 10 days or more in normal stays and after 15 days or more in monsoons(June to September),FLAT,0,PUBLIC,,,
+Medication,"Daily medication ,if required ,as per vet or pet parent instructions",FLAT,0,PUBLIC,,,
+Special care,Any special care required like for paraplegic dogs /blind dogs/wound dressings/care for pregnant dogs or any other special care will  be chargeable on case to case basis.,FLAT,1000,PUBLIC,,,
+Vet Visit,"If any vet visit required during the stay,charges of vet on actuals charged plus for transport",FLAT,400,PUBLIC,,,
