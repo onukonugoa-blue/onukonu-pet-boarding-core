@@ -34,13 +34,17 @@ export default function CheckIn() {
     setError('')
     setSaving(true)
     try {
-      await bookingsApi.checkin(Number(id), {
-        stays: upcomingStays.map((s) => ({
-          stay_id: s.id,
-          ...stayData[s.id],
-          weight_at_checkin: stayData[s.id]?.weight ? Number(stayData[s.id].weight) : null,
-        }))
-      })
+      for (const s of upcomingStays) {
+        const d = stayData[s.id]
+        await bookingsApi.checkin(Number(id), {
+          stay_id:          s.id,
+          kennel:           d?.kennel ?? '',
+          weight_at_checkin: d?.weight ? Number(d.weight) : null,
+          companion_name:   d?.companion_name ?? '',
+          companion_phone:  d?.companion_phone ?? '',
+          notes:            d?.notes ?? '',
+        })
+      }
       navigate(`/bookings/${id}`)
     } catch (e: any) {
       setError(e.message ?? 'Check-in failed')

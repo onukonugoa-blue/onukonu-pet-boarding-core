@@ -2,23 +2,41 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { bookingsApi } from '../../api/bookings'
 import { clientsApi } from '../../api/clients'
+import { settingsApi } from '../../api/settings'
 import type { Client, Pet } from '../../api/clients'
+import type { BoardingService } from '../../api/settings'
 import { useBranchStore } from '../../store/branch'
 
 interface StayForm {
   pet_id: number
+  boarding_service_id: number
   boarding_type: 'DAY' | 'OVERNIGHT'
   check_in_date: string
   check_out_date: string
   check_in_slot: string
   check_out_slot: string
-  kennel: string
   meal_type: string
   notes: string
 }
 
-const SLOTS = ['Morning (7-10)','Afternoon (12-3)','Evening (5-8)','Flexible']
-const MEALS = ['Vegetarian','Non-Vegetarian','Home Food','Royal Canin','Other']
+const SLOTS = ['Morning (7-10)', 'Afternoon (12-3)', 'Evening (5-8)', 'Flexible']
+
+const MEAL_OPTIONS = [
+  { label: 'Parent Supplied Meal', value: 'PARENT_SUPPLIED_MEAL' },
+  { label: 'Boarding Meals',       value: 'BOARDING_MEALS' },
+]
+
+const DEFAULT_STAY: StayForm = {
+  pet_id: 0,
+  boarding_service_id: 0,
+  boarding_type: 'OVERNIGHT',
+  check_in_date: '',
+  check_out_date: '',
+  check_in_slot: 'Morning (7-10)',
+  check_out_slot: 'Morning (7-10)',
+  meal_type: 'PARENT_SUPPLIED_MEAL',
+  notes: '',
+}
 
 export default function BookingCreate() {
   const navigate = useNavigate()
@@ -32,13 +50,9 @@ export default function BookingCreate() {
   const [clientResults, setClientResults] = useState<Client[]>([])
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [pets, setPets] = useState<Pet[]>([])
+  const [boardingServices, setBoardingServices] = useState<BoardingService[]>([])
   const [branchId, setBranchId] = useState(activeBranchId || 0)
-  const [stays, setStays] = useState<StayForm[]>([{
-    pet_id: initPetId, boarding_type: 'OVERNIGHT',
-    check_in_date: '', check_out_date: '',
-    check_in_slot: 'Morning (7-10)', check_out_slot: 'Morning (7-10)',
-    kennel: '', meal_type: 'Vegetarian', notes: ''
-  }])
+  const [stays, setStays] = useState<StayForm[]>([{ ...DEFAULT_STAY, pet_id: initPetId }])
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -47,10 +61,33 @@ export default function BookingCreate() {
     if (initClientId) {
       clientsApi.get(initClientId).then((c) => {
         setSelectedClient(c)
+        setBranchId(c.home_branch_id)
         return clientsApi.pets(initClientId)
       }).then(setPets).catch(console.error)
     }
   }, [initClientId])
+
+  useEffect(() => {
+    if (branchId) {
+      settingsApi.getBoardingServices(branchId)
+        .then((rows) => setBoardingServices(rows.filter((r) => r.is_active)))
+        .catch(console.error)
+    } else {
+      setBoardingServices([])
+    }
+  }, [branchId])
+
+  const getCatalogueOptions = (boarding_type: 'DAY' | 'OVERNIGHT') => {
+    const seen = new Set<string>()
+    const opts: { label: string; id: number }[] = []
+    for (const s of boardingServices) {
+      if (s.boarding_type === boarding_type && !seen.has(s.catalogue_name)) {
+        seen.add(s.catalogue_name)
+        opts.push({ label: s.catalogue_name, id: s.id })
+      }
+    }
+    return opts
+  }
 
   const searchClients = async () => {
     if (!clientSearch.trim()) return
@@ -68,14 +105,17 @@ export default function BookingCreate() {
   }
 
   const updateStay = (i: number, k: keyof StayForm, v: string | number) =>
-    setStays((prev) => prev.map((s, idx) => idx === i ? { ...s, [k]: v } : s))
+    setStays((prev) => prev.map((s, idx) => {
+      if (idx !== i) return s
+      const updated = { ...s, [k]: v }
+      if (k === 'boarding_type') updated.boarding_service_id = 0
+      return updated
+    }))
 
   const addStay = () => setStays((prev) => [...prev, {
-    pet_id: 0, boarding_type: 'OVERNIGHT',
-    check_in_date: stays[0]?.check_in_date ?? '',
+    ...DEFAULT_STAY,
+    check_in_date:  stays[0]?.check_in_date ?? '',
     check_out_date: stays[0]?.check_out_date ?? '',
-    check_in_slot: 'Morning (7-10)', check_out_slot: 'Morning (7-10)',
-    kennel: '', meal_type: 'Vegetarian', notes: ''
   }])
 
   const removeStay = (i: number) => setStays((prev) => prev.filter((_, idx) => idx !== i))
@@ -86,6 +126,7 @@ export default function BookingCreate() {
     if (!selectedClient) { setError('Please select a client'); return }
     if (!branchId) { setError('Please select a branch'); return }
     if (stays.some((s) => !s.pet_id)) { setError('All stays must have a pet selected'); return }
+    if (stays.some((s) => !s.boarding_service_id)) { setError('All stays must have a boarding service selected'); return }
     setSaving(true)
     try {
       const bk = await bookingsApi.create({ client_id: selectedClient.id, branch_id: branchId, notes, stays })
@@ -117,7 +158,13 @@ export default function BookingCreate() {
           ) : (
             <div>
               <div className="flex gap-2 mb-2">
-                <input className="form-input flex-1" placeholder="Search client by name or phone…" value={clientSearch} onChange={(e) => setClientSearch(e.target.value)} onKeyDown={(e) => e.key==='Enter'&&(e.preventDefault(),searchClients())} />
+                <input
+                  className="form-input flex-1"
+                  placeholder="Search client by name or phone…"
+                  value={clientSearch}
+                  onChange={(e) => setClientSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), searchClients())}
+                />
                 <button type="button" onClick={searchClients} className="btn-secondary">Search</button>
               </div>
               {clientResults.length > 0 && (
@@ -148,60 +195,78 @@ export default function BookingCreate() {
             <h2 className="font-semibold">Pet Stays</h2>
             <button type="button" onClick={addStay} className="btn-secondary btn-sm">+ Add Pet</button>
           </div>
-          {stays.map((s, i) => (
-            <div key={i} className="border rounded-lg p-3 mb-3 bg-gray-50">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">Stay #{i+1}</span>
-                {stays.length > 1 && <button type="button" onClick={() => removeStay(i)} className="text-red-500 text-xs">Remove</button>}
+          {stays.map((s, i) => {
+            const catalogueOptions = getCatalogueOptions(s.boarding_type)
+            return (
+              <div key={i} className="border rounded-lg p-3 mb-3 bg-gray-50">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-gray-700">Stay #{i + 1}</span>
+                  {stays.length > 1 && <button type="button" onClick={() => removeStay(i)} className="text-red-500 text-xs">Remove</button>}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="form-group">
+                    <label className="form-label">Pet</label>
+                    <select className="form-select" value={s.pet_id} onChange={(e) => updateStay(i, 'pet_id', Number(e.target.value))}>
+                      <option value={0}>Select pet…</option>
+                      {pets.filter((p) => p.is_active).map((p) => <option key={p.id} value={p.id}>{p.name} ({p.breed})</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Boarding Type</label>
+                    <select className="form-select" value={s.boarding_type} onChange={(e) => updateStay(i, 'boarding_type', e.target.value)}>
+                      <option value="OVERNIGHT">Overnight</option>
+                      <option value="DAY">Day</option>
+                    </select>
+                  </div>
+                  <div className="form-group col-span-2">
+                    <label className="form-label">Boarding Service *</label>
+                    <select
+                      className="form-select"
+                      value={s.boarding_service_id}
+                      onChange={(e) => updateStay(i, 'boarding_service_id', Number(e.target.value))}
+                    >
+                      <option value={0}>
+                        {!branchId
+                          ? 'Select a branch first'
+                          : catalogueOptions.length === 0
+                            ? 'No services configured for this branch / type'
+                            : 'Select boarding service…'}
+                      </option>
+                      {catalogueOptions.map((opt) => (
+                        <option key={opt.id} value={opt.id}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Check-in Date</label>
+                    <input className="form-input" type="date" value={s.check_in_date} onChange={(e) => updateStay(i, 'check_in_date', e.target.value)} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Check-out Date</label>
+                    <input className="form-input" type="date" value={s.check_out_date} onChange={(e) => updateStay(i, 'check_out_date', e.target.value)} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Check-in Slot</label>
+                    <select className="form-select" value={s.check_in_slot} onChange={(e) => updateStay(i, 'check_in_slot', e.target.value)}>
+                      {SLOTS.map((sl) => <option key={sl}>{sl}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Check-out Slot</label>
+                    <select className="form-select" value={s.check_out_slot} onChange={(e) => updateStay(i, 'check_out_slot', e.target.value)}>
+                      {SLOTS.map((sl) => <option key={sl}>{sl}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Meal Type</label>
+                    <select className="form-select" value={s.meal_type} onChange={(e) => updateStay(i, 'meal_type', e.target.value)}>
+                      {MEAL_OPTIONS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                    </select>
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="form-group">
-                  <label className="form-label">Pet</label>
-                  <select className="form-select" value={s.pet_id} onChange={(e) => updateStay(i,'pet_id',Number(e.target.value))}>
-                    <option value={0}>Select pet…</option>
-                    {pets.filter((p) => p.is_active).map((p) => <option key={p.id} value={p.id}>{p.name} ({p.breed})</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Boarding Type</label>
-                  <select className="form-select" value={s.boarding_type} onChange={(e) => updateStay(i,'boarding_type',e.target.value)}>
-                    <option value="OVERNIGHT">Overnight</option>
-                    <option value="DAY">Day</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Check-in Date</label>
-                  <input className="form-input" type="date" value={s.check_in_date} onChange={(e) => updateStay(i,'check_in_date',e.target.value)} required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Check-out Date</label>
-                  <input className="form-input" type="date" value={s.check_out_date} onChange={(e) => updateStay(i,'check_out_date',e.target.value)} required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Check-in Slot</label>
-                  <select className="form-select" value={s.check_in_slot} onChange={(e) => updateStay(i,'check_in_slot',e.target.value)}>
-                    {SLOTS.map((sl) => <option key={sl}>{sl}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Check-out Slot</label>
-                  <select className="form-select" value={s.check_out_slot} onChange={(e) => updateStay(i,'check_out_slot',e.target.value)}>
-                    {SLOTS.map((sl) => <option key={sl}>{sl}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Meal Type</label>
-                  <select className="form-select" value={s.meal_type} onChange={(e) => updateStay(i,'meal_type',e.target.value)}>
-                    {MEALS.map((m) => <option key={m}>{m}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Kennel</label>
-                  <input className="form-input" placeholder="e.g. K3" value={s.kennel} onChange={(e) => updateStay(i,'kennel',e.target.value)} />
-                </div>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Notes */}

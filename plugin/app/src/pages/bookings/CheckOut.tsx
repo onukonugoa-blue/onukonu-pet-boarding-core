@@ -8,7 +8,7 @@ import { fmt } from '../../api/client'
 import WhatsAppButton from '../../components/WhatsAppButton'
 import { useWhatsApp } from '../../hooks/useWhatsApp'
 
-const MODES = ['Cash','UPI','Card','Bank Transfer','Other']
+const MODES = ['Cash', 'UPI', 'Other']
 
 export default function CheckOut() {
   const { id } = useParams<{ id: string }>()
@@ -43,16 +43,19 @@ export default function CheckOut() {
     setError('')
     setSaving(true)
     try {
-      const checkoutData: Record<string, unknown> = {
-        stays: activeStays.map((s) => ({
-          stay_id: s.id,
-          weight_at_checkout: weights[s.id] ? Number(weights[s.id]) : null
-        }))
+      for (const s of activeStays) {
+        await bookingsApi.checkout(Number(id), {
+          stay_id:           s.id,
+          weight_at_checkout: weights[s.id] ? Number(weights[s.id]) : null,
+        })
       }
-      if (payment.amount && Number(payment.amount) > 0) {
-        checkoutData.payment = { amount: Number(payment.amount), mode: payment.mode, notes: payment.notes }
+      if (payment.amount && Number(payment.amount) > 0 && invoice) {
+        await invoicesApi.recordPayment(invoice.id, {
+          amount: Number(payment.amount),
+          mode:   payment.mode,
+          notes:  payment.notes || undefined,
+        })
       }
-      await bookingsApi.checkout(Number(id), checkoutData)
       navigate(`/bookings/${id}`)
     } catch (e: any) {
       setError(e.message ?? 'Check-out failed')
