@@ -96,7 +96,6 @@ class OPB_Import_API extends OPB_REST_Base {
 
     /**
      * Resolve a CSV column value from a prioritised list of possible header names.
-     * Handles legacy exports where column names differ from internal names.
      */
     private function col( array $row, array $keys, string $default = '' ): string {
         foreach ( $keys as $key ) {
@@ -105,63 +104,6 @@ class OPB_Import_API extends OPB_REST_Base {
             }
         }
         return $default;
-    }
-
-    /**
-     * Resolve a raw CSV outlet value to a branch object from $branch_map.
-     *
-     * Resolution order (stops at first match):
-     *   1. Exact code match          — "H2" → branch with code H2
-     *   2. Exact name match          — "H2 Branch" → branch whose name is "H2 Branch"
-     *   3. Normalised name match     — lowercase + collapse whitespace on both sides
-     *   4. H-code extraction         — finds the first /H\d+/ token in the value
-     *      e.g. "Onukonu pet homestyle boarding - H2 succoro" → code H2
-     *
-     * Returns the matching branch object (with ->id, ->code, ->name) or null.
-     * Populates $match_note with a human-readable description of how the match
-     * was made, for use in diagnostics.
-     */
-    private function resolve_branch( string $raw, array $branch_map, string &$match_note = '' ): ?object {
-        $raw = trim($raw);
-        if ( $raw === '' ) { $match_note = 'empty value'; return null; }
-
-        // 1. Exact code match
-        if ( isset($branch_map[$raw]) ) {
-            $match_note = "exact code match '$raw'";
-            return $branch_map[$raw];
-        }
-
-        // 2. Exact name match
-        foreach ( $branch_map as $b ) {
-            if ( $b->name === $raw ) {
-                $match_note = "exact name match '{$b->name}' → code {$b->code}";
-                return $b;
-            }
-        }
-
-        // 3. Normalised match (lowercase, collapse internal whitespace)
-        $norm = strtolower(preg_replace('/\s+/', ' ', $raw));
-        foreach ( $branch_map as $b ) {
-            $norm_name = strtolower(preg_replace('/\s+/', ' ', trim($b->name)));
-            $norm_code = strtolower($b->code);
-            if ( $norm_name === $norm || $norm_code === $norm ) {
-                $match_note = "normalised match '$raw' → code {$b->code}";
-                return $b;
-            }
-        }
-
-        // 4. H-code extraction — pull the first /H\d+/ token out of the raw string
-        //    e.g. "Onukonu pet homestyle boarding - H2 succoro" → "H2"
-        if ( preg_match('/\b(H\d+)\b/i', $raw, $m) ) {
-            $extracted = strtoupper($m[1]);
-            if ( isset($branch_map[$extracted]) ) {
-                $match_note = "H-code extracted '$extracted' from '$raw'";
-                return $branch_map[$extracted];
-            }
-        }
-
-        $match_note = "no match for '$raw' (tried exact code, exact name, normalised, H-code extraction)";
-        return null;
     }
 
     /**
@@ -177,15 +119,13 @@ class OPB_Import_API extends OPB_REST_Base {
             while ( ($line = fgetcsv($h, 0, ',')) !== false ) {
                 if ( !$raw_headers ) {
                     $raw_headers = array_map('trim', $line);
-                    // Strip UTF-8 BOM (\xEF\xBB\xBF) from first header — common in
-                    // legacy Windows/Excel CSV exports and silently corrupts column names.
+                    // Strip UTF-8 BOM from first header
                     if ( isset($raw_headers[0]) && str_starts_with($raw_headers[0], "\xEF\xBB\xBF") ) {
                         $raw_headers[0] = substr($raw_headers[0], 3);
                     }
                     $headers = $raw_headers;
                     continue;
                 }
-                // Guard against rows with fewer columns than headers (blank trailing lines)
                 if ( count($line) < count($headers) ) {
                     $line = array_pad($line, count($headers), '');
                 }
@@ -201,58 +141,41 @@ class OPB_Import_API extends OPB_REST_Base {
     // Diagnostics helpers (dry-run only)
     // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Check which aliases from $groups are present in $headers.
-     * Returns ['matched' => string|null, 'searched' => string[]] per group.
-     *
-     * $groups = [ 'label' => ['Alias A', 'Alias B', ...], ... ]
-     */
     private function analyse_headers( array $headers, array $groups ): array {
         $report = [];
         foreach ( $groups as $label => $aliases ) {
             $matched = null;
             foreach ( $aliases as $alias ) {
-                if ( in_array($alias, $headers, true) ) {
-                    $matched = $alias;
-                    break;
-                }
+                if ( in_array($alias, $headers, true) ) { $matched = $alias; break; }
             }
-            $report[$label] = [
-                'matched'  => $matched,
-                'found'    => $matched !== null,
-                'searched' => $aliases,
-            ];
+            $report[$label] = ['matched'=>$matched,'found'=>$matched!==null,'searched'=>$aliases];
         }
         return $report;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Client importer
+    // Client importer — uses OPB_Branch_Resolver for all branch lookups
     // ─────────────────────────────────────────────────────────────────────────
 
     private function import_clients( array $rows, bool $dry, array $headers = [] ): array {
         global $wpdb;
-        $imported    = 0;
-        $skipped     = 0;
-        $errors      = [];          // row-level error strings (capped at 50)
-        $skipped_rows= [];          // structured: [{row, reason, detail}] (dry-run only, capped at 50)
-        $skip_reasons= [            // tally by category
+        $imported     = 0;
+        $skipped      = 0;
+        $errors       = [];
+        $skipped_rows = [];
+        $skip_reasons = [
             'missing_phone'    => 0,
             'missing_name'     => 0,
             'branch_not_found' => 0,
             'duplicate'        => 0,
         ];
 
-        // ── Branch pre-load ───────────────────────────────────────────────────
-        // Keyed by code (e.g. 'H2'). Each object has id, code, name.
-        $branch_map = $wpdb->get_results(
-            "SELECT id, code, name FROM {$wpdb->prefix}opb_branches WHERE is_active=1",
-            OBJECT_K
-        ) ?: [];
+        // ── Branch resolver (single DB load for the whole import) ─────────────
+        $resolver = OPB_Branch_Resolver::from_db();
 
-        if ( empty($branch_map) ) {
+        if ( $resolver->is_empty() ) {
             return [
-                'error'    => 'No branches found in the database. Please seed your branch records (H2, H3, H4) before importing clients.',
+                'error'    => 'No active branches found in the database. Please seed branch records (H2, H3, H4) before importing.',
                 'imported' => 0,
                 'skipped'  => count($rows),
                 'errors'   => [],
@@ -264,124 +187,111 @@ class OPB_Import_API extends OPB_REST_Base {
         // ── Dry-run: header-level diagnostics ─────────────────────────────────
         $header_diagnostics = null;
         if ( $dry ) {
-            $column_groups = [
-                'phone' => ['Phone Number','phone number','Phone','phone','Mobile','mobile'],
-                'name'  => ['Name','name','Client Name','client_name','Full Name','full_name'],
-                'branch'=> ['Home Outlet','home_outlet','Branch','branch','Home Branch'],
-                'email' => ['Email','email'],
-                'pet_name'  => ['Pet Name','pet_name'],
-                'pet_type'  => ['Pet Type','pet_type'],
-                'gender'    => ['Gender','gender'],
-                'breed'     => ['Breed','breed'],
-                'legacy_id' => ['Pet ID','pet_id','Legacy ID','legacy_id'],
-                'onboarding_date' => ['Onboarding Date','onboarding_date'],
-            ];
-
-            $col_analysis = $this->analyse_headers($headers, $column_groups);
+            $col_analysis = $this->analyse_headers($headers, [
+                'phone'          => ['Phone Number','phone number','Phone','phone','Mobile','mobile'],
+                'name'           => ['Name','name','Client Name','client_name','Full Name','full_name'],
+                'branch'         => ['Home Outlet','home_outlet','Branch','branch','Home Branch'],
+                'email'          => ['Email','email'],
+                'pet_name'       => ['Pet Name','pet_name'],
+                'pet_type'       => ['Pet Type','pet_type'],
+                'gender'         => ['Gender','gender'],
+                'breed'          => ['Breed','breed'],
+                'legacy_id'      => ['Pet ID','pet_id','Legacy ID','legacy_id'],
+                'onboarding_date'=> ['Onboarding Date','onboarding_date'],
+            ]);
 
             $missing_required = [];
             foreach ( ['phone','name'] as $req ) {
                 if ( !$col_analysis[$req]['found'] ) {
-                    $missing_required[] = $req . ' (searched: ' . implode(', ', $col_analysis[$req]['searched']) . ')';
+                    $missing_required[] = $req.' (searched: '.implode(', ',$col_analysis[$req]['searched']).')';
                 }
             }
 
             $header_diagnostics = [
-                'headers_detected'    => $headers,
-                'header_count'        => count($headers),
-                'column_analysis'     => $col_analysis,
-                'missing_required'    => $missing_required,
-                'branch_codes_in_db'  => array_keys($branch_map),
+                'headers_detected'   => $headers,
+                'header_count'       => count($headers),
+                'column_analysis'    => $col_analysis,
+                'missing_required'   => $missing_required,
+                'branch_codes_in_db' => $resolver->available_codes(),
+                'branches_in_db'     => $resolver->describe_branches(),
             ];
         }
 
         // ── Row-by-row processing ─────────────────────────────────────────────
         foreach ( $rows as $i => $row ) {
-            $row_num = $i + 2; // 1-based + header row offset
+            $row_num = $i + 2;
 
-            // ── Required: phone ───────────────────────────────────────────────
-            $phone = $this->col($row, [
-                'Phone Number', 'phone number', 'Phone', 'phone', 'Mobile', 'mobile',
-            ]);
+            // Required: phone
+            $phone = $this->col($row, ['Phone Number','phone number','Phone','phone','Mobile','mobile']);
             if ( !$phone ) {
-                $msg = "Row $row_num: missing phone number (searched: Phone Number, Phone, Mobile)";
+                $msg = "Row $row_num: missing phone (searched: Phone Number, Phone, Mobile)";
                 $errors[] = $msg;
                 if ( $dry && count($skipped_rows) < 50 ) {
                     $skipped_rows[] = [
                         'row'    => $row_num,
                         'reason' => 'missing_phone',
-                        'detail' => 'No value found in any phone column alias. Columns present: ' . implode(', ', array_keys(array_filter($row, fn($v)=>trim($v)!==''))),
+                        'detail' => 'No value found in any phone column alias. Columns present: '.implode(', ',array_keys(array_filter($row,fn($v)=>trim($v)!==''))),
                     ];
                 }
-                $skip_reasons['missing_phone']++;
-                $skipped++; continue;
+                $skip_reasons['missing_phone']++; $skipped++; continue;
             }
 
-            // ── Required: name ────────────────────────────────────────────────
-            $name = $this->col($row, [
-                'Name', 'name', 'Client Name', 'client_name', 'Full Name', 'full_name',
-            ]);
+            // Required: name
+            $name = $this->col($row, ['Name','name','Client Name','client_name','Full Name','full_name']);
             if ( !$name ) {
-                $msg = "Row $row_num: missing name";
+                $msg = "Row $row_num: missing name (phone: $phone)";
                 $errors[] = $msg;
                 if ( $dry && count($skipped_rows) < 50 ) {
                     $skipped_rows[] = [
                         'row'    => $row_num,
                         'reason' => 'missing_name',
-                        'detail' => "Phone $phone has no name value in any name column alias.",
+                        'detail' => "Phone $phone has no value in any name column alias.",
                     ];
                 }
-                $skip_reasons['missing_name']++;
-                $skipped++; continue;
+                $skip_reasons['missing_name']++; $skipped++; continue;
             }
 
-            // ── Branch resolution ─────────────────────────────────────────────
-            // Raw value may be a code ("H2"), a full name, or a legacy outlet
-            // string ("Onukonu pet homestyle boarding - H2 succoro").
-            // resolve_branch() handles all four fallback strategies.
-            $raw_outlet  = $this->col($row, [
-                'Home Outlet', 'home_outlet', 'Branch', 'branch', 'Home Branch',
-            ]);
-            $match_note  = '';
-            $branch_obj  = $this->resolve_branch($raw_outlet, $branch_map, $match_note);
+            // Branch resolution via OPB_Branch_Resolver
+            $raw_outlet = $this->col($row, ['Home Outlet','home_outlet','Branch','branch','Home Branch']);
+            $resolved   = $resolver->resolve($raw_outlet);
 
-            if ( !$branch_obj ) {
-                $available = implode(', ', array_map(fn($b)=>"{$b->code} ({$b->name})", $branch_map));
-                $msg = "Row $row_num: branch not resolved — '$raw_outlet'. $match_note. Available: $available";
+            if ( !$resolved['branch'] ) {
+                $diag_detail = $resolved['diagnostics']['failure_reason']
+                    ?? "No match for '$raw_outlet'";
+                $available = implode(', ', $resolver->describe_branches());
+                $msg = "Row $row_num: branch not resolved — '$raw_outlet'. Available: $available";
                 $errors[] = $msg;
                 if ( $dry && count($skipped_rows) < 50 ) {
                     $skipped_rows[] = [
                         'row'    => $row_num,
                         'reason' => 'branch_not_found',
-                        'detail' => "CSV value: '$raw_outlet'. $match_note. Available branches: $available",
+                        'detail' => "CSV value: '$raw_outlet'. $diag_detail. Available: $available",
+                        'resolver_diagnostics' => $resolved['diagnostics'],
                     ];
                 }
-                $skip_reasons['branch_not_found']++;
-                $skipped++; continue;
+                $skip_reasons['branch_not_found']++; $skipped++; continue;
             }
-            $branch_id = (int)$branch_obj->id;
+            $branch_id = (int)$resolved['branch']->id;
 
-            // ── Duplicate check ───────────────────────────────────────────────
+            // Duplicate check
             $existing = (int)$wpdb->get_var($wpdb->prepare(
                 "SELECT id FROM {$wpdb->prefix}opb_clients WHERE phone=%s", $phone
             ));
             if ( $existing ) {
-                // Record duplicate reason in dry-run (was a silent skip before)
                 if ( $dry ) {
                     $errors[] = "Row $row_num: duplicate — phone $phone already exists as client #$existing";
                     if ( count($skipped_rows) < 50 ) {
                         $skipped_rows[] = [
                             'row'    => $row_num,
                             'reason' => 'duplicate',
-                            'detail' => "Phone $phone already exists in opb_clients as record ID $existing. Name in CSV: $name.",
+                            'detail' => "Phone $phone already exists in opb_clients as record #$existing. Name in CSV: $name.",
                         ];
                     }
                 }
-                $skip_reasons['duplicate']++;
-                $skipped++; continue;
+                $skip_reasons['duplicate']++; $skipped++; continue;
             }
 
-            // ── Insert (live run only) ─────────────────────────────────────────
+            // Insert (live run only)
             if ( !$dry ) {
                 $legacy_id = $this->col($row, ['Pet ID','pet_id','Legacy ID','legacy_id']);
 
@@ -398,17 +308,14 @@ class OPB_Import_API extends OPB_REST_Base {
                 ]);
                 $client_id = (int)$wpdb->insert_id;
 
-                // ── Primary pet ────────────────────────────────────────────────
                 $pet_name = $this->col($row, ['Pet Name','pet_name']);
                 if ( $pet_name && $client_id ) {
-                    $pet_type = $this->col($row,['Pet Type','pet_type'],'Dog');
-                    $pet_type = match(strtolower($pet_type)){
+                    $pet_type = match(strtolower($this->col($row,['Pet Type','pet_type'],'dog'))){
                         'dog'   => 'Dog',
                         'cat'   => 'Cat',
                         default => 'Other',
                     };
-                    $gender = $this->col($row,['Gender','gender'],'Unknown');
-                    $gender = match(strtolower($gender)){
+                    $gender = match(strtolower($this->col($row,['Gender','gender'],'unknown'))){
                         'male','m'   => 'Male',
                         'female','f' => 'Female',
                         default      => 'Unknown',
@@ -427,22 +334,22 @@ class OPB_Import_API extends OPB_REST_Base {
             $imported++;
         }
 
-        // ── Build response ─────────────────────────────────────────────────────
+        // ── Response ──────────────────────────────────────────────────────────
         $response = [
-            'imported'     => $imported,
-            'skipped'      => $skipped,
-            'errors'       => array_slice($errors, 0, 50),
-            'total'        => count($rows),
-            'dry_run'      => $dry,
+            'imported'  => $imported,
+            'skipped'   => $skipped,
+            'errors'    => array_slice($errors, 0, 50),
+            'total'     => count($rows),
+            'dry_run'   => $dry,
         ];
 
         if ( $dry ) {
             $response['diagnostics'] = [
                 'headers'      => $header_diagnostics,
                 'skip_reasons' => $skip_reasons,
-                'skipped_rows' => $skipped_rows,   // first 50 with structured reason + detail
+                'skipped_rows' => $skipped_rows,
                 'note'         => count($skipped_rows) < $skipped
-                    ? 'skipped_rows shows first ' . count($skipped_rows) . ' of ' . $skipped . ' skipped rows'
+                    ? 'skipped_rows shows first '.count($skipped_rows).' of '.$skipped.' skipped rows'
                     : 'all skipped rows shown',
             ];
         }
@@ -453,21 +360,30 @@ class OPB_Import_API extends OPB_REST_Base {
     private function import_bookings( array $rows, bool $dry ): array {
         global $wpdb;
         $imported=0; $skipped=0; $errors=[];
+        $resolver = OPB_Branch_Resolver::from_db();
+
         foreach($rows as $i=>$row){
+            $row_num = $i + 2;
             $phone = trim($row['Phone']??'');
-            if(!$phone){ $errors[]="Row $i: missing phone"; $skipped++; continue; }
+            if(!$phone){ $errors[]="Row $row_num: missing phone"; $skipped++; continue; }
+
             $client_id=(int)$wpdb->get_var($wpdb->prepare(
                 "SELECT id FROM {$wpdb->prefix}opb_clients WHERE phone=%s",$phone
             ));
-            if(!$client_id){ $errors[]="Row $i: client with phone $phone not found"; $skipped++; continue; }
+            if(!$client_id){ $errors[]="Row $row_num: client with phone $phone not found"; $skipped++; continue; }
+
             if(!$dry){
+                $raw_branch = trim($row['Branch']??$row['branch_id']??'');
+                $resolved   = $resolver->resolve($raw_branch);
+                $branch_id  = $resolved['branch'] ? (int)$resolved['branch']->id : 1;
+
                 $wpdb->insert("{$wpdb->prefix}opb_bookings",[
-                    'client_id'    => $client_id,
-                    'branch_id'    => (int)($row['branch_id']??1),
-                    'booking_date' => sanitize_text_field($row['Booking Date']??date('Y-m-d')),
-                    'payment_status'=>sanitize_text_field($row['Payment Status']??'Unpaid'),
-                    'total_billing_amount'=>(float)($row['Total']??0),
-                    'legacy_id'    => isset($row['ID'])?(int)$row['ID']:null,
+                    'client_id'             => $client_id,
+                    'branch_id'             => $branch_id,
+                    'booking_date'          => sanitize_text_field($row['Booking Date']??date('Y-m-d')),
+                    'payment_status'        => sanitize_text_field($row['Payment Status']??'Unpaid'),
+                    'total_billing_amount'  => (float)($row['Total']??0),
+                    'legacy_id'             => isset($row['ID'])?(int)$row['ID']:null,
                 ]);
             }
             $imported++;
@@ -478,14 +394,20 @@ class OPB_Import_API extends OPB_REST_Base {
     private function import_expenses( array $rows, bool $dry ): array {
         global $wpdb;
         $imported=0; $skipped=0; $errors=[];
+        $resolver = OPB_Branch_Resolver::from_db();
+
         foreach($rows as $i=>$row){
-            $desc=(trim($row['Description']??$row['description']??''));
-            if(!$desc){ $errors[]="Row $i: missing description"; $skipped++; continue; }
+            $row_num = $i + 2;
+            $desc=trim($row['Description']??$row['description']??'');
+            if(!$desc){ $errors[]="Row $row_num: missing description"; $skipped++; continue; }
+
             if(!$dry){
-                $branch_code=trim($row['Branch']??$row['branch']??'H2');
-                $branch_id=(int)$wpdb->get_var($wpdb->prepare("SELECT id FROM {$wpdb->prefix}opb_branches WHERE code=%s",$branch_code));
+                $raw_branch = trim($row['Branch']??$row['branch']??'');
+                $resolved   = $resolver->resolve($raw_branch);
+                $branch_id  = $resolved['branch'] ? (int)$resolved['branch']->id : 1;
+
                 $wpdb->insert("{$wpdb->prefix}opb_expenses",[
-                    'branch_id'   => $branch_id ?: 1,
+                    'branch_id'   => $branch_id,
                     'description' => sanitize_text_field($desc),
                     'amount'      => (float)($row['Amount']??$row['amount']??0),
                     'mode'        => sanitize_text_field($row['Mode']??$row['mode']??'Cash'),

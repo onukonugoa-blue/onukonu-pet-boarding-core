@@ -25,6 +25,7 @@ require_once OPB_PLUGIN_DIR . 'includes/class-opb-deactivator.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-roles.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-pricing-engine.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-invoice-generator.php';
+require_once OPB_PLUGIN_DIR . 'includes/services/class-opb-branch-resolver.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-rest-base.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-branches-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-clients-api.php';
