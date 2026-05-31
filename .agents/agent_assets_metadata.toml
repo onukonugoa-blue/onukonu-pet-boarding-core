@@ -24,3 +24,9 @@ id = "ix_A7qqG1cyQGQUfjj_R3"
 uri = "file://onukonu-pet-boarding-core-v1.0.3.zip"
 type = "unspecified"
 title = "onukonu-pet-boarding-core-v1.0.3.zip"
+
+[[outputs]]
+id = "MdcDPmkfcVrhxbWPwK7-d"
+uri = "file://onukonu-pet-boarding-core-v1.0.4.zip"
+type = "unspecified"
+title = "onukonu-pet-boarding-core-v1.0.4.zip — Deployment candidate"
