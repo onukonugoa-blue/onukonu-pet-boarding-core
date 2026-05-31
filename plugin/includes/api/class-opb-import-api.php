@@ -108,6 +108,63 @@ class OPB_Import_API extends OPB_REST_Base {
     }
 
     /**
+     * Resolve a raw CSV outlet value to a branch object from $branch_map.
+     *
+     * Resolution order (stops at first match):
+     *   1. Exact code match          — "H2" → branch with code H2
+     *   2. Exact name match          — "H2 Branch" → branch whose name is "H2 Branch"
+     *   3. Normalised name match     — lowercase + collapse whitespace on both sides
+     *   4. H-code extraction         — finds the first /H\d+/ token in the value
+     *      e.g. "Onukonu pet homestyle boarding - H2 succoro" → code H2
+     *
+     * Returns the matching branch object (with ->id, ->code, ->name) or null.
+     * Populates $match_note with a human-readable description of how the match
+     * was made, for use in diagnostics.
+     */
+    private function resolve_branch( string $raw, array $branch_map, string &$match_note = '' ): ?object {
+        $raw = trim($raw);
+        if ( $raw === '' ) { $match_note = 'empty value'; return null; }
+
+        // 1. Exact code match
+        if ( isset($branch_map[$raw]) ) {
+            $match_note = "exact code match '$raw'";
+            return $branch_map[$raw];
+        }
+
+        // 2. Exact name match
+        foreach ( $branch_map as $b ) {
+            if ( $b->name === $raw ) {
+                $match_note = "exact name match '{$b->name}' → code {$b->code}";
+                return $b;
+            }
+        }
+
+        // 3. Normalised match (lowercase, collapse internal whitespace)
+        $norm = strtolower(preg_replace('/\s+/', ' ', $raw));
+        foreach ( $branch_map as $b ) {
+            $norm_name = strtolower(preg_replace('/\s+/', ' ', trim($b->name)));
+            $norm_code = strtolower($b->code);
+            if ( $norm_name === $norm || $norm_code === $norm ) {
+                $match_note = "normalised match '$raw' → code {$b->code}";
+                return $b;
+            }
+        }
+
+        // 4. H-code extraction — pull the first /H\d+/ token out of the raw string
+        //    e.g. "Onukonu pet homestyle boarding - H2 succoro" → "H2"
+        if ( preg_match('/\b(H\d+)\b/i', $raw, $m) ) {
+            $extracted = strtoupper($m[1]);
+            if ( isset($branch_map[$extracted]) ) {
+                $match_note = "H-code extracted '$extracted' from '$raw'";
+                return $branch_map[$extracted];
+            }
+        }
+
+        $match_note = "no match for '$raw' (tried exact code, exact name, normalised, H-code extraction)";
+        return null;
+    }
+
+    /**
      * Returns ['headers' => string[], 'rows' => array[]].
      * Headers are trimmed and stripped of UTF-8 BOM.
      */
@@ -187,8 +244,9 @@ class OPB_Import_API extends OPB_REST_Base {
         ];
 
         // ── Branch pre-load ───────────────────────────────────────────────────
+        // Keyed by code (e.g. 'H2'). Each object has id, code, name.
         $branch_map = $wpdb->get_results(
-            "SELECT id, code FROM {$wpdb->prefix}opb_branches WHERE is_active=1",
+            "SELECT id, code, name FROM {$wpdb->prefix}opb_branches WHERE is_active=1",
             OBJECT_K
         ) ?: [];
 
@@ -278,23 +336,30 @@ class OPB_Import_API extends OPB_REST_Base {
             }
 
             // ── Branch resolution ─────────────────────────────────────────────
-            $branch_code = $this->col($row, [
+            // Raw value may be a code ("H2"), a full name, or a legacy outlet
+            // string ("Onukonu pet homestyle boarding - H2 succoro").
+            // resolve_branch() handles all four fallback strategies.
+            $raw_outlet  = $this->col($row, [
                 'Home Outlet', 'home_outlet', 'Branch', 'branch', 'Home Branch',
-            ], 'H2');
-            if ( !isset($branch_map[$branch_code]) ) {
-                $msg = "Row $row_num: branch code '$branch_code' not found in DB (available: " . implode(', ', array_keys($branch_map)) . ")";
+            ]);
+            $match_note  = '';
+            $branch_obj  = $this->resolve_branch($raw_outlet, $branch_map, $match_note);
+
+            if ( !$branch_obj ) {
+                $available = implode(', ', array_map(fn($b)=>"{$b->code} ({$b->name})", $branch_map));
+                $msg = "Row $row_num: branch not resolved — '$raw_outlet'. $match_note. Available: $available";
                 $errors[] = $msg;
                 if ( $dry && count($skipped_rows) < 50 ) {
                     $skipped_rows[] = [
                         'row'    => $row_num,
                         'reason' => 'branch_not_found',
-                        'detail' => "Branch code '$branch_code' is not in the active branch table. Available codes: " . implode(', ', array_keys($branch_map)),
+                        'detail' => "CSV value: '$raw_outlet'. $match_note. Available branches: $available",
                     ];
                 }
                 $skip_reasons['branch_not_found']++;
                 $skipped++; continue;
             }
-            $branch_id = (int)$branch_map[$branch_code]->id;
+            $branch_id = (int)$branch_obj->id;
 
             // ── Duplicate check ───────────────────────────────────────────────
             $existing = (int)$wpdb->get_var($wpdb->prepare(
