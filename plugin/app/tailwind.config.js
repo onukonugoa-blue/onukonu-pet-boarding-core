@@ -1,6 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  // Prefix every utility with #opb-root so compiled rules have ID-level
+  // specificity (1,1,0) and cannot be overridden by WordPress admin CSS
+  // compound selectors such as .wp-admin a or #wpcontent svg.
+  important: '#opb-root',
   theme: {
     extend: {
       colors: {

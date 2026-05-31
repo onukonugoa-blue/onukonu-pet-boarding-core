@@ -8,7 +8,7 @@ export default function Layout({ children }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-32px)] overflow-hidden">
       <TopBar onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
