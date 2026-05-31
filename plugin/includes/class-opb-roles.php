@@ -93,8 +93,9 @@ class OPB_Roles {
 
     public static function get_user_branch_id(): int {
         $user = wp_get_current_user();
-        if ( $user->has_cap( 'opb_view_all_branches' ) ) {
-            return 0; // 0 = all branches
+        // WP administrators and opb_super_admin (opb_view_all_branches) are unrestricted.
+        if ( $user->has_cap( 'opb_view_all_branches' ) || $user->has_cap( 'manage_options' ) ) {
+            return 0; // 0 = no branch restriction
         }
         return (int) get_user_meta( $user->ID, 'opb_branch_id', true );
     }
