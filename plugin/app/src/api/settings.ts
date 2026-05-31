@@ -69,18 +69,52 @@ export const settingsApi = {
   updateStaff: (id: number, data: { role?: string; branch_id?: number }) => api.put<StaffUser>(`/settings/staff/${id}`, data),
 }
 
+export interface ImportColumnInfo {
+  matched: string | null
+  found: boolean
+  searched: string[]
+}
+
+export interface ImportSkippedRow {
+  row: number
+  reason: string
+  detail: string
+}
+
+export interface ImportDiagnostics {
+  headers: {
+    headers_detected: string[]
+    header_count: number
+    column_analysis: Record<string, ImportColumnInfo>
+    missing_required: string[]
+    branch_codes_in_db: string[]
+  }
+  skip_reasons: Record<string, number>
+  skipped_rows: ImportSkippedRow[]
+  note: string
+}
+
+export interface ImportResult {
+  imported: number
+  skipped: number
+  errors: string[]
+  total: number
+  dry_run?: boolean
+  diagnostics?: ImportDiagnostics
+}
+
 export const importApi = {
   status: () => api.get<Record<string, number>>('/import/status'),
   dryRun: (entity: string, file: File) => {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('entity', entity)
-    return api.upload<{ imported: number; skipped: number; errors: string[]; total: number }>('/import/dry-run', fd)
+    return api.upload<ImportResult>('/import/dry-run', fd)
   },
   run: (entity: string, file: File) => {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('entity', entity)
-    return api.upload<{ imported: number; skipped: number; errors: string[]; total: number }>('/import/run', fd)
+    return api.upload<ImportResult>('/import/run', fd)
   },
 }

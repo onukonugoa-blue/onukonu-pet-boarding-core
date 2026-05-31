@@ -30,3 +30,9 @@ id = "MdcDPmkfcVrhxbWPwK7-d"
 uri = "file://onukonu-pet-boarding-core-v1.0.4.zip"
 type = "unspecified"
 title = "onukonu-pet-boarding-core-v1.0.4.zip — Deployment candidate"
+
+[[outputs]]
+id = "Z8Mm9WHX9DuH3JdmatP9P"
+uri = "file://onukonu-pet-boarding-core-v1.0.5.zip"
+type = "unspecified"
+title = "onukonu-pet-boarding-core-v1.0.5.zip — Import diagnostics"

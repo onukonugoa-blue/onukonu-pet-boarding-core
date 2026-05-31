@@ -83,10 +83,11 @@ class OPB_Import_API extends OPB_REST_Base {
                 'errors'   => [],
             ];
         }
-        $rows = $this->read_csv($path);
+
+        [ 'headers' => $headers, 'rows' => $rows ] = $this->read_csv($path);
 
         return match($entity) {
-            'clients'  => $this->import_clients($rows,$dry),
+            'clients'  => $this->import_clients($rows,$dry,$headers),
             'bookings' => $this->import_bookings($rows,$dry),
             'expenses' => $this->import_expenses($rows,$dry),
             default    => ['error'=>"Unknown entity: $entity",'imported'=>0,'skipped'=>0,'errors'=>[]],
@@ -106,37 +107,86 @@ class OPB_Import_API extends OPB_REST_Base {
         return $default;
     }
 
+    /**
+     * Returns ['headers' => string[], 'rows' => array[]].
+     * Headers are trimmed and stripped of UTF-8 BOM.
+     */
     private function read_csv( string $path ): array {
-        $rows=[];
-        if(($h=fopen($path,'r'))!==false){
-            $headers=null;
-            while(($line=fgetcsv($h,0,','))!==false){
-                if(!$headers){
-                    $headers = array_map('trim',$line);
+        $headers = [];
+        $rows    = [];
+
+        if ( ($h = fopen($path, 'r')) !== false ) {
+            $raw_headers = null;
+            while ( ($line = fgetcsv($h, 0, ',')) !== false ) {
+                if ( !$raw_headers ) {
+                    $raw_headers = array_map('trim', $line);
                     // Strip UTF-8 BOM (\xEF\xBB\xBF) from first header — common in
                     // legacy Windows/Excel CSV exports and silently corrupts column names.
-                    if( isset($headers[0]) && str_starts_with($headers[0], "\xEF\xBB\xBF") ){
-                        $headers[0] = substr($headers[0], 3);
+                    if ( isset($raw_headers[0]) && str_starts_with($raw_headers[0], "\xEF\xBB\xBF") ) {
+                        $raw_headers[0] = substr($raw_headers[0], 3);
                     }
+                    $headers = $raw_headers;
                     continue;
                 }
                 // Guard against rows with fewer columns than headers (blank trailing lines)
-                if( count($line) < count($headers) ){
+                if ( count($line) < count($headers) ) {
                     $line = array_pad($line, count($headers), '');
                 }
-                $rows[]=array_combine($headers,$line);
+                $rows[] = array_combine($headers, $line);
             }
             fclose($h);
         }
-        return $rows;
+
+        return ['headers' => $headers, 'rows' => $rows];
     }
 
-    private function import_clients( array $rows, bool $dry ): array {
-        global $wpdb;
-        $imported=0; $skipped=0; $errors=[];
+    // ─────────────────────────────────────────────────────────────────────────
+    // Diagnostics helpers (dry-run only)
+    // ─────────────────────────────────────────────────────────────────────────
 
-        // Pre-load all branch codes once to avoid N+1 queries and to give a
-        // clear error when branches haven't been seeded yet.
+    /**
+     * Check which aliases from $groups are present in $headers.
+     * Returns ['matched' => string|null, 'searched' => string[]] per group.
+     *
+     * $groups = [ 'label' => ['Alias A', 'Alias B', ...], ... ]
+     */
+    private function analyse_headers( array $headers, array $groups ): array {
+        $report = [];
+        foreach ( $groups as $label => $aliases ) {
+            $matched = null;
+            foreach ( $aliases as $alias ) {
+                if ( in_array($alias, $headers, true) ) {
+                    $matched = $alias;
+                    break;
+                }
+            }
+            $report[$label] = [
+                'matched'  => $matched,
+                'found'    => $matched !== null,
+                'searched' => $aliases,
+            ];
+        }
+        return $report;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Client importer
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private function import_clients( array $rows, bool $dry, array $headers = [] ): array {
+        global $wpdb;
+        $imported    = 0;
+        $skipped     = 0;
+        $errors      = [];          // row-level error strings (capped at 50)
+        $skipped_rows= [];          // structured: [{row, reason, detail}] (dry-run only, capped at 50)
+        $skip_reasons= [            // tally by category
+            'missing_phone'    => 0,
+            'missing_name'     => 0,
+            'branch_not_found' => 0,
+            'duplicate'        => 0,
+        ];
+
+        // ── Branch pre-load ───────────────────────────────────────────────────
         $branch_map = $wpdb->get_results(
             "SELECT id, code FROM {$wpdb->prefix}opb_branches WHERE is_active=1",
             OBJECT_K
@@ -153,44 +203,121 @@ class OPB_Import_API extends OPB_REST_Base {
             ];
         }
 
-        foreach($rows as $i=>$row){
-            $row_num = $i + 2; // 1-based + header row
+        // ── Dry-run: header-level diagnostics ─────────────────────────────────
+        $header_diagnostics = null;
+        if ( $dry ) {
+            $column_groups = [
+                'phone' => ['Phone Number','phone number','Phone','phone','Mobile','mobile'],
+                'name'  => ['Name','name','Client Name','client_name','Full Name','full_name'],
+                'branch'=> ['Home Outlet','home_outlet','Branch','branch','Home Branch'],
+                'email' => ['Email','email'],
+                'pet_name'  => ['Pet Name','pet_name'],
+                'pet_type'  => ['Pet Type','pet_type'],
+                'gender'    => ['Gender','gender'],
+                'breed'     => ['Breed','breed'],
+                'legacy_id' => ['Pet ID','pet_id','Legacy ID','legacy_id'],
+                'onboarding_date' => ['Onboarding Date','onboarding_date'],
+            ];
 
-            // ── Required fields ────────────────────────────────────────────────
-            // Legacy schema uses "Phone Number"; internal aliases also accepted.
+            $col_analysis = $this->analyse_headers($headers, $column_groups);
+
+            $missing_required = [];
+            foreach ( ['phone','name'] as $req ) {
+                if ( !$col_analysis[$req]['found'] ) {
+                    $missing_required[] = $req . ' (searched: ' . implode(', ', $col_analysis[$req]['searched']) . ')';
+                }
+            }
+
+            $header_diagnostics = [
+                'headers_detected'    => $headers,
+                'header_count'        => count($headers),
+                'column_analysis'     => $col_analysis,
+                'missing_required'    => $missing_required,
+                'branch_codes_in_db'  => array_keys($branch_map),
+            ];
+        }
+
+        // ── Row-by-row processing ─────────────────────────────────────────────
+        foreach ( $rows as $i => $row ) {
+            $row_num = $i + 2; // 1-based + header row offset
+
+            // ── Required: phone ───────────────────────────────────────────────
             $phone = $this->col($row, [
                 'Phone Number', 'phone number', 'Phone', 'phone', 'Mobile', 'mobile',
             ]);
+            if ( !$phone ) {
+                $msg = "Row $row_num: missing phone number (searched: Phone Number, Phone, Mobile)";
+                $errors[] = $msg;
+                if ( $dry && count($skipped_rows) < 50 ) {
+                    $skipped_rows[] = [
+                        'row'    => $row_num,
+                        'reason' => 'missing_phone',
+                        'detail' => 'No value found in any phone column alias. Columns present: ' . implode(', ', array_keys(array_filter($row, fn($v)=>trim($v)!==''))),
+                    ];
+                }
+                $skip_reasons['missing_phone']++;
+                $skipped++; continue;
+            }
+
+            // ── Required: name ────────────────────────────────────────────────
             $name = $this->col($row, [
                 'Name', 'name', 'Client Name', 'client_name', 'Full Name', 'full_name',
             ]);
-
-            if( !$phone ){
-                $errors[] = "Row $row_num: missing phone number (looked for: Phone Number, Phone, Mobile)";
+            if ( !$name ) {
+                $msg = "Row $row_num: missing name";
+                $errors[] = $msg;
+                if ( $dry && count($skipped_rows) < 50 ) {
+                    $skipped_rows[] = [
+                        'row'    => $row_num,
+                        'reason' => 'missing_name',
+                        'detail' => "Phone $phone has no name value in any name column alias.",
+                    ];
+                }
+                $skip_reasons['missing_name']++;
                 $skipped++; continue;
             }
-            if( !$name ){
-                $errors[] = "Row $row_num: missing name";
-                $skipped++; continue;
-            }
 
-            // ── Branch resolution ───────────────────────────────────────────────
+            // ── Branch resolution ─────────────────────────────────────────────
             $branch_code = $this->col($row, [
                 'Home Outlet', 'home_outlet', 'Branch', 'branch', 'Home Branch',
             ], 'H2');
-            if( !isset($branch_map[$branch_code]) ){
-                $errors[] = "Row $row_num: branch code '$branch_code' not found (available: ".implode(', ',array_keys($branch_map)).")";
+            if ( !isset($branch_map[$branch_code]) ) {
+                $msg = "Row $row_num: branch code '$branch_code' not found in DB (available: " . implode(', ', array_keys($branch_map)) . ")";
+                $errors[] = $msg;
+                if ( $dry && count($skipped_rows) < 50 ) {
+                    $skipped_rows[] = [
+                        'row'    => $row_num,
+                        'reason' => 'branch_not_found',
+                        'detail' => "Branch code '$branch_code' is not in the active branch table. Available codes: " . implode(', ', array_keys($branch_map)),
+                    ];
+                }
+                $skip_reasons['branch_not_found']++;
                 $skipped++; continue;
             }
             $branch_id = (int)$branch_map[$branch_code]->id;
 
-            // ── Duplicate check ─────────────────────────────────────────────────
+            // ── Duplicate check ───────────────────────────────────────────────
             $existing = (int)$wpdb->get_var($wpdb->prepare(
                 "SELECT id FROM {$wpdb->prefix}opb_clients WHERE phone=%s", $phone
             ));
-            if( $existing ){ $skipped++; continue; }
+            if ( $existing ) {
+                // Record duplicate reason in dry-run (was a silent skip before)
+                if ( $dry ) {
+                    $errors[] = "Row $row_num: duplicate — phone $phone already exists as client #$existing";
+                    if ( count($skipped_rows) < 50 ) {
+                        $skipped_rows[] = [
+                            'row'    => $row_num,
+                            'reason' => 'duplicate',
+                            'detail' => "Phone $phone already exists in opb_clients as record ID $existing. Name in CSV: $name.",
+                        ];
+                    }
+                }
+                $skip_reasons['duplicate']++;
+                $skipped++; continue;
+            }
 
-            if( !$dry ){
+            // ── Insert (live run only) ─────────────────────────────────────────
+            if ( !$dry ) {
                 $legacy_id = $this->col($row, ['Pet ID','pet_id','Legacy ID','legacy_id']);
 
                 $wpdb->insert("{$wpdb->prefix}opb_clients",[
@@ -206,11 +333,10 @@ class OPB_Import_API extends OPB_REST_Base {
                 ]);
                 $client_id = (int)$wpdb->insert_id;
 
-                // ── Primary pet ─────────────────────────────────────────────────
+                // ── Primary pet ────────────────────────────────────────────────
                 $pet_name = $this->col($row, ['Pet Name','pet_name']);
-                if( $pet_name && $client_id ){
+                if ( $pet_name && $client_id ) {
                     $pet_type = $this->col($row,['Pet Type','pet_type'],'Dog');
-                    // Normalise pet type to match ENUM('Dog','Cat','Other')
                     $pet_type = match(strtolower($pet_type)){
                         'dog'   => 'Dog',
                         'cat'   => 'Cat',
@@ -236,13 +362,27 @@ class OPB_Import_API extends OPB_REST_Base {
             $imported++;
         }
 
-        return [
-            'imported'  => $imported,
-            'skipped'   => $skipped,
-            'errors'    => array_slice($errors, 0, 50),
-            'total'     => count($rows),
-            'dry_run'   => $dry,
+        // ── Build response ─────────────────────────────────────────────────────
+        $response = [
+            'imported'     => $imported,
+            'skipped'      => $skipped,
+            'errors'       => array_slice($errors, 0, 50),
+            'total'        => count($rows),
+            'dry_run'      => $dry,
         ];
+
+        if ( $dry ) {
+            $response['diagnostics'] = [
+                'headers'      => $header_diagnostics,
+                'skip_reasons' => $skip_reasons,
+                'skipped_rows' => $skipped_rows,   // first 50 with structured reason + detail
+                'note'         => count($skipped_rows) < $skipped
+                    ? 'skipped_rows shows first ' . count($skipped_rows) . ' of ' . $skipped . ' skipped rows'
+                    : 'all skipped rows shown',
+            ];
+        }
+
+        return $response;
     }
 
     private function import_bookings( array $rows, bool $dry ): array {
