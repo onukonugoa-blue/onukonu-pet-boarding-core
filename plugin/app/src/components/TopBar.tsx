@@ -1,4 +1,10 @@
+import { useState, useEffect } from 'react'
 import BranchSelector from './BranchSelector'
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>
+  readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+}
 
 interface Props { onMenuToggle: () => void }
 
@@ -6,8 +12,32 @@ export default function TopBar({ onMenuToggle }: Props) {
   const user      = window.OPB?.user
   const logoutUrl = window.OPB?.logoutUrl ?? '/wp-login.php?action=logout'
 
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [installed, setInstalled]         = useState(false)
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault()
+      setInstallPrompt(e as BeforeInstallPromptEvent)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    window.addEventListener('appinstalled', () => setInstalled(true))
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  async function handleInstall() {
+    if (!installPrompt) return
+    await installPrompt.prompt()
+    const { outcome } = await installPrompt.userChoice
+    if (outcome === 'accepted') setInstalled(true)
+    setInstallPrompt(null)
+  }
+
   return (
-    <header className="bg-blue-900 text-white h-12 flex items-center px-4 gap-3 shrink-0 shadow-md z-20">
+    <header
+      className="bg-blue-900 text-white flex items-center px-4 gap-3 shrink-0 shadow-md z-20"
+      style={{ paddingTop: 'env(safe-area-inset-top)', minHeight: '3rem' }}
+    >
       <button
         onClick={onMenuToggle}
         className="lg:hidden p-1 rounded hover:bg-blue-700"
@@ -30,6 +60,19 @@ export default function TopBar({ onMenuToggle }: Props) {
       </div>
 
       <BranchSelector />
+
+      {installPrompt && !installed && (
+        <button
+          onClick={handleInstall}
+          title="Install app"
+          className="flex items-center gap-1.5 text-xs text-blue-200 hover:text-white bg-blue-700 hover:bg-blue-600 rounded px-2 py-1 transition-colors shrink-0"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          <span className="hidden sm:inline">Install</span>
+        </button>
+      )}
 
       <div className="flex items-center gap-3 text-sm text-blue-200">
         <div className="flex items-center gap-1.5">

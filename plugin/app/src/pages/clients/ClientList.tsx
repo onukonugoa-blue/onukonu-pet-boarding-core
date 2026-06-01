@@ -55,40 +55,81 @@ export default function ClientList() {
       </div>
 
       <div className="card">
-        <div className="table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Phone</th>
-                <th>Email</th>
-                <th>Branch</th>
-                <th>Pets</th>
-                <th>Wallet</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-100">
-              {loading ? (
-                <tr><td colSpan={8} className="text-center py-8 text-gray-400">Loading…</td></tr>
-              ) : clients.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-8 text-gray-400">No clients found</td></tr>
-              ) : clients.map((c) => (
-                <tr key={c.id} className="cursor-pointer" onClick={() => navigate(`/clients/${c.id}`)}>
-                  <td className="font-medium text-blue-600 hover:underline">{c.name}</td>
-                  <td>{c.phone}</td>
-                  <td>{c.email ?? '—'}</td>
-                  <td>{c.branch_code ?? '—'}</td>
-                  <td>{c.pet_count ?? 0}</td>
-                  <td>{c.wallet_balance !== 0 ? fmt.inr(c.wallet_balance) : '—'}</td>
-                  <td><span className={c.status === 'active' ? 'badge-green' : 'badge-gray'}>{c.status}</span></td>
-                  <td><Link to={`/clients/${c.id}`} className="text-blue-600 hover:underline text-xs">View</Link></td>
-                </tr>
+        {/* ── Mobile card list ── */}
+        <div className="block md:hidden">
+          {loading ? (
+            <div className="py-10 text-center text-gray-400 text-sm">Loading…</div>
+          ) : clients.length === 0 ? (
+            <div className="py-10 text-center text-gray-400 text-sm">No clients found</div>
+          ) : (
+            <div className="mobile-card-list">
+              {clients.map((c) => (
+                <div key={c.id} className="mobile-card-item">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="mobile-card-title">{c.name}</p>
+                      <p className="mobile-card-sub">{c.phone}</p>
+                      {c.email && <p className="mobile-card-sub">{c.email}</p>}
+                    </div>
+                    <span className={`shrink-0 ${c.status === 'active' ? 'badge-green' : 'badge-gray'} badge`}>{c.status}</span>
+                  </div>
+                  <div className="mobile-card-meta">
+                    {c.branch_code && (
+                      <span className="text-xs text-gray-500 bg-gray-100 rounded px-1.5 py-0.5">{c.branch_code}</span>
+                    )}
+                    <span className="text-xs text-gray-500">{c.pet_count ?? 0} pet{(c.pet_count ?? 0) !== 1 ? 's' : ''}</span>
+                    {c.wallet_balance !== 0 && (
+                      <span className="text-xs text-gray-500">Wallet: {fmt.inr(c.wallet_balance)}</span>
+                    )}
+                  </div>
+                  <div className="mobile-card-actions">
+                    <Link to={`/clients/${c.id}`} className="btn btn-primary btn-sm flex-1 justify-center">View</Link>
+                    <Link to={`/clients/${c.id}/edit`} className="btn btn-secondary btn-sm flex-1 justify-center">Edit</Link>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          )}
         </div>
+
+        {/* ── Desktop table ── */}
+        <div className="hidden md:block">
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Email</th>
+                  <th>Branch</th>
+                  <th>Pets</th>
+                  <th>Wallet</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {loading ? (
+                  <tr><td colSpan={8} className="text-center py-8 text-gray-400">Loading…</td></tr>
+                ) : clients.length === 0 ? (
+                  <tr><td colSpan={8} className="text-center py-8 text-gray-400">No clients found</td></tr>
+                ) : clients.map((c) => (
+                  <tr key={c.id} className="cursor-pointer" onClick={() => navigate(`/clients/${c.id}`)}>
+                    <td className="font-medium text-blue-600 hover:underline whitespace-nowrap">{c.name}</td>
+                    <td className="whitespace-nowrap">{c.phone}</td>
+                    <td className="whitespace-nowrap">{c.email ?? '—'}</td>
+                    <td className="whitespace-nowrap">{c.branch_code ?? '—'}</td>
+                    <td>{c.pet_count ?? 0}</td>
+                    <td className="whitespace-nowrap">{c.wallet_balance !== 0 ? fmt.inr(c.wallet_balance) : '—'}</td>
+                    <td><span className={c.status === 'active' ? 'badge-green' : 'badge-gray'}>{c.status}</span></td>
+                    <td><Link to={`/clients/${c.id}`} className="text-blue-600 hover:underline text-xs">View</Link></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <Pagination page={page} totalPages={totalPages} total={total} perPage={perPage} onPage={(p) => { setPage(p); load(p) }} />
       </div>
     </div>

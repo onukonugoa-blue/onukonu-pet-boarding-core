@@ -35,11 +35,12 @@
   #opb-root .badge-gray   { @apply bg-gray-100 text-gray-700; }
   #opb-root .badge-orange { @apply bg-orange-100 text-orange-800; }
 
+  /* Desktop table — horizontal scroll only when truly needed; no forced nowrap */
   #opb-root .table-container { @apply overflow-x-auto rounded-lg border border-gray-200; }
   #opb-root .data-table  { @apply min-w-full divide-y divide-gray-200; }
   #opb-root .data-table thead tr { @apply bg-gray-50; }
   #opb-root .data-table th { @apply px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider; }
-  #opb-root .data-table td { @apply px-4 py-3 text-sm text-gray-700 whitespace-nowrap; }
+  #opb-root .data-table td { @apply px-4 py-3 text-sm text-gray-700; }
   #opb-root .data-table tbody tr { @apply hover:bg-gray-50 transition-colors; }
   #opb-root .data-table tbody tr:not(:last-child) { @apply border-b border-gray-100; }
 
@@ -69,4 +70,12 @@
 
   #opb-root .empty-state     { @apply flex flex-col items-center justify-center py-16 text-center text-gray-400; }
   #opb-root .empty-state svg { @apply w-12 h-12 mb-3; }
+
+  /* Mobile card list — used by list pages on small screens */
+  #opb-root .mobile-card-list  { @apply divide-y divide-gray-100; }
+  #opb-root .mobile-card-item  { @apply p-4 bg-white hover:bg-gray-50 transition-colors; }
+  #opb-root .mobile-card-title { @apply text-sm font-semibold text-gray-900 truncate; }
+  #opb-root .mobile-card-sub   { @apply text-xs text-gray-500 mt-0.5 truncate; }
+  #opb-root .mobile-card-meta  { @apply flex items-center gap-2 mt-2 flex-wrap; }
+  #opb-root .mobile-card-actions { @apply flex items-center gap-2 mt-3 pt-2 border-t border-gray-100; }
 }

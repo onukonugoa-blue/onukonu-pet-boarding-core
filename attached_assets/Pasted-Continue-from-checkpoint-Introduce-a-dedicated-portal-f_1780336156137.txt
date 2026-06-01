@@ -1,0 +1,182 @@
+Continue from checkpoint:
+
+"Introduce a dedicated portal for staff with enhanced PWA features"
+
+Current state:
+
+- Legacy migration complete
+- 685 clients
+- 685 pets
+- 1914 bookings
+- 1895 invoices
+- 1710 payments
+- 437 expenses
+- 54 services
+- 17 addons
+
+Operational workflow validated:
+
+Client
+→ Pet
+→ Booking
+→ Check-In
+→ Check-Out
+→ Invoice
+→ Payment
+
+Portal implementation exists.
+
+PWA implementation exists.
+
+We are NOT redesigning the application.
+
+We are NOT implementing offline sync.
+
+We are NOT introducing IndexedDB.
+
+We are NOT introducing local persistence.
+
+We are NOT introducing sync queues.
+
+WordPress remains the backend, authentication provider, user manager, and API platform.
+
+Goal:
+
+Refine the portal and mobile experience.
+
+Observed issues:
+
+1. Some portal pages appear vertically constrained.
+2. Some screens use nested scrollbars.
+3. Client listing requires horizontal scrolling to access final columns.
+4. Mobile UX remains desktop-table oriented.
+5. PWA experience feels like a desktop application compressed into a phone screen.
+
+Audit first.
+
+Do not immediately code.
+
+Determine:
+
+A. Layout Issues
+
+Inspect:
+
+- App.tsx
+- Layout.tsx
+- PortalLayout.tsx
+- Sidebar.tsx
+- TopBar.tsx
+
+Look for:
+
+- overflow-hidden
+- nested scroll regions
+- fixed-height wrappers
+- h-screen
+- min-h-screen
+- max-height constraints
+- content containers that create internal scrolling
+
+Goal:
+
+Single natural page scroll.
+
+No nested vertical scrolling regions.
+
+B. Data Presentation
+
+Audit:
+
+- Clients
+- Bookings
+- Invoices
+- Payments
+
+Current issue:
+
+Desktop tables are being rendered on mobile.
+
+Requirements:
+
+Desktop:
+
+- retain table view
+
+Mobile:
+
+- responsive card view
+- no horizontal scrolling
+- primary actions directly accessible
+
+Example:
+
+Client Card
+
+Owner Name
+Phone
+Email
+Branch
+Pet Count
+
+[View]
+[Edit]
+
+instead of 10-column tables.
+
+C. Portal Experience
+
+Verify:
+
+- Portal route
+- Login flow
+- Logout flow
+- Role-aware navigation
+- Branch-aware navigation
+
+D. PWA Experience
+
+Verify:
+
+- manifest.json
+- service worker
+- installability
+
+Confirm:
+
+- no offline booking creation
+- no offline invoice creation
+- no local database
+- no sync engine
+
+PWA is only:
+
+- installable
+- branded
+- standalone
+- mobile friendly
+
+Acceptance Criteria:
+
+1. Staff can comfortably operate from a phone.
+2. No horizontal scrolling on core screens.
+3. No nested vertical scrollbars.
+4. Natural mobile navigation.
+5. Portal feels like a dedicated application rather than wp-admin.
+6. WordPress remains completely backend-driven.
+
+Before coding:
+
+Provide:
+
+- root-cause analysis
+- affected files
+- implementation plan
+
+Then implement.
+
+After implementation:
+
+Build ZIP.
+Provide commit hash.
+Provide summary of UX improvements.

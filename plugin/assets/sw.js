@@ -11,7 +11,7 @@
  * A hard refresh or plugin update bumps the version and purges stale caches.
  */
 
-const CACHE_VERSION  = 'opb-1.2.0';
+const CACHE_VERSION  = 'opb-1.3.0';
 const ASSET_ORIGIN   = self.location.origin;
 const ASSET_PATTERNS = [
     /\/wp-content\/plugins\/onukonu-pet-boarding-core\/assets\//,

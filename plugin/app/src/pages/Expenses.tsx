@@ -87,28 +87,69 @@ export default function Expenses() {
       </div>
 
       <div className="card">
-        <div className="table-container">
-          <table className="data-table">
-            <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Mode</th><th>Branch</th><th>Amount</th><th></th></tr></thead>
-            <tbody className="bg-white divide-y divide-gray-100">
-              {loading ? (
-                <tr><td colSpan={7} className="text-center py-8 text-gray-400">Loading…</td></tr>
-              ) : expenses.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-8 text-gray-400">No expenses found</td></tr>
-              ) : expenses.map((e) => (
-                <tr key={e.id}>
-                  <td>{fmt.date(e.expense_at)}</td>
-                  <td>{e.description}</td>
-                  <td><span className="badge-gray">{e.category}</span></td>
-                  <td>{e.mode}</td>
-                  <td>{e.branch_name}</td>
-                  <td className="font-medium">{fmt.inr(e.amount)}</td>
-                  <td><button onClick={() => handleDelete(e.id)} className="text-red-500 hover:underline text-xs">Delete</button></td>
-                </tr>
+        {/* ── Mobile card list ── */}
+        <div className="block md:hidden">
+          {loading ? (
+            <div className="py-10 text-center text-gray-400 text-sm">Loading…</div>
+          ) : expenses.length === 0 ? (
+            <div className="py-10 text-center text-gray-400 text-sm">No expenses found</div>
+          ) : (
+            <div className="mobile-card-list">
+              {expenses.map((e) => (
+                <div key={e.id} className="mobile-card-item">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="mobile-card-title">{e.description}</p>
+                      <p className="mobile-card-sub">{fmt.date(e.expense_at)} · {e.mode}</p>
+                    </div>
+                    <span className="shrink-0 font-semibold text-sm text-gray-800">{fmt.inr(e.amount)}</span>
+                  </div>
+                  <div className="mobile-card-meta">
+                    <span className="badge badge-gray">{e.category}</span>
+                    {e.branch_name && (
+                      <span className="text-xs text-gray-500 bg-gray-100 rounded px-1.5 py-0.5">{e.branch_name}</span>
+                    )}
+                  </div>
+                  <div className="mobile-card-actions">
+                    <button
+                      onClick={() => handleDelete(e.id)}
+                      className="btn btn-danger btn-sm flex-1 justify-center"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          )}
         </div>
+
+        {/* ── Desktop table ── */}
+        <div className="hidden md:block">
+          <div className="table-container">
+            <table className="data-table">
+              <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Mode</th><th>Branch</th><th>Amount</th><th></th></tr></thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {loading ? (
+                  <tr><td colSpan={7} className="text-center py-8 text-gray-400">Loading…</td></tr>
+                ) : expenses.length === 0 ? (
+                  <tr><td colSpan={7} className="text-center py-8 text-gray-400">No expenses found</td></tr>
+                ) : expenses.map((e) => (
+                  <tr key={e.id}>
+                    <td className="whitespace-nowrap">{fmt.date(e.expense_at)}</td>
+                    <td>{e.description}</td>
+                    <td><span className="badge-gray">{e.category}</span></td>
+                    <td>{e.mode}</td>
+                    <td className="whitespace-nowrap">{e.branch_name}</td>
+                    <td className="font-medium whitespace-nowrap">{fmt.inr(e.amount)}</td>
+                    <td><button onClick={() => handleDelete(e.id)} className="text-red-500 hover:underline text-xs">Delete</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <Pagination page={page} totalPages={totalPages} total={total} perPage={perPage} onPage={(p) => { setPage(p); load(p) }} />
       </div>
 

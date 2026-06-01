@@ -151,6 +151,13 @@ class OPB_Portal {
   *, *::before, *::after { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; height: 100%; background: #1e3a5f; overflow: hidden; }
   #opb-root { height: 100%; }
+  /* Safe-area insets for notch/home-indicator devices */
+  :root {
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+  }
 </style>
 </head>
 <body>
