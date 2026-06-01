@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="72" fill="#1e3a5f"/>
+  <!-- Top-left toe -->
+  <ellipse cx="164" cy="202" rx="46" ry="56" fill="#ffffff" transform="rotate(-15 164 202)"/>
+  <!-- Top-right toe -->
+  <ellipse cx="348" cy="202" rx="46" ry="56" fill="#ffffff" transform="rotate(15 348 202)"/>
+  <!-- Mid-left toe -->
+  <ellipse cx="224" cy="165" rx="40" ry="50" fill="#ffffff" transform="rotate(-5 224 165)"/>
+  <!-- Mid-right toe -->
+  <ellipse cx="288" cy="165" rx="40" ry="50" fill="#ffffff" transform="rotate(5 288 165)"/>
+  <!-- Central pad -->
+  <ellipse cx="256" cy="326" rx="96" ry="78" fill="#ffffff"/>
+</svg>

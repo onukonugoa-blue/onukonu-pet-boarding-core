@@ -77,15 +77,18 @@ class OPB_Admin_Page {
             wp_enqueue_style( 'opb-app-style', $dist . $css_file, [], OPB_VERSION );
         }
 
+        $user = wp_get_current_user();
+
         wp_localize_script( 'opb-app', 'OPB', [
-            'apiBase'  => rest_url( 'opb/v1' ),
-            'nonce'    => wp_create_nonce( 'wp_rest' ),
-            'adminUrl' => admin_url( 'admin.php' ),
-            'user'     => [
-                'id'       => get_current_user_id(),
-                'name'     => wp_get_current_user()->display_name,
-                'roles'    => wp_get_current_user()->roles,
-                'branchId' => (int) get_user_meta( get_current_user_id(), 'opb_branch_id', true ),
+            'apiBase'   => rest_url( 'opb/v1' ),
+            'nonce'     => wp_create_nonce( 'wp_rest' ),
+            'adminUrl'  => admin_url( 'admin.php' ),
+            'logoutUrl' => wp_logout_url( admin_url() ),
+            'user'      => [
+                'id'       => $user->ID,
+                'name'     => $user->display_name,
+                'roles'    => $user->roles,
+                'branchId' => (int) get_user_meta( $user->ID, 'opb_branch_id', true ),
             ],
         ] );
     }

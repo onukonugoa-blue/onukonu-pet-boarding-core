@@ -4,6 +4,7 @@ declare global {
       apiBase: string
       nonce: string
       adminUrl: string
+      logoutUrl: string
       user: { id: number; name: string; roles: string[]; branchId: number }
     }
   }
