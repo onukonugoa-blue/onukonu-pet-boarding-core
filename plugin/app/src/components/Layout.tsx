@@ -13,8 +13,16 @@ export default function Layout({ children }: Props) {
       <TopBar onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-4 lg:p-5 pb-20 md:pb-5">
+        <main className="flex-1 overflow-y-auto bg-gray-50 p-4 lg:p-5">
           {children}
+          {/* Clearance spacer — keeps content above the fixed BottomNav on mobile.
+              Height = BottomNav visual height (4rem/64px) + device safe-area-inset-bottom.
+              Must be a runtime calc(); a Tailwind pb-* class cannot express env(). */}
+          <div
+            className="md:hidden"
+            style={{ height: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}
+            aria-hidden="true"
+          />
         </main>
       </div>
       <BottomNav />
