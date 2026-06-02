@@ -9,11 +9,11 @@ export default function Layout({ children }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col h-dvh overflow-hidden">
       <TopBar onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0">
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-4 lg:p-5">
+        <main className="flex-1 min-h-0 overflow-y-auto bg-gray-50 p-4 lg:p-5">
           {children}
           {/* Clearance spacer — keeps content above the fixed BottomNav on mobile.
               Height = BottomNav visual height (4rem/64px) + device safe-area-inset-bottom.
