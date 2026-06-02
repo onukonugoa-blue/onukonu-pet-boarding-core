@@ -136,4 +136,9 @@ export const bookingsApi = {
     const q = new URLSearchParams(params as Record<string,string>).toString()
     return api.get<KennelBoard>(`/kennel-board${q?'?'+q:''}`)
   },
+  assignKennel: (stayId: number, kennelId: number | null) =>
+    api.post<{ stay_id: number; kennel_id: number | null; kennel: string | null }>(
+      `/stays/${stayId}/assign-kennel`,
+      { kennel_id: kennelId }
+    ),
 }

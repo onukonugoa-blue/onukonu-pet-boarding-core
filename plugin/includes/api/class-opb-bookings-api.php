@@ -23,6 +23,9 @@ class OPB_Bookings_API extends OPB_REST_Base {
         register_rest_route( $this->namespace, '/kennel-board', [
             [ 'methods' => 'GET', 'callback' => [ $this, 'kennel_board' ], 'permission_callback' => [ $this, 'permission_check' ] ],
         ]);
+        register_rest_route( $this->namespace, '/stays/(?P<stay_id>\d+)/assign-kennel', [
+            [ 'methods' => 'POST', 'callback' => [ $this, 'assign_kennel' ], 'permission_callback' => fn($r)=>$this->permission_manage('opb_manage_bookings',$r) ],
+        ]);
     }
 
     public function get_items( $r ) {
@@ -300,6 +303,41 @@ class OPB_Bookings_API extends OPB_REST_Base {
         $inv_id = (int)$wpdb->get_var($wpdb->prepare("SELECT id FROM {$wpdb->prefix}opb_invoices WHERE booking_id=%d",$id));
         if($inv_id) OPB_Invoice_Generator::recalculate($inv_id);
         return $this->get_item($r);
+    }
+
+    public function assign_kennel( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+        $check = $this->permission_manage('opb_manage_bookings',$r); if(is_wp_error($check)) return $check;
+        global $wpdb;
+
+        $stay_id  = (int)$r['stay_id'];
+        $d        = $r->get_json_params();
+        $kennel_id = isset($d['kennel_id']) && $d['kennel_id'] !== null && $d['kennel_id'] !== '' ? (int)$d['kennel_id'] : null;
+
+        // Verify stay exists and is assignable (not completed / no show)
+        $stay = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, status FROM {$wpdb->prefix}opb_booking_stays WHERE id=%d", $stay_id
+        ), ARRAY_A);
+        if (!$stay) return $this->error('not_found','Stay not found',404);
+        if (in_array($stay['status'], ['Completed','No show'])) {
+            return $this->error('invalid','Cannot assign kennel to a completed or no-show stay');
+        }
+
+        $update = ['kennel_id' => $kennel_id, 'kennel' => null];
+        if ($kennel_id) {
+            $kennel_row = $wpdb->get_row($wpdb->prepare(
+                "SELECT code FROM {$wpdb->prefix}opb_kennels WHERE id=%d AND is_active=1", $kennel_id
+            ), ARRAY_A);
+            if (!$kennel_row) return $this->error('not_found','Kennel not found or inactive',404);
+            $update['kennel'] = $kennel_row['code'];
+        }
+
+        $wpdb->update("{$wpdb->prefix}opb_booking_stays", $update, ['id' => $stay_id]);
+
+        return $this->success([
+            'stay_id'   => $stay_id,
+            'kennel_id' => $kennel_id,
+            'kennel'    => $update['kennel'],
+        ]);
     }
 
     public function kennel_board( WP_REST_Request $r ): WP_REST_Response|WP_Error {
