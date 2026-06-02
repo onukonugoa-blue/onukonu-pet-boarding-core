@@ -1,130 +1,234 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { kennelsApi } from '../api/kennels'
+import type { Kennel } from '../api/kennels'
+import { branchesApi } from '../api/branches'
+import type { Branch } from '../store/branch'
 import { bookingsApi } from '../api/bookings'
-import type { KennelBoard, BookingStay } from '../api/bookings'
+import type { BookingStay } from '../api/bookings'
 import { useBranchStore } from '../store/branch'
 
+interface OccupiedInfo {
+  stay_id: number
+  booking_id: number
+  pet_name: string
+  pet_type: string
+  client_name: string
+  check_in_date: string
+  check_out_date: string
+  status: string
+}
+
+const STATUS_ORDER = ['Available', 'Occupied', 'Maintenance', 'Blocked'] as const
+
+const STATUS_STYLES: Record<string, { section: string; badge: string; dot: string }> = {
+  Available:   { section: 'border-green-200 bg-green-50',  badge: 'bg-green-100 text-green-800 border-green-200',  dot: 'bg-green-500' },
+  Occupied:    { section: 'border-blue-200 bg-blue-50',    badge: 'bg-blue-100 text-blue-800 border-blue-200',     dot: 'bg-blue-500' },
+  Maintenance: { section: 'border-yellow-200 bg-yellow-50',badge: 'bg-yellow-100 text-yellow-800 border-yellow-200',dot: 'bg-yellow-500' },
+  Blocked:     { section: 'border-red-200 bg-red-50',      badge: 'bg-red-100 text-red-800 border-red-200',        dot: 'bg-red-500' },
+}
+
 export default function OccupancyBoard() {
-  const [board, setBoard] = useState<KennelBoard | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [from, setFrom] = useState(() => new Date().toISOString().slice(0, 10))
-  const [to, setTo] = useState(() => {
-    const d = new Date(); d.setDate(d.getDate() + 13); return d.toISOString().slice(0, 10)
-  })
+  const [kennels, setKennels]           = useState<Kennel[]>([])
+  const [occupancy, setOccupancy]       = useState<Record<number, OccupiedInfo>>({})
+  const [unassigned, setUnassigned]     = useState<BookingStay[]>([])
+  const [branches, setBranches]         = useState<Branch[]>([])
+  const [loading, setLoading]           = useState(true)
+  const [selectedBranch, setSelectedBranch] = useState<number | null>(null)
   const activeBranchId = useBranchStore((s) => s.activeBranchId)
 
-  const load = () => {
+  const today = new Date().toISOString().slice(0, 10)
+
+  const load = async (branchId: number | null) => {
     setLoading(true)
-    const params: Record<string, unknown> = { from, to }
-    if (activeBranchId) params.branch_id = activeBranchId
-    bookingsApi.kennelBoard(params)
-      .then(setBoard)
-      .catch(console.error)
-      .finally(() => setLoading(false))
+    try {
+      const [ks, bs, board] = await Promise.all([
+        kennelsApi.list(branchId ?? undefined, true),
+        branchesApi.list(),
+        bookingsApi.kennelBoard({ from: today, to: today, ...(branchId ? { branch_id: branchId } : {}) }),
+      ])
+      setKennels(ks)
+      setBranches(bs)
+
+      // Build kennel_id → stay occupancy map from today's active/upcoming stays
+      const occ: Record<number, OccupiedInfo> = {}
+      const unasgn: BookingStay[] = []
+      ;(board.stays ?? []).forEach((s: BookingStay) => {
+        if (s.status === 'Completed' || s.status === 'No show') return
+        if (s.kennel_id) {
+          occ[s.kennel_id] = {
+            stay_id:       s.id,
+            booking_id:    s.booking_id,
+            pet_name:      s.pet_name ?? '',
+            pet_type:      s.pet_type ?? '',
+            client_name:   s.client_name ?? '',
+            check_in_date: s.check_in_date,
+            check_out_date:s.check_out_date,
+            status:        s.status,
+          }
+        } else {
+          unasgn.push(s)
+        }
+      })
+      setOccupancy(occ)
+      setUnassigned(unasgn)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  useEffect(load, [activeBranchId])
+  useEffect(() => {
+    const bid = activeBranchId ?? null
+    setSelectedBranch(bid)
+    load(bid)
+  }, [activeBranchId])
 
-  // Group stays by kennel/pet
-  const staysByKennel = (board?.stays ?? []).reduce<Record<string, BookingStay[]>>((acc, s) => {
-    const key = s.kennel || `Pet:${s.pet_name ?? s.pet_id}`
-    acc[key] = acc[key] ?? []
-    acc[key].push(s)
+  const grouped = STATUS_ORDER.reduce<Record<string, Kennel[]>>((acc, s) => {
+    acc[s] = kennels.filter((k) => {
+      if (s === 'Occupied') return occupancy[k.id] !== undefined
+      if (s === 'Available') return k.status === 'Available' && !occupancy[k.id]
+      return k.status === s
+    })
     return acc
-  }, {})
+  }, {} as Record<string, Kennel[]>)
 
-  const kennels = Object.keys(staysByKennel).sort()
-  const days = board?.days ?? []
+  const displayBranches = selectedBranch
+    ? branches.filter((b) => b.id === selectedBranch)
+    : branches
 
-  const isOccupied = (stay: BookingStay, day: string) =>
-    day >= stay.check_in_date && day <= stay.check_out_date
-
-  const statusColor: Record<string, string> = {
-    Active: 'bg-green-200 text-green-900 border-green-300',
-    Upcoming: 'bg-blue-200 text-blue-900 border-blue-300',
-    Completed: 'bg-gray-100 text-gray-500 border-gray-200',
-    'No show': 'bg-red-100 text-red-700 border-red-200',
-  }
+  if (loading) return <div className="flex items-center justify-center py-20 text-gray-400">Loading board…</div>
 
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Kennel / Occupancy Board</h1>
-      </div>
-
-      <div className="card mb-4">
-        <div className="flex flex-wrap gap-2 items-end">
-          <div className="form-group mb-0">
-            <label className="form-label">From</label>
-            <input className="form-input w-36" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-          </div>
-          <div className="form-group mb-0">
-            <label className="form-label">To</label>
-            <input className="form-input w-36" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          </div>
-          <button onClick={load} className="btn-primary">Load</button>
+        <div>
+          <h1 className="page-title">Kennel Board</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Today — {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => load(selectedBranch)} className="btn-secondary text-sm">↻ Refresh</button>
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-16 text-gray-400">Loading board…</div>
-      ) : !board || days.length === 0 ? (
-        <div className="empty-state"><span>🏠</span><p>No stays in this date range</p></div>
+      {/* Summary strip */}
+      <div className="flex flex-wrap gap-3 mb-5">
+        {STATUS_ORDER.map((s) => {
+          const st = STATUS_STYLES[s]
+          return (
+            <div key={s} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium ${st.section}`}>
+              <span className={`w-2 h-2 rounded-full ${st.dot}`} />
+              <span className={`${st.badge.split(' ').slice(1).join(' ')}`}>{s}</span>
+              <span className="font-bold">{grouped[s].length}</span>
+            </div>
+          )
+        })}
+        {unassigned.length > 0 && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-600">
+            <span className="w-2 h-2 rounded-full bg-gray-400" />
+            Unassigned stays
+            <span className="font-bold">{unassigned.length}</span>
+          </div>
+        )}
+      </div>
+
+      {kennels.length === 0 ? (
+        <div className="empty-state">
+          <span>🏠</span>
+          <p>No kennels configured yet.</p>
+          <p className="text-sm text-gray-400 mt-1">Go to Settings → Kennels to add kennel units.</p>
+        </div>
       ) : (
-        <div className="card overflow-x-auto">
-          <table className="border-collapse text-xs min-w-max">
-            <thead>
-              <tr>
-                <th className="sticky left-0 bg-white border border-gray-200 px-2 py-1 text-left text-xs font-semibold text-gray-600 min-w-[100px] z-10">Kennel / Pet</th>
-                {days.map((d) => {
-                  const dt = new Date(d)
-                  const isToday = d === new Date().toISOString().slice(0, 10)
-                  return (
-                    <th key={d} className={`border border-gray-200 px-1 py-1 text-center font-normal min-w-[36px] ${isToday ? 'bg-yellow-50 font-bold' : 'bg-gray-50'}`}>
-                      <div>{dt.getDate()}</div>
-                      <div className="text-gray-400">{dt.toLocaleDateString('en',{weekday:'narrow'})}</div>
-                    </th>
-                  )
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {kennels.map((kennel) => (
-                <tr key={kennel}>
-                  <td className="sticky left-0 bg-white border border-gray-200 px-2 py-1 font-medium text-gray-700 z-10">{kennel}</td>
-                  {days.map((day) => {
-                    const occupyingStay = staysByKennel[kennel].find((s) => isOccupied(s, day))
-                    if (occupyingStay) {
-                      const isStart = day === occupyingStay.check_in_date
-                      const isEnd   = day === occupyingStay.check_out_date
-                      return (
-                        <td key={day} className="border border-gray-200 p-0">
-                          <Link
-                            to={`/bookings/${occupyingStay.booking_id}`}
-                            className={`block h-7 px-1 leading-7 ${statusColor[occupyingStay.status] ?? 'bg-gray-200'} ${isStart ? 'rounded-l-sm' : ''} ${isEnd ? 'rounded-r-sm' : ''} truncate`}
-                            title={`${occupyingStay.pet_name} (${occupyingStay.status})`}
-                          >
-                            {isStart ? occupyingStay.pet_name?.split(' ')[0] : ''}
-                          </Link>
-                        </td>
-                      )
-                    }
-                    return <td key={day} className="border border-gray-200 h-7" />
+        <div className="space-y-5">
+          {STATUS_ORDER.map((status) => {
+            const items = grouped[status]
+            if (items.length === 0) return null
+            const st = STATUS_STYLES[status]
+            return (
+              <div key={status}>
+                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${st.dot}`} />
+                  {status}
+                  <span className="text-gray-400 font-normal normal-case">({items.length})</span>
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                  {items.map((k) => {
+                    const occ = occupancy[k.id]
+                    return (
+                      <div
+                        key={k.id}
+                        className={`rounded-lg border-2 p-3 ${st.section} flex flex-col gap-1`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono font-bold text-gray-900">{k.code}</span>
+                          {occ && (
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full border font-medium ${
+                              occ.status === 'Active' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-blue-100 text-blue-800 border-blue-200'
+                            }`}>
+                              {occ.status}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-600 truncate">{k.name}</div>
+                        {occ ? (
+                          <div className="mt-1 pt-1 border-t border-current border-opacity-20">
+                            <Link
+                              to={`/bookings/${occ.booking_id}`}
+                              className="font-semibold text-sm text-blue-700 hover:underline block truncate"
+                            >
+                              {occ.pet_name}
+                            </Link>
+                            <div className="text-xs text-gray-500 truncate">{occ.client_name}</div>
+                            <div className="text-xs text-gray-400 mt-0.5">
+                              {occ.check_in_date} → {occ.check_out_date}
+                            </div>
+                          </div>
+                        ) : (
+                          status === 'Available' && (
+                            <div className="mt-1 text-xs text-green-600 font-medium">Free</div>
+                          )
+                        )}
+                        {k.notes && (
+                          <div className="text-xs text-gray-400 italic truncate mt-0.5" title={k.notes}>{k.notes}</div>
+                        )}
+                      </div>
+                    )
                   })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 
-      {board && (
-        <div className="flex gap-4 mt-3 text-xs text-gray-500">
-          {Object.entries(statusColor).map(([s, c]) => (
-            <span key={s} className="flex items-center gap-1">
-              <span className={`inline-block w-3 h-3 rounded-sm border ${c}`}></span>{s}
-            </span>
-          ))}
+      {/* Unassigned stays */}
+      {unassigned.length > 0 && (
+        <div className="mt-6">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-gray-400" />
+            Unassigned Stays
+            <span className="text-gray-400 font-normal normal-case">({unassigned.length})</span>
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {unassigned.map((s) => (
+              <div key={s.id} className="rounded-lg border border-gray-200 bg-white p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <Link to={`/bookings/${s.booking_id}`} className="font-semibold text-blue-700 hover:underline">
+                    {s.pet_name}
+                  </Link>
+                  <span className="text-xs text-gray-500">{s.status}</span>
+                </div>
+                <div className="text-xs text-gray-500">{s.client_name}</div>
+                <div className="text-xs text-gray-400 mt-0.5">{s.check_in_date} → {s.check_out_date}</div>
+                <div className="mt-2">
+                  <Link to={`/bookings/${s.booking_id}/checkin`} className="text-xs text-blue-600 hover:underline">
+                    Assign kennel →
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

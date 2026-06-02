@@ -22,6 +22,9 @@ export interface BookingStay {
   weight_at_checkout?: number
   meal_type?: string
   kennel?: string
+  kennel_id?: number
+  client_name?: string
+  client_phone?: string
   final_amount?: number
   late_checkout_fees?: number
   companion_name?: string

@@ -208,6 +208,7 @@ class OPB_Activator {
             weight_at_checkout    DECIMAL(5,2),
             meal_type             ENUM('BOARDING_MEALS','PARENT_SUPPLIED_MEAL'),
             kennel                VARCHAR(50),
+            kennel_id             INT UNSIGNED,
             final_amount          DECIMAL(10,2),
             late_checkout_fees    DECIMAL(10,2) NOT NULL DEFAULT 0.00,
             refund_amount         DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -329,6 +330,23 @@ class OPB_Activator {
             KEY idx_status (status)
         ) ENGINE=InnoDB $charset;";
 
+        $tables[] = "CREATE TABLE {$wpdb->prefix}opb_kennels (
+            id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            branch_id    TINYINT UNSIGNED NOT NULL,
+            code         VARCHAR(20)  NOT NULL,
+            name         VARCHAR(100) NOT NULL,
+            status       ENUM('Available','Occupied','Maintenance','Blocked') NOT NULL DEFAULT 'Available',
+            notes        TEXT,
+            sort_order   SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+            is_active    TINYINT(1)   NOT NULL DEFAULT 1,
+            created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uq_branch_kennel_code (branch_id, code),
+            KEY idx_branch (branch_id),
+            KEY idx_status (status)
+        ) ENGINE=InnoDB $charset;";
+
         $tables[] = "CREATE TABLE {$wpdb->prefix}opb_expenses (
             id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
             branch_id       TINYINT UNSIGNED NOT NULL,
@@ -348,6 +366,12 @@ class OPB_Activator {
         foreach ( $tables as $sql ) {
             dbDelta( $sql );
         }
+
+        // Add kennel_id column to existing booking_stays tables (idempotent)
+        $wpdb->query(
+            "ALTER TABLE {$wpdb->prefix}opb_booking_stays
+             ADD COLUMN IF NOT EXISTS kennel_id INT UNSIGNED NULL AFTER kennel"
+        );
 
         update_option( 'opb_db_version', OPB_VERSION );
     }

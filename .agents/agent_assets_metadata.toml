@@ -66,3 +66,9 @@ id = "bZdEqRMGUxdXKeQOsw_Xj"
 uri = "file://onukonu-pet-boarding-core-MILESTONE-v1.3.0-operational-portal-prebeta.zip"
 type = "unspecified"
 title = "onukonu-pet-boarding-core-MILESTONE-v1.3.0-operational-portal-prebeta.zip"
+
+[[outputs]]
+id = "5ii1UkVuG_McRwVvRiKPE"
+uri = "file://onukonu-pet-boarding-core-v1.4.0.zip"
+type = "unspecified"
+title = "onukonu-pet-boarding-core-v1.4.0.zip"

@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom'
 
 const sections = [
-  { to: '/settings/branches',  icon: '🏠', title: 'Branches',        desc: 'Manage boarding locations and contact info' },
+  { to: '/settings/branches',  icon: '🏠', title: 'Branches',          desc: 'Manage boarding locations and contact info' },
+  { to: '/settings/kennels',   icon: '🐾', title: 'Kennels',           desc: 'Configure kennel units per branch, status and ordering' },
   { to: '/settings/boarding',  icon: '🛏', title: 'Boarding Catalogue', desc: 'Configure pricing for overnight and day stays' },
-  { to: '/settings/addons',    icon: '➕', title: 'Add-on Services',  desc: 'Grooming, transport, vet visits, extras' },
-  { to: '/settings/staff',     icon: '👤', title: 'Staff & Roles',    desc: 'Assign roles and branch access to users' },
+  { to: '/settings/addons',    icon: '➕', title: 'Add-on Services',   desc: 'Grooming, transport, vet visits, extras' },
+  { to: '/settings/staff',     icon: '👤', title: 'Staff & Roles',     desc: 'Assign roles and branch access to users' },
 ]
 
 export default function Settings() {

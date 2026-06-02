@@ -215,16 +215,30 @@ class OPB_Bookings_API extends OPB_REST_Base {
         $stay_id = $stay_id ?: ($stay['id']??0);
         if(!$stay_id) return $this->error('invalid','No upcoming stay found');
 
-        $wpdb->update("{$wpdb->prefix}opb_booking_stays",[
-            'status'           => 'Active',
-            'actual_check_in_at'=> sanitize_text_field($d['actual_check_in_at']??current_time('Y-m-d H:i:s')),
-            'weight_at_checkin' => isset($d['weight_at_checkin'])?(float)$d['weight_at_checkin']:null,
-            'kennel'            => sanitize_text_field($d['kennel']??''),
-            'meal_type'         => sanitize_text_field($d['meal_type']??'PARENT_SUPPLIED_MEAL'),
-            'companion_name'    => sanitize_text_field($d['companion_name']??''),
-            'companion_phone'   => sanitize_text_field($d['companion_phone']??''),
-            'notes'             => sanitize_textarea_field($d['notes']??''),
-        ],['id'=>$stay_id]);
+        $update_data = [
+            'status'             => 'Active',
+            'actual_check_in_at' => sanitize_text_field($d['actual_check_in_at']??current_time('Y-m-d H:i:s')),
+            'weight_at_checkin'  => isset($d['weight_at_checkin'])?(float)$d['weight_at_checkin']:null,
+            'meal_type'          => sanitize_text_field($d['meal_type']??'PARENT_SUPPLIED_MEAL'),
+            'companion_name'     => sanitize_text_field($d['companion_name']??''),
+            'companion_phone'    => sanitize_text_field($d['companion_phone']??''),
+            'notes'              => sanitize_textarea_field($d['notes']??''),
+        ];
+        // Support kennel assignment via kennel_id (structured) or legacy free-text kennel
+        if (!empty($d['kennel_id'])) {
+            $kennel_row = $wpdb->get_row($wpdb->prepare(
+                "SELECT code, name FROM {$wpdb->prefix}opb_kennels WHERE id=%d AND is_active=1",
+                (int)$d['kennel_id']
+            ), ARRAY_A);
+            if ($kennel_row) {
+                $update_data['kennel_id'] = (int)$d['kennel_id'];
+                $update_data['kennel']    = $kennel_row['code'];
+            }
+        } elseif (isset($d['kennel'])) {
+            $update_data['kennel']    = sanitize_text_field($d['kennel']);
+            $update_data['kennel_id'] = null;
+        }
+        $wpdb->update("{$wpdb->prefix}opb_booking_stays", $update_data, ['id'=>$stay_id]);
 
         return $this->get_item($r);
     }
@@ -301,7 +315,7 @@ class OPB_Bookings_API extends OPB_REST_Base {
         if($branch_id){ $b_sql=' AND bk.branch_id=%d'; $args[]=$branch_id; }
 
         $stays = $wpdb->get_results($wpdb->prepare(
-            "SELECT bs.id, bs.kennel, bs.status, bs.check_in_date, bs.check_out_date,
+            "SELECT bs.id, bs.kennel, bs.kennel_id, bs.status, bs.check_in_date, bs.check_out_date,
                     bs.actual_check_in_at, bs.actual_check_out_at,
                     p.name as pet_name, p.breed, p.pet_type,
                     c.name as client_name, c.phone as client_phone,
