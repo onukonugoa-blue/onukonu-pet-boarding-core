@@ -301,13 +301,13 @@ export default function Reports() {
                 <h2 className="font-semibold text-gray-900">Expenses by Category</h2>
               </div>
               <DonutChart
-                data={data.expenses_by_category.map(e => ({ label: e.category, value: e.total }))}
+                data={data.expenses_by_category.map(e => ({ label: e.category ?? 'Uncategorised', value: Number(e.total) }))}
                 height={160}
               />
               <div className="mt-2 divide-y divide-gray-100">
-                {data.expenses_by_category.map(e => (
-                  <div key={e.category} className="flex justify-between py-1.5 text-sm">
-                    <span className="text-gray-700">{e.category}</span>
+                {data.expenses_by_category.map((e, i) => (
+                  <div key={e.category ?? i} className="flex justify-between py-1.5 text-sm">
+                    <span className="text-gray-700">{e.category ?? 'Uncategorised'}</span>
                     <span className="font-medium text-gray-900">{fmt.inr(e.total)}</span>
                   </div>
                 ))}
@@ -327,9 +327,9 @@ export default function Reports() {
                 height={160}
               />
               <div className="mt-2 divide-y divide-gray-100">
-                {data.revenue_by_branch.map(b => (
-                  <div key={b.branch} className="flex justify-between py-1.5 text-sm">
-                    <span className="text-gray-700">{b.branch}</span>
+                {data.revenue_by_branch.map((b, i) => (
+                  <div key={b.branch ?? i} className="flex justify-between py-1.5 text-sm">
+                    <span className="text-gray-700">{b.branch ?? '—'}</span>
                     <div className="text-right">
                       <span className="font-medium text-gray-900">{fmt.inr(b.revenue)}</span>
                       {b.outstanding > 0 && (

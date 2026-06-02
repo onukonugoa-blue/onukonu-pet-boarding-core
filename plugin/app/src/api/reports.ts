@@ -15,12 +15,12 @@ export interface RevDay {
 }
 
 export interface ExpCategory {
-  category: string
+  category: string | null
   total: number
 }
 
 export interface RevBranch {
-  branch: string
+  branch: string | null
   revenue: number
   outstanding: number
 }

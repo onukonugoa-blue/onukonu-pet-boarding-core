@@ -62,7 +62,7 @@ class OPB_Reports_API extends OPB_REST_Base {
                     COALESCE(SUM(e.amount),0) as total
              FROM {$wpdb->prefix}opb_expenses e
              WHERE DATE(e.expense_at) >= %s AND DATE(e.expense_at) <= %s $exp_w
-             GROUP BY category
+             GROUP BY COALESCE(NULLIF(e.category,''),'Uncategorised')
              ORDER BY total DESC",
             $from, $to
         ), ARRAY_A);
@@ -70,13 +70,13 @@ class OPB_Reports_API extends OPB_REST_Base {
 
         // ── Revenue by branch ─────────────────────────────────────────────────
         $revenue_by_branch = $wpdb->get_results($wpdb->prepare(
-            "SELECT b.name as branch,
+            "SELECT COALESCE(b.name,'Unknown Branch') as branch,
                     COALESCE(SUM(i.revenue),0) as revenue,
                     COALESCE(SUM(i.due),0) as outstanding
              FROM {$wpdb->prefix}opb_invoices i
              LEFT JOIN {$wpdb->prefix}opb_branches b ON b.id=i.branch_id
              WHERE i.invoice_date >= %s AND i.invoice_date <= %s
-             GROUP BY i.branch_id, b.name
+             GROUP BY i.branch_id, COALESCE(b.name,'Unknown Branch')
              ORDER BY revenue DESC",
             $from, $to
         ), ARRAY_A);
