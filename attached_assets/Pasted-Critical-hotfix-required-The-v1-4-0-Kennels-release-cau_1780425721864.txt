@@ -1,0 +1,108 @@
+Critical hotfix required.
+
+The v1.4.0 Kennels release causes a PHP fatal error on plugin activation.
+
+Error:
+
+Fatal error:
+
+Declaration of OPB_Kennels_API::get_items(
+WP_REST_Request $r
+): WP_REST_Response|WP_Error
+
+must be compatible with
+
+WP_REST_Controller::get_items($request)
+
+Root Cause
+
+The new Kennels API controller introduces PHP type hints and/or return types that are incompatible with the WordPress REST controller inheritance chain.
+
+WordPress core REST controller methods must maintain signature compatibility.
+
+This is a framework compatibility issue, not a kennel feature issue.
+
+Required Actions
+
+Audit the entire controller:
+
+class-opb-kennels-api.php
+
+Review all public methods that override or mirror WordPress REST controller methods.
+
+Specifically inspect:
+
+* get_items()
+* get_item()
+* create_item()
+* update_item()
+* delete_item()
+* prepare_item_for_response()
+* prepare_item_for_database()
+* get_collection_params()
+* get_item_schema()
+
+Compare every method signature against the parent class.
+
+Requirements
+
+1. Remove incompatible parameter type declarations.
+2. Remove incompatible return type declarations.
+3. Ensure full compatibility with:
+
+   * WordPress core
+   * PHP 8.x
+   * Existing plugin architecture
+
+Do NOT patch only get_items().
+
+Perform a complete inheritance audit.
+
+Search all newly added API controllers for the same issue:
+
+* class-opb-kennels-api.php
+* kennel-board endpoints
+* any new REST controllers introduced in v1.4.0
+
+Search for:
+
+WP_REST_Request
+WP_REST_Response
+WP_Error
+union return types
+typed parameters
+typed returns
+
+and validate every override.
+
+Additional Validation
+
+After patching:
+
+1. Activate plugin on a clean WordPress instance.
+2. Confirm no PHP fatal errors.
+3. Confirm REST routes register successfully.
+4. Confirm:
+
+   * Settings → Kennels loads
+   * Kennel CRUD works
+   * Kennel Board loads
+   * Check-In kennel assignment works
+
+Deliverables
+
+* Root cause summary
+* Files changed
+* Methods corrected
+* Production ZIP
+* Updated version number (v1.4.1)
+
+This is a stabilization release.
+
+Do not add features.
+
+Do not modify database design.
+
+Do not modify kennel workflow.
+
+Fix framework compatibility only and produce a clean production build.

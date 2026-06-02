@@ -15,16 +15,17 @@ class OPB_Kennels_API extends OPB_REST_Base {
         ]);
     }
 
-    public function get_items( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    // No type hint on $r, no return type — must be compatible with WP_REST_Controller::get_items($request)
+    public function get_items( $r ) {
         $check = $this->permission_check($r); if(is_wp_error($check)) return $check;
         global $wpdb;
 
-        $branch_id  = $this->branch_filter((int)($r->get_param('branch_id') ?? 0));
+        $branch_id   = $this->branch_filter((int)($r->get_param('branch_id') ?? 0));
         $active_only = (bool)($r->get_param('active_only') ?? false);
 
         $where = ['1=1']; $args = [];
-        if ($branch_id) { $where[] = 'k.branch_id=%d'; $args[] = $branch_id; }
-        if ($active_only) { $where[] = 'k.is_active=1'; }
+        if ($branch_id)  { $where[] = 'k.branch_id=%d'; $args[] = $branch_id; }
+        if ($active_only){ $where[] = 'k.is_active=1'; }
         $where_sql = implode(' AND ', $where);
 
         $sql = "SELECT k.*, b.code as branch_code, b.name as branch_name
@@ -40,7 +41,8 @@ class OPB_Kennels_API extends OPB_REST_Base {
         return $this->success($rows);
     }
 
-    public function create_item( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    // No type hint on $r, no return type — must be compatible with WP_REST_Controller::create_item($request)
+    public function create_item( $r ) {
         $check = $this->permission_manage('opb_manage_settings', $r); if(is_wp_error($check)) return $check;
         global $wpdb;
         $d = $r->get_json_params();
@@ -76,7 +78,8 @@ class OPB_Kennels_API extends OPB_REST_Base {
         return $this->success($this->fetch_kennel($new_id), 201);
     }
 
-    public function update_item( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    // No type hint on $r, no return type — must be compatible with WP_REST_Controller::update_item($request)
+    public function update_item( $r ) {
         $check = $this->permission_manage('opb_manage_settings', $r); if(is_wp_error($check)) return $check;
         global $wpdb;
         $d  = $r->get_json_params();
@@ -87,7 +90,6 @@ class OPB_Kennels_API extends OPB_REST_Base {
         ), ARRAY_A);
         if (!$existing) return $this->error('not_found', 'Kennel not found', 404);
 
-        // Check code uniqueness if code is being changed
         if (isset($d['code']) && $d['code'] !== $existing['code']) {
             $conflict = $wpdb->get_var($wpdb->prepare(
                 "SELECT id FROM {$wpdb->prefix}opb_kennels WHERE branch_id=%d AND code=%s AND id!=%d",
@@ -108,7 +110,8 @@ class OPB_Kennels_API extends OPB_REST_Base {
         return $this->success($this->fetch_kennel($id));
     }
 
-    public function delete_item( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    // No type hint on $r, no return type — must be compatible with WP_REST_Controller::delete_item($request)
+    public function delete_item( $r ) {
         $check = $this->permission_manage('opb_manage_settings', $r); if(is_wp_error($check)) return $check;
         global $wpdb;
         $id = (int)$r['id'];
@@ -116,13 +119,14 @@ class OPB_Kennels_API extends OPB_REST_Base {
         return $this->success(['disabled' => true]);
     }
 
+    // Custom method — not overriding WP_REST_Controller, typed signature is fine
     public function reorder( WP_REST_Request $r ): WP_REST_Response|WP_Error {
         $check = $this->permission_manage('opb_manage_settings', $r); if(is_wp_error($check)) return $check;
         global $wpdb;
         $d = $r->get_json_params();
-        // Expects: [{ id: 1, sort_order: 0 }, { id: 2, sort_order: 1 }, ...]
         foreach ((array)($d['items'] ?? []) as $item) {
-            $wpdb->update("{$wpdb->prefix}opb_kennels",
+            $wpdb->update(
+                "{$wpdb->prefix}opb_kennels",
                 ['sort_order' => (int)$item['sort_order']],
                 ['id'         => (int)$item['id']]
             );
