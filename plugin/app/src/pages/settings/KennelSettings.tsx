@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { kennelsApi } from '../../api/kennels'
-import type { Kennel } from '../../api/kennels'
+import type { Kennel, KennelStaffOption } from '../../api/kennels'
 import { branchesApi } from '../../api/branches'
 import type { Branch } from '../../store/branch'
 import Modal from '../../components/Modal'
@@ -24,20 +24,21 @@ interface FormState {
 const EMPTY_FORM: FormState = { branch_id: '', code: '', name: '', status: 'Available', notes: '' }
 
 export default function KennelSettings() {
-  const [kennels, setKennels]     = useState<Kennel[]>([])
-  const [branches, setBranches]   = useState<Branch[]>([])
-  const [loading, setLoading]     = useState(true)
-  const [saving, setSaving]       = useState(false)
-  const [error, setError]         = useState('')
-  const [showModal, setShowModal] = useState(false)
-  const [editing, setEditing]     = useState<Kennel | null>(null)
-  const [form, setForm]           = useState<FormState>(EMPTY_FORM)
+  const [kennels, setKennels]           = useState<Kennel[]>([])
+  const [branches, setBranches]         = useState<Branch[]>([])
+  const [staffOptions, setStaffOptions] = useState<KennelStaffOption[]>([])
+  const [loading, setLoading]           = useState(true)
+  const [saving, setSaving]             = useState(false)
+  const [error, setError]               = useState('')
+  const [showModal, setShowModal]       = useState(false)
+  const [editing, setEditing]           = useState<Kennel | null>(null)
+  const [form, setForm]                 = useState<FormState>(EMPTY_FORM)
   const [showDisabled, setShowDisabled] = useState(false)
 
   const load = () => {
     setLoading(true)
-    Promise.all([kennelsApi.list(undefined, false), branchesApi.list()])
-      .then(([ks, bs]) => { setKennels(ks); setBranches(bs) })
+    Promise.all([kennelsApi.list(undefined, false), branchesApi.list(), kennelsApi.staffOptions()])
+      .then(([ks, bs, opts]) => { setKennels(ks); setBranches(bs); setStaffOptions(opts) })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
   }
@@ -93,6 +94,19 @@ export default function KennelSettings() {
     load()
   }
 
+  const handleStaffChange = async (k: Kennel, wpUserId: number | null) => {
+    try {
+      if (wpUserId) {
+        await kennelsApi.assignStaff(k.id, wpUserId)
+      } else {
+        await kennelsApi.removeStaff(k.id)
+      }
+      load()
+    } catch (e: any) {
+      setError(e.message ?? 'Staff assignment failed')
+    }
+  }
+
   const handleMoveUp = async (k: Kennel, branchKennels: Kennel[]) => {
     const idx = branchKennels.findIndex((x) => x.id === k.id)
     if (idx === 0) return
@@ -115,6 +129,9 @@ export default function KennelSettings() {
     load()
   }
 
+  const canAssignStaff = (k: Kennel) =>
+    k.is_active && k.status !== 'Maintenance' && k.status !== 'Blocked'
+
   const visibleKennels = kennels.filter((k) => showDisabled ? true : k.is_active)
 
   const grouped = branches.reduce<Record<number, { branch: Branch; items: Kennel[] }>>((acc, b) => {
@@ -129,7 +146,7 @@ export default function KennelSettings() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Kennels</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage kennel units by branch</p>
+          <p className="text-sm text-gray-500 mt-1">Manage kennel units and staff assignments by branch</p>
         </div>
         <div className="flex gap-2 items-center">
           <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
@@ -160,6 +177,7 @@ export default function KennelSettings() {
                     <th className="text-left py-2 px-2 text-xs font-semibold text-gray-500 w-20">Code</th>
                     <th className="text-left py-2 px-2 text-xs font-semibold text-gray-500">Name</th>
                     <th className="text-left py-2 px-2 text-xs font-semibold text-gray-500 w-36">Status</th>
+                    <th className="text-left py-2 px-2 text-xs font-semibold text-gray-500 w-36">Staff</th>
                     <th className="text-left py-2 px-2 text-xs font-semibold text-gray-500">Notes</th>
                     <th className="text-right py-2 px-2 text-xs font-semibold text-gray-500 w-32">Order</th>
                     <th className="text-right py-2 px-2 text-xs font-semibold text-gray-500 w-28">Actions</th>
@@ -179,6 +197,24 @@ export default function KennelSettings() {
                         >
                           {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
                         </select>
+                      </td>
+                      <td className="py-2 px-2">
+                        {canAssignStaff(k) ? (
+                          <select
+                            value={k.assigned_staff_id != null ? String(k.assigned_staff_id) : ''}
+                            onChange={(e) => handleStaffChange(k, e.target.value ? Number(e.target.value) : null)}
+                            className="text-xs form-input py-1 w-full"
+                          >
+                            <option value="">— Unassigned —</option>
+                            {staffOptions.map((s) => (
+                              <option key={s.id} value={String(s.id)}>{s.name}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">
+                            {k.status === 'Maintenance' || k.status === 'Blocked' ? k.status : '—'}
+                          </span>
+                        )}
                       </td>
                       <td className="py-2 px-2 text-gray-500 text-xs">{k.notes || '—'}</td>
                       <td className="py-2 px-2 text-right">

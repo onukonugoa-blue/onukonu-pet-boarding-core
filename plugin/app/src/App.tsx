@@ -13,6 +13,7 @@ import BookingCreate from './pages/bookings/BookingCreate'
 import CheckIn from './pages/bookings/CheckIn'
 import CheckOut from './pages/bookings/CheckOut'
 import OccupancyBoard from './pages/OccupancyBoard'
+import LinearOccupancy from './pages/LinearOccupancy'
 import InvoiceList from './pages/invoices/InvoiceList'
 import InvoiceDetail from './pages/invoices/InvoiceDetail'
 import Tasks from './pages/Tasks'
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="/bookings/:id/checkin"    element={<CheckIn />} />
         <Route path="/bookings/:id/checkout"   element={<CheckOut />} />
         <Route path="/kennel"                  element={<OccupancyBoard />} />
+        <Route path="/kennel/linear"           element={<LinearOccupancy />} />
         <Route path="/invoices"                element={<InvoiceList />} />
         <Route path="/invoices/:id"            element={<InvoiceDetail />} />
         <Route path="/tasks"                   element={<Tasks />} />

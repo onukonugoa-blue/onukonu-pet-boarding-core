@@ -1,0 +1,385 @@
+Project Context
+
+This is the Onukonu Pet Boarding Platform.
+
+Repository state is current GitHub HEAD.
+
+The application is operational and contains imported production data.
+
+Current working modules:
+
+* Branches
+* Clients
+* Pets
+* Bookings
+* Booking Stays
+* Check-In
+* Check-Out
+* Invoices
+* Payments
+* Expenses
+* Reports
+* Migration Engine
+* Staff Portal
+* Kennel Management
+* Kennel Assignment
+
+Current database contains approximately:
+
+* 3 branches
+* 685 clients
+* 685 pets
+* 1900+ bookings
+* 1800+ invoices
+* 1700+ payments
+* services and addons
+
+Important:
+
+Preserve all existing functionality.
+
+Do not redesign existing modules.
+
+Do not modify importer logic.
+
+Do not modify reports.
+
+Do not modify portal authentication.
+
+Do not modify role architecture.
+
+Do not remove existing kennel functionality.
+
+---
+
+## OBJECTIVE
+
+Implement a clean operational kennel management experience.
+
+This is NOT a hotel management system.
+
+This is NOT a forecasting engine.
+
+This is NOT a scheduling platform.
+
+This is a boarding facility operations tool.
+
+Primary operational questions:
+
+1. Which kennel is this pet occupying?
+2. Which kennels are free?
+3. Which kennels are unavailable?
+4. Which staff member is responsible for a kennel?
+5. Which kennels become available over the next few days?
+
+---
+
+## EXISTING MODEL
+
+Review the repository before proposing changes.
+
+Assume the repository already contains:
+
+opb_kennels
+
+and
+
+booking_stays.kennel_id
+
+Verify actual implementation first.
+
+---
+
+## SOURCE OF TRUTH
+
+Occupancy must be derived directly from:
+
+booking_stays
++
+kennel_id
++
+status
++
+check_in_date
++
+check_out_date
+
+Do NOT create:
+
+* occupancy tables
+* planner tables
+* reservation tables
+* analytics tables
+* utilisation tables
+* scheduling tables
+
+Do not duplicate occupancy information.
+
+The stay record remains the single source of truth.
+
+---
+
+## KENNEL STATES
+
+Administrative states:
+
+* Maintenance
+* Blocked
+
+Operational states:
+
+* Occupied
+* Available
+
+Occupied and Available should be derived from stay records.
+
+Do not maintain duplicate occupancy state if it can be calculated.
+
+---
+
+## STAFF ASSIGNMENT
+
+Add kennel responsibility assignment.
+
+Purpose:
+
+Operational accountability.
+
+Example:
+
+S1 → Rahul
+S2 → Rahul
+S3 → Neha
+
+Suggested table:
+
+opb_kennel_staff
+
+id
+kennel_id
+wp_user_id
+assigned_at
+created_at
+
+Requirements:
+
+* One active staff owner per kennel
+* Staff must be an existing WordPress user
+* Respect existing branch scoping
+* Branch managers should only assign within their branch
+
+Do NOT implement:
+
+* shift scheduling
+* rosters
+* attendance
+* workload balancing
+
+Simple ownership only.
+
+---
+
+## KENNEL BOARD
+
+Create a dedicated Kennel Board.
+
+Purpose:
+
+Immediate operational visibility.
+
+Grouped by:
+
+Occupied
+Available
+Maintenance
+Blocked
+
+Each kennel card should display:
+
+* Kennel code
+* Kennel name
+* Current pet (if occupied)
+* Assigned staff member (if assigned)
+* Current state
+
+Example:
+
+## Occupied
+
+S1
+Front Garden
+Bella
+Rahul
+
+S2
+AC Room 1
+Bruno
+Neha
+
+## Available
+
+S3
+Reception Side
+Rahul
+
+## Maintenance
+
+S4
+
+## Blocked
+
+S5
+
+Requirements:
+
+* Mobile-first
+* Fast visual scanning
+* Touch friendly
+* Branch aware
+
+---
+
+## LINEAR OCCUPANCY VIEW
+
+Create a second occupancy view.
+
+Purpose:
+
+Visualise kennel occupancy over a selected date range.
+
+This is NOT a planner.
+
+This is NOT a scheduling engine.
+
+This is NOT forecasting.
+
+It is only a visual representation of existing stay assignments.
+
+Data source:
+
+booking_stays
++
+kennel_id
++
+check_in_date
++
+check_out_date
+
+Example:
+
+Date Range
+
+Jun 03  Jun 04  Jun 05  Jun 06  Jun 07
+
+S1 | ███████████ Bella
+S2 |     ███████ Bruno
+S3 | Available
+S4 | Maintenance
+
+Requirements:
+
+* Date range selector
+* Branch aware
+* Kennels listed vertically
+* Date labels across the top
+* Stay bars drawn from check-in to check-out
+* Pet name shown on bar
+* Client name optional in tooltip/popover
+* Highlight current day
+
+Allowed:
+
+* Occupancy bars
+* Date range viewing
+* Visual inspection
+
+Not allowed:
+
+* Occupancy percentages
+* Available kennel-day calculations
+* Utilisation metrics
+* Forecasting
+* Drag and drop
+* Relocation planning
+* Reservation engine
+* Scheduling engine
+
+This is a visualisation layer only.
+
+---
+
+## BUSINESS RULES
+
+Maintenance kennels:
+
+Cannot receive assignments.
+
+Blocked kennels:
+
+Cannot receive assignments.
+
+Enforce in:
+
+* UI
+* REST API
+* Validation layer
+
+---
+
+## FUTURE EXTENSION POINTS
+
+Design cleanly for future:
+
+Kennel
+↓
+Staff
+↓
+Tasks
+
+Examples:
+
+* Feed
+* Walk
+* Medication
+* Cleaning
+
+Do NOT implement tasks now.
+
+Only leave clean extension points.
+
+---
+
+## DELIVERABLES
+
+Before coding:
+
+1. Review repository.
+2. Review current kennel implementation.
+3. Review current schema.
+4. Review current REST endpoints.
+5. Identify affected files.
+6. Provide implementation plan.
+
+Then implement:
+
+* Staff assignment
+* Kennel Board
+* Linear Occupancy View
+
+After implementation provide:
+
+* Schema changes
+* API changes
+* Changed files
+* Commit hash
+* Production ZIP
+
+Important:
+
+Keep the implementation operationally simple.
+
+Do not introduce planner architecture.
+
+Do not introduce occupancy analytics.
+
+Occupancy must always be derived from the existing stay-to-kennel relationship.

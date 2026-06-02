@@ -347,6 +347,17 @@ class OPB_Activator {
             KEY idx_status (status)
         ) ENGINE=InnoDB $charset;";
 
+        $tables[] = "CREATE TABLE {$wpdb->prefix}opb_kennel_staff (
+            id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            kennel_id    INT UNSIGNED NOT NULL,
+            wp_user_id   BIGINT UNSIGNED NOT NULL,
+            assigned_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uq_kennel (kennel_id),
+            KEY idx_user (wp_user_id)
+        ) ENGINE=InnoDB $charset;";
+
         $tables[] = "CREATE TABLE {$wpdb->prefix}opb_expenses (
             id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
             branch_id       TINYINT UNSIGNED NOT NULL,

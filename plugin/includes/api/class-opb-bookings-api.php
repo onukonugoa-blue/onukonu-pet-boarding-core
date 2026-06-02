@@ -325,9 +325,12 @@ class OPB_Bookings_API extends OPB_REST_Base {
         $update = ['kennel_id' => $kennel_id, 'kennel' => null];
         if ($kennel_id) {
             $kennel_row = $wpdb->get_row($wpdb->prepare(
-                "SELECT code FROM {$wpdb->prefix}opb_kennels WHERE id=%d AND is_active=1", $kennel_id
+                "SELECT code, status FROM {$wpdb->prefix}opb_kennels WHERE id=%d AND is_active=1", $kennel_id
             ), ARRAY_A);
             if (!$kennel_row) return $this->error('not_found','Kennel not found or inactive',404);
+            if (in_array($kennel_row['status'], ['Maintenance', 'Blocked'])) {
+                return $this->error('invalid', 'Cannot assign a Maintenance or Blocked kennel to a stay', 422);
+            }
             $update['kennel'] = $kennel_row['code'];
         }
 
