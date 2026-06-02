@@ -1,0 +1,363 @@
+Project Context
+
+This is a continuation of the Onukonu Pet Boarding Platform.
+
+Current milestone:
+
+Operational Portal Pre-Beta
+
+Validated and operational:
+
+* Clients
+* Pets
+* Bookings
+* Booking Stays
+* Invoices
+* Payments
+* Expenses
+* Reports
+* Migration Engine
+* Staff Portal
+
+Current database:
+
+* 3 branches
+* 685 clients
+* 685 pets
+* 1914 bookings
+* 1895 invoices
+* 1710 payments
+* 437 expenses
+* 54 services
+* 17 addons
+
+The next milestone is:
+
+KENNELS & OCCUPANCY
+
+This is now the highest priority subsystem.
+
+Do not work on:
+
+* PWA
+* Roles
+* Branch scoping
+* Customer portal
+* Commerce
+* Notifications
+
+Those are future milestones.
+
+Focus only on kennel management.
+
+---
+
+## DESIGN PRINCIPLES
+
+Keep this simple.
+
+Do NOT build:
+
+* accommodation categories
+* capacity planning
+* forecasting
+* occupancy analytics
+* kennel history reconstruction
+* legacy kennel migration
+* kennel scheduling algorithms
+
+We are not building a hotel engine.
+
+We are building operational kennel assignment.
+
+---
+
+## BUSINESS MODEL
+
+Branches already exist.
+
+Examples:
+
+H2 Succoro
+H3 Colvale
+H4
+
+Each branch contains kennel units.
+
+Example:
+
+H2
+S1
+S2
+S3
+...
+S20
+
+H3
+C1
+C2
+C3
+
+A kennel is a physical unit.
+
+Each kennel requires:
+
+* Branch
+* Code
+* Name
+* Status
+* Notes
+
+Examples:
+
+Code: S1
+Name: Front Garden
+
+Code: S2
+Name: Reception Side
+
+Code: S3
+Name: AC Room 1
+
+---
+
+## DATABASE DESIGN
+
+Create:
+
+opb_kennels
+
+Suggested fields:
+
+id
+branch_id
+code
+name
+status
+notes
+sort_order
+is_active
+created_at
+updated_at
+
+Status values:
+
+Available
+Occupied
+Maintenance
+Blocked
+
+Requirements:
+
+* code unique within branch
+* notes optional
+* sort_order supported
+* soft disable supported
+
+---
+
+## LEGACY DATA
+
+Important:
+
+Do NOT migrate historical kennel assignments.
+
+Do NOT preserve legacy kennel occupancy.
+
+Do NOT map old kennel values.
+
+Historical bookings remain valid without kennel assignments.
+
+Kennel management begins from go-live.
+
+Any existing:
+
+booking_stays.kennel
+
+legacy text values may be discarded.
+
+Keep historical data intact but do not attempt occupancy reconstruction.
+
+---
+
+## STAY WORKFLOW
+
+Current:
+
+Booking
+→ Stay
+
+Target:
+
+Booking
+→ Stay
+→ Kennel Assignment
+
+A stay may be assigned to a kennel.
+
+Replace free-text kennel usage with proper kennel linkage.
+
+Recommended:
+
+booking_stays.kennel_id
+
+linked to:
+
+opb_kennels.id
+
+---
+
+## OCCUPANCY
+
+Keep occupancy simple.
+
+Occupied:
+
+A kennel assigned to an active stay.
+
+Available:
+
+No active stay assigned.
+
+Maintenance:
+
+Unavailable for assignment.
+
+Blocked:
+
+Unavailable by management decision.
+
+No forecasting.
+
+No future occupancy engine.
+
+No capacity calculations.
+
+---
+
+## SETTINGS
+
+Add:
+
+Settings → Kennels
+
+Required:
+
+* List kennels by branch
+* Add kennel
+* Edit kennel
+* Disable kennel
+* Change status
+* Add notes
+* Reorder kennels
+
+Example:
+
+H2
+
+S1 Front Garden
+S2 Reception Side
+S3 AC Room 1
+
+---
+
+## KENNEL BOARD
+
+Add a simple operational kennel board.
+
+Display:
+
+Available
+Occupied
+Maintenance
+Blocked
+
+Example:
+
+## Available
+
+S1
+S2
+S4
+
+## Occupied
+
+S3 → Bella
+S5 → Bruno
+
+## Maintenance
+
+S6
+
+## Blocked
+
+S7
+
+Focus on usability.
+
+This is an operational board.
+
+Not analytics.
+
+---
+
+## STAFF
+
+Do NOT build staff assignment yet.
+
+However:
+
+Design clean extension points for future support.
+
+Future concept:
+
+Kennel
+→ Assigned Staff
+→ Tasks
+
+Examples:
+
+Feed
+Walk
+Medication
+Cleaning
+
+Leave architecture ready for this.
+
+Do not implement in this sprint.
+
+---
+
+## DELIVERABLES
+
+1. Schema review.
+2. Database migration.
+3. Kennel CRUD API.
+4. Kennel Settings page.
+5. Kennel assignment in stay workflow.
+6. Kennel Board page.
+7. Production build.
+8. Installable plugin ZIP.
+
+Before coding:
+
+Provide:
+
+* implementation plan
+* schema changes
+* affected files
+* migration strategy
+
+Confirm:
+
+* no impact on imported clients
+* no impact on imported pets
+* no impact on imported bookings
+* no impact on imported invoices
+* no impact on imported payments
+
+This is a kennel inventory and assignment upgrade.
+
+Keep it simple.
+Keep it operational.
+Avoid over-engineering.
