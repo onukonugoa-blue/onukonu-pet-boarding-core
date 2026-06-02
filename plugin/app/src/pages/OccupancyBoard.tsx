@@ -22,13 +22,13 @@ interface OccupiedInfo {
 const STATUS_ORDER = ['Available', 'Occupied', 'Maintenance', 'Blocked'] as const
 
 const STATUS_STYLES: Record<string, { section: string; dot: string; header: string }> = {
-  Available:   { section: 'border-green-200 bg-green-50',   dot: 'bg-green-500',  header: 'text-green-700' },
-  Occupied:    { section: 'border-blue-200 bg-blue-50',     dot: 'bg-blue-500',   header: 'text-blue-700'  },
-  Maintenance: { section: 'border-yellow-200 bg-yellow-50', dot: 'bg-yellow-500', header: 'text-yellow-700'},
-  Blocked:     { section: 'border-red-200 bg-red-50',       dot: 'bg-red-500',    header: 'text-red-700'   },
+  Available:   { section: 'border-green-200 bg-green-50',   dot: 'bg-green-500',  header: 'text-green-700'  },
+  Occupied:    { section: 'border-blue-200 bg-blue-50',     dot: 'bg-blue-500',   header: 'text-blue-700'   },
+  Maintenance: { section: 'border-yellow-200 bg-yellow-50', dot: 'bg-yellow-500', header: 'text-yellow-700' },
+  Blocked:     { section: 'border-red-200 bg-red-50',       dot: 'bg-red-500',    header: 'text-red-700'    },
 }
 
-// ── Quick-assign popover inside an available kennel card ──────────────────────
+// ── Quick-assign popover (available → stay) ───────────────────────────────────
 interface AssignPopoverProps {
   kennel: Kennel
   unassigned: BookingStay[]
@@ -41,7 +41,6 @@ function AssignPopover({ kennel, unassigned, onAssign, onClose }: AssignPopoverP
   const [saving, setSaving] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose()
@@ -53,11 +52,8 @@ function AssignPopover({ kennel, unassigned, onAssign, onClose }: AssignPopoverP
   const handleConfirm = async () => {
     if (!selected) return
     setSaving(true)
-    try {
-      await onAssign(Number(selected), kennel.id)
-    } finally {
-      setSaving(false)
-    }
+    try { await onAssign(Number(selected), kennel.id) }
+    finally { setSaving(false) }
   }
 
   return (
@@ -99,19 +95,64 @@ function AssignPopover({ kennel, unassigned, onAssign, onClose }: AssignPopoverP
   )
 }
 
+// ── Un-assign confirm inline (occupied card) ──────────────────────────────────
+interface UnassignConfirmProps {
+  onConfirm: () => void
+  onCancel: () => void
+  saving: boolean
+}
+
+function UnassignConfirm({ onConfirm, onCancel, saving }: UnassignConfirmProps) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onCancel()
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [onCancel])
+
+  return (
+    <div
+      ref={ref}
+      className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-red-300 rounded-lg shadow-lg p-3"
+    >
+      <p className="text-xs text-gray-700 mb-2">Remove this kennel assignment?</p>
+      <div className="flex gap-2">
+        <button
+          onClick={onConfirm}
+          disabled={saving}
+          className="flex-1 text-xs font-medium bg-red-600 hover:bg-red-700 text-white rounded px-2 py-1 transition-colors"
+        >
+          {saving ? 'Removing…' : 'Yes, un-assign'}
+        </button>
+        <button onClick={onCancel} className="btn-secondary text-xs py-1 px-2">Cancel</button>
+      </div>
+    </div>
+  )
+}
+
 // ── Main board ────────────────────────────────────────────────────────────────
 export default function OccupancyBoard() {
-  const [kennels, setKennels]           = useState<Kennel[]>([])
-  const [occupancy, setOccupancy]       = useState<Record<number, OccupiedInfo>>({})
-  const [unassigned, setUnassigned]     = useState<BookingStay[]>([])
-  const [branches, setBranches]         = useState<Branch[]>([])
-  const [loading, setLoading]           = useState(true)
-  const [assigningKennelId, setAssigningKennelId] = useState<number | null>(null)
-  const [assigningStayId, setAssigningStayId]     = useState<number | null>(null)
-  const [assigning, setAssigning]       = useState(false)
-  const [flashId, setFlashId]           = useState<number | null>(null)
-  const selectedBranch = useBranchStore((s) => s.activeBranchId) || null
+  const [kennels, setKennels]     = useState<Kennel[]>([])
+  const [occupancy, setOccupancy] = useState<Record<number, OccupiedInfo>>({})
+  const [unassigned, setUnassigned] = useState<BookingStay[]>([])
+  const [branches, setBranches]   = useState<Branch[]>([])
+  const [loading, setLoading]     = useState(true)
 
+  // Quick-assign state (available card)
+  const [assigningKennelId, setAssigningKennelId] = useState<number | null>(null)
+  // Un-assign state (occupied card)
+  const [unassigningKennelId, setUnassigningKennelId] = useState<number | null>(null)
+  const [unassignSaving, setUnassignSaving] = useState(false)
+  // Assign-from-stay (unassigned section)
+  const [assigningStayId, setAssigningStayId] = useState<number | null>(null)
+  const [assigningStay, setAssigningStay] = useState(false)
+  // Flash highlight on recently changed card
+  const [flashId, setFlashId] = useState<number | null>(null)
+
+  const selectedBranch = useBranchStore((s) => s.activeBranchId) || null
   const today = new Date().toISOString().slice(0, 10)
 
   const load = async (branchId: number | null) => {
@@ -152,27 +193,43 @@ export default function OccupancyBoard() {
 
   useEffect(() => { load(selectedBranch) }, [selectedBranch])
 
+  const flash = (kennelId: number) => {
+    setFlashId(kennelId)
+    setTimeout(() => setFlashId(null), 1500)
+  }
+
   // Quick-assign from kennel card
   const handleAssignFromKennel = async (stayId: number, kennelId: number) => {
     await bookingsApi.assignKennel(stayId, kennelId)
     setAssigningKennelId(null)
-    setFlashId(kennelId)
-    setTimeout(() => setFlashId(null), 1500)
+    flash(kennelId)
     load(selectedBranch)
   }
 
-  // Quick-assign from unassigned stay row
+  // Un-assign from occupied kennel card
+  const handleUnassign = async (kennelId: number, stayId: number) => {
+    setUnassignSaving(true)
+    try {
+      await bookingsApi.assignKennel(stayId, null)
+      setUnassigningKennelId(null)
+      flash(kennelId)
+      load(selectedBranch)
+    } finally {
+      setUnassignSaving(false)
+    }
+  }
+
+  // Assign from unassigned stay row
   const handleAssignFromStay = async (stayId: number, kennelId: number) => {
     if (!kennelId) return
     setAssigningStayId(stayId)
-    setAssigning(true)
+    setAssigningStay(true)
     try {
       await bookingsApi.assignKennel(stayId, kennelId)
-      setFlashId(kennelId)
-      setTimeout(() => setFlashId(null), 1500)
+      flash(kennelId)
       load(selectedBranch)
     } finally {
-      setAssigning(false)
+      setAssigningStay(false)
       setAssigningStayId(null)
     }
   }
@@ -205,9 +262,9 @@ export default function OccupancyBoard() {
       {/* Summary strip */}
       <div className="flex flex-wrap gap-3 mb-5">
         {STATUS_ORDER.map((s) => {
-          const st = STATUS_STYLES[s]
           const count = grouped[s].length
           if (count === 0) return null
+          const st = STATUS_STYLES[s]
           return (
             <div key={s} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium ${st.section}`}>
               <span className={`w-2 h-2 rounded-full ${st.dot}`} />
@@ -246,9 +303,11 @@ export default function OccupancyBoard() {
                 </h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                   {items.map((k) => {
-                    const occ = occupancy[k.id]
+                    const occ        = occupancy[k.id]
                     const isFlashing = flashId === k.id
-                    const isAssigning = assigningKennelId === k.id
+                    const isAssigning  = assigningKennelId === k.id
+                    const isUnassigning = unassigningKennelId === k.id
+
                     return (
                       <div
                         key={k.id}
@@ -256,7 +315,7 @@ export default function OccupancyBoard() {
                           ${isFlashing ? 'border-green-400 bg-green-100 scale-105 shadow-md' : st.section}
                         `}
                       >
-                        {/* Header row */}
+                        {/* Header */}
                         <div className="flex items-center justify-between">
                           <span className="font-mono font-bold text-gray-900 text-sm">{k.code}</span>
                           {occ && (
@@ -271,23 +330,32 @@ export default function OccupancyBoard() {
                         </div>
                         <div className="text-xs text-gray-500 truncate">{k.name}</div>
 
-                        {/* Occupied: show pet + client */}
+                        {/* Occupied */}
                         {occ && (
-                          <div className="mt-1 pt-1 border-t border-blue-200">
-                            <Link
-                              to={`/bookings/${occ.booking_id}`}
-                              className="font-semibold text-sm text-blue-700 hover:underline block truncate"
-                            >
-                              {occ.pet_name}
-                            </Link>
-                            <div className="text-xs text-gray-500 truncate">{occ.client_name}</div>
-                            <div className="text-xs text-gray-400 mt-0.5">
-                              {occ.check_in_date} → {occ.check_out_date}
+                          <>
+                            <div className="mt-1 pt-1 border-t border-blue-200">
+                              <Link
+                                to={`/bookings/${occ.booking_id}`}
+                                className="font-semibold text-sm text-blue-700 hover:underline block truncate"
+                              >
+                                {occ.pet_name}
+                              </Link>
+                              <div className="text-xs text-gray-500 truncate">{occ.client_name}</div>
+                              <div className="text-xs text-gray-400 mt-0.5">
+                                {occ.check_in_date} → {occ.check_out_date}
+                              </div>
                             </div>
-                          </div>
+                            {/* Un-assign button */}
+                            <button
+                              onClick={() => setUnassigningKennelId(isUnassigning ? null : k.id)}
+                              className="mt-1 w-full text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded px-2 py-0.5 transition-colors border border-transparent hover:border-red-200 text-left"
+                            >
+                              {isUnassigning ? 'Cancel' : '✕ Un-assign'}
+                            </button>
+                          </>
                         )}
 
-                        {/* Available: show assign button if unassigned stays exist */}
+                        {/* Available — assign button */}
                         {status === 'Available' && !occ && (
                           <div className="mt-1">
                             {unassigned.length > 0 ? (
@@ -304,7 +372,7 @@ export default function OccupancyBoard() {
                         )}
 
                         {k.notes && (
-                          <div className="text-xs text-gray-400 italic truncate" title={k.notes}>{k.notes}</div>
+                          <div className="text-xs text-gray-400 italic truncate mt-0.5" title={k.notes}>{k.notes}</div>
                         )}
 
                         {/* Assign popover */}
@@ -314,6 +382,15 @@ export default function OccupancyBoard() {
                             unassigned={unassigned}
                             onAssign={handleAssignFromKennel}
                             onClose={() => setAssigningKennelId(null)}
+                          />
+                        )}
+
+                        {/* Un-assign confirm */}
+                        {isUnassigning && occ && (
+                          <UnassignConfirm
+                            onConfirm={() => handleUnassign(k.id, occ.stay_id)}
+                            onCancel={() => setUnassigningKennelId(null)}
+                            saving={unassignSaving}
                           />
                         )}
                       </div>
@@ -349,14 +426,12 @@ export default function OccupancyBoard() {
                 </div>
                 <div className="text-xs text-gray-600">{s.client_name}</div>
                 <div className="text-xs text-gray-400 mt-0.5 mb-2">{s.check_in_date} → {s.check_out_date}</div>
-
-                {/* Inline kennel picker */}
                 {availableKennels.length > 0 ? (
                   <div className="flex gap-2 items-center">
                     <select
                       className="form-input text-xs flex-1 py-1"
                       defaultValue=""
-                      disabled={assigning && assigningStayId === s.id}
+                      disabled={assigningStay && assigningStayId === s.id}
                       onChange={(e) => {
                         if (e.target.value) handleAssignFromStay(s.id, Number(e.target.value))
                       }}
@@ -366,7 +441,7 @@ export default function OccupancyBoard() {
                         <option key={k.id} value={k.id}>{k.code} — {k.name}</option>
                       ))}
                     </select>
-                    {assigning && assigningStayId === s.id && (
+                    {assigningStay && assigningStayId === s.id && (
                       <span className="text-xs text-gray-400">Saving…</span>
                     )}
                   </div>
