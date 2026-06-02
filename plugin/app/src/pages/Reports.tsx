@@ -153,7 +153,7 @@ function DonutChart({ data, height = 160 }: {
             <g key={i}>
               <rect x={lx} y={ly - 7} width={10} height={10} fill={s.color} rx="2" />
               <text x={lx + 14} y={ly + 2} fontSize="9" fill="#374151">
-                {s.label.slice(0, 14)} ({((s.value / total) * 100).toFixed(0)}%)
+                {String(s.label ?? '—').slice(0, 14)} ({((s.value / total) * 100).toFixed(0)}%)
               </text>
             </g>
           )

@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
+import ErrorBoundary from './components/ErrorBoundary'
 import Dashboard from './pages/Dashboard'
 import ClientList from './pages/clients/ClientList'
 import ClientProfile from './pages/clients/ClientProfile'
@@ -52,7 +53,7 @@ export default function App() {
         <Route path="/settings/boarding"       element={<BoardingCatalogue />} />
         <Route path="/settings/addons"         element={<AddonCatalogue />} />
         <Route path="/settings/staff"          element={<Staff />} />
-        <Route path="/reports"                 element={<Reports />} />
+        <Route path="/reports"                 element={<ErrorBoundary><Reports /></ErrorBoundary>} />
         <Route path="*"                        element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
