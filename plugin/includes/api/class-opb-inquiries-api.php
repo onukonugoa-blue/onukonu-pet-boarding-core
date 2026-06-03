@@ -268,6 +268,10 @@ class OPB_Inquiries_API extends OPB_REST_Base {
             );
         }
 
+        // Always email the link to the customer if they have an address on file,
+        // regardless of the chosen delivery method.
+        OPB_Notifications::notify_customer_onboarding_link( $inquiry, $onboarding_url );
+
         return $this->success([
             'onboarding_url'   => $onboarding_url,
             'whatsapp_url'     => $wa_url,

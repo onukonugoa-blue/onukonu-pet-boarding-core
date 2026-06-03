@@ -133,6 +133,60 @@ class OPB_Notifications {
     }
 
     /**
+     * Sends the onboarding link to the customer by email.
+     * Fires whenever staff triggers "Send Onboarding" regardless of delivery method,
+     * as long as the inquiry has a valid customer email address.
+     *
+     * @param array  $inquiry         Row from opb_inquiries.
+     * @param string $onboarding_url  The full onboarding URL.
+     */
+    public static function notify_customer_onboarding_link( array $inquiry, string $onboarding_url ): void {
+        $email = $inquiry['email'] ?? '';
+        if ( ! is_email( $email ) ) {
+            return;
+        }
+
+        $facility    = self::facility_name();
+        $client_name = $inquiry['owner_name'];
+        $subject     = "Your onboarding link — {$facility}";
+
+        $pet_line = '';
+        if ( ! empty( $inquiry['pet_name'] ) ) {
+            $type_str = ! empty( $inquiry['pet_type'] ) ? ' (' . esc_html( $inquiry['pet_type'] ) . ')' : '';
+            $pet_line = '<p style="color:#374151;margin:0 0 8px">We\'re looking forward to welcoming your pet <strong>'
+                . esc_html( $inquiry['pet_name'] ) . $type_str . '</strong>!</p>';
+        }
+
+        $body = self::wrap_html( $subject,
+            '<p style="color:#374151;margin:0 0 16px">Hi <strong>' . esc_html( $client_name ) . '</strong>,</p>'
+            . '<p style="color:#374151;margin:0 0 16px">Thank you for choosing <strong>' . esc_html( $facility ) . '</strong>. '
+            . 'We\'ve reviewed your inquiry and we\'re ready to get you onboarded.</p>'
+            . $pet_line
+            . '<p style="color:#374151;margin:0 0 24px">Please use the secure link below to complete your pet\'s profile, '
+            . 'upload any required documents, and review our boarding terms &amp; conditions.</p>'
+            . '<div style="text-align:center;margin-bottom:24px">'
+            . '<a href="' . esc_url( $onboarding_url ) . '" '
+            . 'style="display:inline-block;background:#1e3a8a;color:#fff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:700;font-size:16px">'
+            . 'Complete Onboarding →</a></div>'
+            . '<p style="color:#6b7280;font-size:13px;margin:0 0 4px">Or copy this link into your browser:</p>'
+            . '<p style="color:#1e3a8a;font-size:13px;word-break:break-all;margin:0 0 24px">' . esc_url( $onboarding_url ) . '</p>'
+            . '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:14px 16px;">'
+            . '<p style="margin:0 0 6px;color:#374151;font-weight:600">This link is personal and secure.</p>'
+            . '<p style="margin:0;color:#6b7280;font-size:13px">Please do not share it with anyone else. '
+            . 'The form saves your progress as you go, so you can return to it at any time.</p>'
+            . '</div>'
+        );
+
+        $headers = [
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . $facility . ' <' . get_option( 'admin_email' ) . '>',
+            'Reply-To: ' . get_option( 'admin_email' ),
+        ];
+
+        wp_mail( $email, $subject, $body, $headers );
+    }
+
+    /**
      * Customer completed onboarding + accepted T&C. Status just moved to READY_FOR_REVIEW.
      *
      * @param array $inquiry    Row from opb_inquiries.
