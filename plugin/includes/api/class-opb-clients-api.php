@@ -89,10 +89,31 @@ class OPB_Clients_API extends OPB_REST_Base {
         if(empty($d['name'])||empty($d['phone'])||empty($d['home_branch_id'])){
             return $this->error('invalid','name, phone, home_branch_id required');
         }
+
+        // --- Duplicate phone check (primary identifier) ---
+        $phone = sanitize_text_field($d['phone']);
+        $existing = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, name, phone FROM {$wpdb->prefix}opb_clients WHERE phone = %s LIMIT 1",
+            $phone
+        ));
+        if ( $existing ) {
+            return new WP_REST_Response([
+                'code'    => 'duplicate_phone',
+                'message' => 'A client with this phone number already exists.',
+                'data'    => [
+                    'existing_client' => [
+                        'id'    => (int)$existing->id,
+                        'name'  => $existing->name,
+                        'phone' => $existing->phone,
+                    ],
+                ],
+            ], 409);
+        }
+
         $wpdb->insert("{$wpdb->prefix}opb_clients",[
             'home_branch_id'         => (int)$d['home_branch_id'],
             'name'                   => sanitize_text_field($d['name']),
-            'phone'                  => sanitize_text_field($d['phone']),
+            'phone'                  => $phone,
             'email'                  => sanitize_email($d['email']??''),
             'address'                => sanitize_textarea_field($d['address']??''),
             'local_guardian_name'    => sanitize_text_field($d['local_guardian_name']??''),
@@ -103,7 +124,11 @@ class OPB_Clients_API extends OPB_REST_Base {
             'status'                 => 'active',
         ]);
         $id = (int)$wpdb->insert_id;
-        return $this->get_item( new WP_REST_Request('GET',"/opb/v1/clients/$id",['id'=>$id]) );
+
+        // Fix: use set_param() so get_item can resolve $r['id'] correctly.
+        $get_req = new WP_REST_Request('GET', "/opb/v1/clients/$id");
+        $get_req->set_param('id', $id);
+        return $this->get_item($get_req);
     }
 
     public function update_item( $r ) {

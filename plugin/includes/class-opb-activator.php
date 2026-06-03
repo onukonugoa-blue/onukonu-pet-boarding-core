@@ -384,6 +384,22 @@ class OPB_Activator {
              ADD COLUMN IF NOT EXISTS kennel_id INT UNSIGNED NULL AFTER kennel"
         );
 
+        // Promote phone index to UNIQUE to enforce client identity (idempotent).
+        // Phone is the primary operational identifier for a client.
+        // Skip if the unique key already exists.
+        $uq_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM information_schema.STATISTICS
+             WHERE table_schema = DATABASE()
+               AND table_name   = %s
+               AND index_name   = 'uq_phone'
+               AND non_unique   = 0",
+            "{$wpdb->prefix}opb_clients"
+        ));
+        if ( ! $uq_exists ) {
+            $wpdb->query( "ALTER TABLE {$wpdb->prefix}opb_clients DROP INDEX IF EXISTS idx_phone" );
+            $wpdb->query( "ALTER TABLE {$wpdb->prefix}opb_clients ADD UNIQUE KEY uq_phone (phone)" );
+        }
+
         update_option( 'opb_db_version', OPB_VERSION );
     }
 }

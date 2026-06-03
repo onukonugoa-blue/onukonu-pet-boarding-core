@@ -14,7 +14,11 @@ const getBase = () => window.OPB?.apiBase ?? '/wp-json/opb/v1'
 const getNonce = () => window.OPB?.nonce ?? ''
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(
+    public status: number,
+    message: string,
+    public data?: unknown
+  ) {
     super(message)
   }
 }
@@ -34,7 +38,7 @@ async function request<T>(
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({ message: res.statusText }))
-    throw new ApiError(res.status, body?.message ?? res.statusText)
+    throw new ApiError(res.status, body?.message ?? res.statusText, body?.data)
   }
   return res.json()
 }

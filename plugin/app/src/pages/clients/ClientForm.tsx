@@ -2,12 +2,19 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { clientsApi } from '../../api/clients'
 import type { Client } from '../../api/clients'
+import { ApiError } from '../../api/client'
 import { useBranchStore } from '../../store/branch'
 
 const INITIAL: Partial<Client> = {
   name: '', phone: '', email: '', address: '',
   local_guardian_name: '', local_guardian_contact: '',
   status: 'active', tc_accepted: 0,
+}
+
+interface DuplicateInfo {
+  id: number
+  name: string
+  phone: string
 }
 
 export default function ClientForm() {
@@ -19,6 +26,7 @@ export default function ClientForm() {
   const [form, setForm] = useState<Partial<Client>>({ ...INITIAL, home_branch_id: activeBranchId || 0 })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [duplicate, setDuplicate] = useState<DuplicateInfo | null>(null)
 
   useEffect(() => {
     if (isEdit) {
@@ -26,11 +34,15 @@ export default function ClientForm() {
     }
   }, [id])
 
-  const set = (k: keyof Client, v: unknown) => setForm((f) => ({ ...f, [k]: v }))
+  const set = (k: keyof Client, v: unknown) => {
+    setDuplicate(null)
+    setForm((f) => ({ ...f, [k]: v }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setDuplicate(null)
     if (!form.name?.trim() || !form.phone?.trim()) { setError('Name and phone are required'); return }
     setSaving(true)
     try {
@@ -39,7 +51,16 @@ export default function ClientForm() {
         : await clientsApi.create(form)
       navigate(`/clients/${saved.id}`)
     } catch (e: any) {
-      setError(e.message ?? 'Failed to save')
+      if (e instanceof ApiError && e.status === 409) {
+        const existing = (e.data as any)?.existing_client as DuplicateInfo | undefined
+        if (existing) {
+          setDuplicate(existing)
+        } else {
+          setError(e.message)
+        }
+      } else {
+        setError(e.message ?? 'Failed to save')
+      }
     } finally {
       setSaving(false)
     }
@@ -49,6 +70,23 @@ export default function ClientForm() {
     <div>
       <h1 className="page-title mb-5">{isEdit ? 'Edit Client' : 'New Client'}</h1>
       {error && <div className="alert-error">{error}</div>}
+      {duplicate && (
+        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4">
+          <p className="text-sm font-semibold text-amber-800 mb-1">Client already exists with this phone number</p>
+          <p className="text-sm text-amber-700">
+            <span className="font-medium">{duplicate.name}</span>
+            <span className="mx-2 text-amber-400">·</span>
+            {duplicate.phone}
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate(`/clients/${duplicate.id}`)}
+            className="mt-2 text-sm font-medium text-amber-800 underline hover:text-amber-900"
+          >
+            Open existing client →
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 max-w-3xl">
         <div className="form-group">
