@@ -85,6 +85,21 @@ class OPB_Public_API extends OPB_REST_Base {
             return $this->error( 'db_error', 'Could not save inquiry.', 500 );
         }
 
+        $inquiry_for_notify = array_merge( $d, [
+            'id'                 => $wpdb->insert_id,
+            'owner_name'         => $name,
+            'phone'              => $phone,
+            'email'              => sanitize_email( $d['email'] ?? '' ),
+            'pet_name'           => sanitize_text_field( $d['pet_name'] ?? '' ),
+            'pet_type'           => sanitize_text_field( $d['pet_type'] ?? '' ),
+            'desired_check_in'   => $this->safe_date( $d['desired_check_in'] ?? '' ),
+            'desired_check_out'  => $this->safe_date( $d['desired_check_out'] ?? '' ),
+            'message'            => sanitize_textarea_field( $d['message'] ?? '' ),
+            'branch_id'          => ! empty( $d['branch_id'] ) ? (int) $d['branch_id'] : null,
+            'existing_client_id' => $existing_client ? (int) $existing_client['id'] : null,
+        ] );
+        OPB_Notifications::notify_new_inquiry( $inquiry_for_notify );
+
         $response = [ 'message' => 'Thank you! Your inquiry has been received. Our team will be in touch shortly.' ];
 
         if ( $existing_client ) {
@@ -360,13 +375,21 @@ class OPB_Public_API extends OPB_REST_Base {
             ) );
         }
 
-        // Advance status if ready
+        // Advance status if ready, then notify staff
         if ( $inquiry['status'] === 'ONBOARDING_COMPLETED' ) {
             $wpdb->update(
                 "{$wpdb->prefix}opb_inquiries",
                 [ 'status' => 'READY_FOR_REVIEW' ],
                 [ 'id'     => $inquiry['id'] ]
             );
+
+            // Fetch full onboarding_client row for the notification
+            $ob_client_row = $wpdb->get_row( $wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}opb_onboarding_clients WHERE inquiry_id = %d LIMIT 1",
+                $inquiry['id']
+            ), ARRAY_A ) ?? [];
+
+            OPB_Notifications::notify_onboarding_complete( $inquiry, $ob_client_row );
         }
 
         return $this->success( [ 'message' => 'Terms accepted. Thank you.' ] );

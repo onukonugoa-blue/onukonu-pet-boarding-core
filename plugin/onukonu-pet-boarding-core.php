@@ -47,6 +47,7 @@ require_once OPB_PLUGIN_DIR . 'includes/migration/adapters/class-opb-services-ad
 require_once OPB_PLUGIN_DIR . 'includes/migration/adapters/class-opb-addons-adapter.php';
 
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-onboarding-handler.php';
+require_once OPB_PLUGIN_DIR . 'includes/class-opb-notifications.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-public-portal.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-rest-base.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-branches-api.php';
