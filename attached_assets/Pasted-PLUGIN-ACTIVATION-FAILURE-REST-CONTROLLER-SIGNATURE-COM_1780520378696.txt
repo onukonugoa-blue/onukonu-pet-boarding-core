@@ -1,0 +1,146 @@
+PLUGIN ACTIVATION FAILURE — REST CONTROLLER SIGNATURE COMPATIBILITY
+
+Context
+
+The repository currently contains a newly added Inquiry / Onboarding module.
+
+The plugin is failing to activate.
+
+This is NOT a feature request.
+
+Do NOT continue feature development.
+
+Do NOT redesign the Inquiry module.
+
+Do NOT add new functionality.
+
+This task is strictly a production stabilisation and activation fix.
+
+---
+
+## CURRENT FAILURE
+
+Plugin activation produces:
+
+Fatal error:
+
+Declaration of OPB_Inquiries_API::get_items(
+WP_REST_Request $r
+): WP_REST_Response|WP_Error
+
+must be compatible with
+
+WP_REST_Controller::get_items($request)
+
+File:
+
+includes/api/class-opb-inquiries-api.php
+
+---
+
+## OBJECTIVE
+
+Identify and fix all WordPress REST controller signature incompatibilities.
+
+The goal is:
+
+* Plugin activates successfully
+* Plugin loads successfully
+* Inquiry module loads successfully
+* No PHP fatal errors
+
+---
+
+## LIKELY ROOT CAUSE
+
+The Inquiry API class appears to extend:
+
+WP_REST_Controller
+
+but overrides methods using stricter PHP type declarations than the parent class.
+
+WordPress core REST controllers frequently use:
+
+public function get_items( $request )
+
+without typed parameters and without typed return values.
+
+PHP requires child method signatures to remain compatible with parent declarations.
+
+---
+
+## REQUIRED REVIEW
+
+Review:
+
+class-opb-inquiries-api.php
+
+and any other newly added REST controller classes.
+
+Check for overrides including:
+
+* get_items()
+* get_item()
+* create_item()
+* update_item()
+* delete_item()
+* prepare_item_for_response()
+* prepare_response_for_collection()
+* get_collection_params()
+* permission_callback methods
+
+---
+
+## IMPORTANT
+
+Do not assume only get_items() is affected.
+
+Review all overridden methods.
+
+Look for:
+
+* Typed parameters
+* Typed return declarations
+* Signature mismatches
+* Visibility mismatches
+
+Ensure compatibility with the parent WordPress REST controller definitions.
+
+---
+
+## COMPATIBILITY TARGET
+
+This plugin must remain compatible with typical production WordPress hosting environments.
+
+Prioritise WordPress compatibility over modern PHP typing.
+
+Follow WordPress core conventions for REST controllers.
+
+---
+
+## VALIDATION
+
+After changes:
+
+1. Plugin activates without fatal errors.
+2. REST routes register successfully.
+3. Inquiry pages load.
+4. No PHP warnings or fatals in debug log.
+5. Existing operational modules continue functioning.
+
+---
+
+## DELIVERABLES
+
+Provide:
+
+* Root cause summary
+* Files changed
+* Methods corrected
+* Explanation of compatibility issue
+* Commit hash
+* Production ZIP
+
+Success Criteria
+
+The plugin activates cleanly and the Inquiry module loads without any REST controller signature errors.

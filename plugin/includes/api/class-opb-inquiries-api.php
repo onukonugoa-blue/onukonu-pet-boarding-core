@@ -59,7 +59,7 @@ class OPB_Inquiries_API extends OPB_REST_Base {
 
     // ── List ───────────────────────────────────────────────────────────────────
 
-    public function get_items( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    public function get_items( $r ): WP_REST_Response|WP_Error {
         $check = $this->permission_check($r); if(is_wp_error($check)) return $check;
         global $wpdb;
 
@@ -115,7 +115,7 @@ class OPB_Inquiries_API extends OPB_REST_Base {
 
     // ── Detail ─────────────────────────────────────────────────────────────────
 
-    public function get_item( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    public function get_item( $r ): WP_REST_Response|WP_Error {
         $check = $this->permission_check($r); if(is_wp_error($check)) return $check;
         global $wpdb;
 
@@ -179,7 +179,7 @@ class OPB_Inquiries_API extends OPB_REST_Base {
 
     // ── Update Status ──────────────────────────────────────────────────────────
 
-    public function update_item( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+    public function update_item( $r ): WP_REST_Response|WP_Error {
         $check = $this->permission_manage('opb_manage_clients',$r); if(is_wp_error($check)) return $check;
         global $wpdb;
 
