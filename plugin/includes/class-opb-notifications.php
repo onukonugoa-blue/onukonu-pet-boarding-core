@@ -5,8 +5,9 @@
  * Sends wp_mail() notifications for key pipeline events.
  *
  * Events:
- *   notify_new_inquiry()         — fired when a public inquiry is submitted
- *   notify_onboarding_complete() — fired when a customer accepts T&C (READY_FOR_REVIEW)
+ *   notify_new_inquiry()              — fired when a public inquiry is submitted (staff)
+ *   notify_customer_inquiry_received() — confirmation sent to the customer on inquiry submit
+ *   notify_onboarding_complete()      — fired when a customer accepts T&C (READY_FOR_REVIEW)
  */
 class OPB_Notifications {
 
@@ -67,6 +68,68 @@ class OPB_Notifications {
         );
 
         self::send( self::recipients( $inquiry['branch_id'] ?? null ), $subject, $body );
+    }
+
+    /**
+     * Confirmation email sent directly to the customer after their inquiry is submitted.
+     * Only fires when a valid email address was provided.
+     *
+     * @param array $inquiry  Row from opb_inquiries (as inserted, id available).
+     */
+    public static function notify_customer_inquiry_received( array $inquiry ): void {
+        $email = $inquiry['email'] ?? '';
+        if ( ! is_email( $email ) ) {
+            return; // No email provided — skip silently.
+        }
+
+        $facility    = self::facility_name();
+        $client_name = $inquiry['owner_name'];
+        $subject     = "We've received your inquiry — {$facility}";
+
+        $pet_line = '';
+        if ( ! empty( $inquiry['pet_name'] ) ) {
+            $type_str = ! empty( $inquiry['pet_type'] ) ? ' (' . esc_html( $inquiry['pet_type'] ) . ')' : '';
+            $pet_line = '<tr><td style="padding:4px 0;color:#6b7280;width:120px">Pet</td>'
+                . '<td style="padding:4px 0"><strong>' . esc_html( $inquiry['pet_name'] ) . $type_str . '</strong></td></tr>';
+        }
+
+        $dates_line = '';
+        if ( ! empty( $inquiry['desired_check_in'] ) ) {
+            $dates_line = '<tr><td style="padding:4px 0;color:#6b7280">Requested stay</td>'
+                . '<td style="padding:4px 0">'
+                . esc_html( $inquiry['desired_check_in'] )
+                . ' → ' . esc_html( $inquiry['desired_check_out'] ?? '—' )
+                . '</td></tr>';
+        }
+
+        $body = self::wrap_html( $subject,
+            '<p style="color:#374151;margin:0 0 16px">Hi <strong>' . esc_html( $client_name ) . '</strong>,</p>'
+            . '<p style="color:#374151;margin:0 0 20px">Thank you for reaching out to <strong>' . esc_html( $facility ) . '</strong>! We\'ve received your boarding inquiry and our team will review it and get back to you shortly.</p>'
+            . '<table style="width:100%;border-collapse:collapse;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-bottom:24px">'
+            . '<tr><td style="padding:8px 12px;color:#6b7280;width:120px">Name</td><td style="padding:8px 12px"><strong>' . esc_html( $client_name ) . '</strong></td></tr>'
+            . '<tr><td style="padding:8px 12px;color:#6b7280">Phone</td><td style="padding:8px 12px">' . esc_html( $inquiry['phone'] ) . '</td></tr>'
+            . $pet_line
+            . $dates_line
+            . '</table>'
+            . '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:16px;margin-bottom:24px;">'
+            . '<p style="margin:0 0 8px;color:#1e40af;font-weight:600">What happens next?</p>'
+            . '<ol style="margin:0;padding-left:20px;color:#374151;line-height:1.8">'
+            . '<li>Our team reviews your inquiry (usually within 1 business day).</li>'
+            . '<li>We send you a personalised onboarding link to complete your pet\'s profile.</li>'
+            . '<li>Once reviewed, we confirm availability and finalise your booking.</li>'
+            . '</ol>'
+            . '</div>'
+            . '<p style="color:#374151;margin:0 0 4px">If you have any immediate questions, feel free to reply to this email or contact us directly.</p>'
+            . '<p style="color:#374151;margin:0">We look forward to welcoming your pet! 🐾</p>'
+        );
+
+        $headers = [
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . $facility . ' <' . get_option( 'admin_email' ) . '>',
+            'Reply-To: ' . get_option( 'admin_email' ),
+        ];
+
+        wp_mail( $email, $subject, $body, $headers );
     }
 
     /**

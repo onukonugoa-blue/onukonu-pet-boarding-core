@@ -99,6 +99,7 @@ class OPB_Public_API extends OPB_REST_Base {
             'existing_client_id' => $existing_client ? (int) $existing_client['id'] : null,
         ] );
         OPB_Notifications::notify_new_inquiry( $inquiry_for_notify );
+        OPB_Notifications::notify_customer_inquiry_received( $inquiry_for_notify );
 
         $response = [ 'message' => 'Thank you! Your inquiry has been received. Our team will be in touch shortly.' ];
 
