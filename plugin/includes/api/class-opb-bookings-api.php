@@ -230,10 +230,21 @@ class OPB_Bookings_API extends OPB_REST_Base {
         // Support kennel assignment via kennel_id (structured) or legacy free-text kennel
         if (!empty($d['kennel_id'])) {
             $kennel_row = $wpdb->get_row($wpdb->prepare(
-                "SELECT code, name FROM {$wpdb->prefix}opb_kennels WHERE id=%d AND is_active=1",
+                "SELECT code, name, branch_id FROM {$wpdb->prefix}opb_kennels WHERE id=%d AND is_active=1",
                 (int)$d['kennel_id']
             ), ARRAY_A);
             if ($kennel_row) {
+                // Branch boundary enforcement: kennel must belong to the same branch as the booking.
+                $booking_branch_id = (int)$wpdb->get_var($wpdb->prepare(
+                    "SELECT branch_id FROM {$wpdb->prefix}opb_bookings WHERE id=%d", $id
+                ));
+                if ( (int)$kennel_row['branch_id'] !== $booking_branch_id ) {
+                    return $this->error(
+                        'cross_branch',
+                        'This kennel belongs to a different branch than the booking. Cross-branch kennel assignment is not permitted.',
+                        422
+                    );
+                }
                 $update_data['kennel_id'] = (int)$d['kennel_id'];
                 $update_data['kennel']    = $kennel_row['code'];
             }
@@ -313,9 +324,12 @@ class OPB_Bookings_API extends OPB_REST_Base {
         $d         = $r->get_json_params();
         $kennel_id = isset($d['kennel_id']) && $d['kennel_id'] !== null && $d['kennel_id'] !== '' ? (int)$d['kennel_id'] : null;
 
-        // Verify stay exists, is assignable, and fetch dates for conflict check
+        // Verify stay exists, is assignable, and fetch dates + booking branch for validation
         $stay = $wpdb->get_row($wpdb->prepare(
-            "SELECT id, status, check_in_date, check_out_date FROM {$wpdb->prefix}opb_booking_stays WHERE id=%d", $stay_id
+            "SELECT bs.id, bs.status, bs.check_in_date, bs.check_out_date, bk.branch_id AS booking_branch_id
+             FROM {$wpdb->prefix}opb_booking_stays bs
+             JOIN {$wpdb->prefix}opb_bookings bk ON bk.id = bs.booking_id
+             WHERE bs.id = %d", $stay_id
         ), ARRAY_A);
         if (!$stay) return $this->error('not_found', 'Stay not found', 404);
         if (in_array($stay['status'], ['Completed', 'No show'])) {
@@ -327,11 +341,20 @@ class OPB_Bookings_API extends OPB_REST_Base {
         if ($kennel_id) {
             // Validate kennel is active and operational
             $kennel_row = $wpdb->get_row($wpdb->prepare(
-                "SELECT id, code, status FROM {$wpdb->prefix}opb_kennels WHERE id=%d AND is_active=1", $kennel_id
+                "SELECT id, code, status, branch_id FROM {$wpdb->prefix}opb_kennels WHERE id=%d AND is_active=1", $kennel_id
             ), ARRAY_A);
             if (!$kennel_row) return $this->error('not_found', 'Kennel not found or inactive', 404);
             if (in_array($kennel_row['status'], ['Maintenance', 'Blocked'])) {
                 return $this->error('invalid', 'Cannot assign a Maintenance or Blocked kennel to a stay', 422);
+            }
+
+            // Branch boundary enforcement: kennel must belong to the same branch as the booking.
+            if ( (int)$kennel_row['branch_id'] !== (int)$stay['booking_branch_id'] ) {
+                return $this->error(
+                    'cross_branch',
+                    'This kennel belongs to a different branch than the booking. Cross-branch kennel assignment is not permitted.',
+                    422
+                );
             }
 
             // Conflict check: is this kennel already allocated to another stay

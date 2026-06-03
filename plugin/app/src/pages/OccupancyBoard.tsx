@@ -58,6 +58,11 @@ function AssignPopover({ kennel, unassigned, onAssign, onClose }: AssignPopoverP
   const [error, setError]       = useState('')
   const ref = useRef<HTMLDivElement>(null)
 
+  // Only show stays that belong to the same branch as this kennel.
+  const eligible = unassigned.filter(
+    (s) => s.branch_id == null || s.branch_id === kennel.branch_id
+  )
+
   useEffect(() => {
     const h = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose()
@@ -86,8 +91,8 @@ function AssignPopover({ kennel, unassigned, onAssign, onClose }: AssignPopoverP
     >
       <p className="text-xs font-semibold text-gray-700 mb-2">Assign stay to {kennel.code}:</p>
       {error && <p className="text-xs text-red-600 mb-2 leading-snug">{error}</p>}
-      {unassigned.length === 0 ? (
-        <p className="text-xs text-gray-400 italic">No unassigned stays.</p>
+      {eligible.length === 0 ? (
+        <p className="text-xs text-gray-400 italic">No unassigned stays for this branch.</p>
       ) : (
         <>
           <select
@@ -97,7 +102,7 @@ function AssignPopover({ kennel, unassigned, onAssign, onClose }: AssignPopoverP
             autoFocus
           >
             <option value="">— Select a stay —</option>
-            {unassigned.map((s) => (
+            {eligible.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.pet_name} · {s.client_name} · {s.check_in_date}
                 {s.check_in_date !== s.check_out_date ? ` → ${s.check_out_date}` : ''} ({s.status})
@@ -337,10 +342,17 @@ export default function OccupancyBoard() {
     }
   }
 
-  // Issue 4: all non-Maintenance/Blocked kennels are valid targets for future stays
+  // All non-Maintenance/Blocked kennels — used for kennel card "Assign stay" button visibility.
+  // Per-stay branch filtering happens inside AssignPopover and the unassigned stays dropdown.
   const assignableKennels = kennels.filter(
     (k) => k.status !== 'Maintenance' && k.status !== 'Blocked'
   )
+
+  // Returns kennels eligible for a specific stay: same branch, not Maintenance/Blocked.
+  const eligibleKennelsForStay = (stay: BookingStay) =>
+    assignableKennels.filter(
+      (k) => stay.branch_id == null || k.branch_id === stay.branch_id
+    )
 
   const grouped = STATUS_ORDER.reduce<Record<string, Kennel[]>>((acc, s) => {
     acc[s] = kennels.filter((k) => {
@@ -569,8 +581,8 @@ export default function OccupancyBoard() {
                 <div className="text-xs text-gray-600">{s.client_name}</div>
                 <div className="text-xs text-gray-400 mt-0.5 mb-2">{s.check_in_date} → {s.check_out_date}</div>
 
-                {/* Issue 1: explicit select + confirm button — no auto-fire */}
-                {assignableKennels.length > 0 ? (
+                {/* Branch-scoped kennel options for this stay */}
+                {eligibleKennelsForStay(s).length > 0 ? (
                   <>
                     <div className="flex gap-2 items-center">
                       <select
@@ -582,7 +594,7 @@ export default function OccupancyBoard() {
                         }}
                       >
                         <option value="">Select kennel…</option>
-                        {assignableKennels.map((k) => (
+                        {eligibleKennelsForStay(s).map((k) => (
                           <option key={k.id} value={k.id}>
                             {k.code} — {k.name}
                             {occupancy[k.id] ? ' (occupied today)' : ''}

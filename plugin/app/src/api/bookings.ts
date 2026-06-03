@@ -4,6 +4,7 @@ import type { PaginatedResponse } from './client'
 export interface BookingStay {
   id: number
   booking_id: number
+  branch_id?: number
   pet_id: number
   pet_name?: string
   breed?: string
