@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { kennelsApi } from '../api/kennels'
 import type { Kennel } from '../api/kennels'
@@ -6,10 +6,9 @@ import { bookingsApi } from '../api/bookings'
 import type { BookingStay } from '../api/bookings'
 import { useBranchStore } from '../store/branch'
 
-const DAY_WIDTH = 80
+const DAY_WIDTH  = 80
 const KENNEL_COL = 140
 
-// Issue 2: Board and Timeline must agree — same status colours, same exclusions
 const STATUS_BAR_COLORS: Record<string, string> = {
   Active:   'bg-green-500 text-white',
   Upcoming: 'bg-blue-500 text-white',
@@ -40,10 +39,43 @@ function addDays(iso: string, n: number): string {
   return d.toISOString().slice(0, 10)
 }
 
+/** True when two stays have overlapping date ranges. */
+function overlaps(a: BookingStay, b: BookingStay): boolean {
+  return a.check_in_date < b.check_out_date && a.check_out_date > b.check_in_date
+}
+
 interface StayBar {
   stay: BookingStay
   startIdx: number
   endIdx: number
+  conflicted: boolean
+}
+
+/**
+ * Returns a Set of stay IDs that are involved in at least one
+ * date-range conflict with another stay on the same kennel.
+ */
+function findConflictedStayIds(stays: BookingStay[]): Set<number> {
+  const conflicted = new Set<number>()
+  // Group by kennel
+  const byKennel = new Map<number, BookingStay[]>()
+  for (const s of stays) {
+    const kid = Number(s.kennel_id)
+    if (!byKennel.has(kid)) byKennel.set(kid, [])
+    byKennel.get(kid)!.push(s)
+  }
+  // Check every pair within each kennel
+  for (const group of byKennel.values()) {
+    for (let i = 0; i < group.length; i++) {
+      for (let j = i + 1; j < group.length; j++) {
+        if (overlaps(group[i], group[j])) {
+          conflicted.add(group[i].id)
+          conflicted.add(group[j].id)
+        }
+      }
+    }
+  }
+  return conflicted
 }
 
 export default function LinearOccupancy() {
@@ -58,12 +90,14 @@ export default function LinearOccupancy() {
   const [toDate, setToDate]           = useState(addDays(today, 6))
   const [pendingFrom, setPendingFrom] = useState(today)
   const [pendingTo, setPendingTo]     = useState(addDays(today, 6))
+  const [bannerDismissed, setBannerDismissed] = useState(false)
 
   const selectedBranch = useBranchStore((s) => s.activeBranchId) || null
 
   const load = async (from: string, to: string, branchId: number | null) => {
     setLoading(true)
     setError('')
+    setBannerDismissed(false)
     try {
       const [ks, board] = await Promise.all([
         kennelsApi.list(branchId ?? undefined, true),
@@ -75,10 +109,6 @@ export default function LinearOccupancy() {
       ])
       setKennels(ks)
       setDays(board.days ?? [])
-
-      // Issue 2: same exclusion rules as the Board
-      // — only show stays that have a kennel assigned
-      // — exclude Completed and No show (PHP already excludes No show; filter Completed here)
       setStays(
         (board.stays ?? []).filter(
           (s: BookingStay) => s.kennel_id && s.status !== 'Completed'
@@ -102,20 +132,31 @@ export default function LinearOccupancy() {
     load(pendingFrom, pendingTo, selectedBranch)
   }
 
-  // Issue 2: fix type-safe comparison — PHP ARRAY_A returns all values as strings;
-  // cast both sides to Number so "5" === 5 comparisons don't silently fail.
-  const staysByKennel = (kennelId: number): StayBar[] => {
-    return stays
+  // Derive conflict set once whenever stays changes
+  const conflictedIds = useMemo(() => findConflictedStayIds(stays), [stays])
+
+  // Kennels that have at least one conflicted stay
+  const conflictedKennelIds = useMemo(() => {
+    const ids = new Set<number>()
+    for (const s of stays) {
+      if (conflictedIds.has(s.id)) ids.add(Number(s.kennel_id))
+    }
+    return ids
+  }, [stays, conflictedIds])
+
+  const staysByKennel = (kennelId: number): StayBar[] =>
+    stays
       .filter((s) => Number(s.kennel_id) === Number(kennelId))
       .map((s) => {
         const startIdx = Math.max(0, daysBetween(fromDate, s.check_in_date))
         const endIdx   = Math.min(days.length - 1, daysBetween(fromDate, s.check_out_date))
-        return { stay: s, startIdx, endIdx }
+        return { stay: s, startIdx, endIdx, conflicted: conflictedIds.has(s.id) }
       })
       .filter((b) => b.endIdx >= b.startIdx)
-  }
 
-  const totalWidth = days.length * DAY_WIDTH
+  const totalWidth       = days.length * DAY_WIDTH
+  const conflictCount    = conflictedKennelIds.size
+  const showConflictBanner = conflictCount > 0 && !bannerDismissed
 
   return (
     <div>
@@ -140,7 +181,7 @@ export default function LinearOccupancy() {
       </div>
 
       {/* Date range controls */}
-      <div className="flex flex-wrap items-center gap-3 mb-5">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="flex items-center gap-2">
           <label className="text-sm text-gray-600 font-medium">From</label>
           <input
@@ -163,9 +204,39 @@ export default function LinearOccupancy() {
           Apply
         </button>
         {!loading && (
-          <span className="text-xs text-gray-400">{days.length} days · {kennels.length} kennels · {stays.length} assigned stays</span>
+          <span className="text-xs text-gray-400">
+            {days.length} days · {kennels.length} kennels · {stays.length} assigned stays
+            {conflictCount > 0 && (
+              <span className="ml-2 text-red-500 font-semibold">
+                · ⚠ {conflictCount} kennel{conflictCount > 1 ? 's' : ''} with conflicts
+              </span>
+            )}
+          </span>
         )}
       </div>
+
+      {/* Conflict banner */}
+      {showConflictBanner && (
+        <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4">
+          <span className="text-red-500 text-lg leading-none mt-0.5">⚠</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-red-700">
+              Double-booking detected on {conflictCount} kennel{conflictCount > 1 ? 's' : ''}
+            </p>
+            <p className="text-xs text-red-600 mt-0.5">
+              Kennels marked in red below have two or more stays with overlapping dates.
+              Open each booking to re-assign or cancel the conflicting stay.
+            </p>
+          </div>
+          <button
+            onClick={() => setBannerDismissed(true)}
+            className="text-red-400 hover:text-red-600 text-lg leading-none ml-2 shrink-0"
+            title="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {error && <div className="alert-error mb-4">{error}</div>}
 
@@ -207,15 +278,38 @@ export default function LinearOccupancy() {
               {kennels.map((k) => {
                 const bars          = staysByKennel(k.id)
                 const isAdminStatus = k.status === 'Maintenance' || k.status === 'Blocked'
+                const hasConflict   = conflictedKennelIds.has(k.id)
 
                 return (
-                  <div key={k.id} className="flex border-b border-gray-100 hover:bg-gray-50 group" style={{ minHeight: 52 }}>
+                  <div
+                    key={k.id}
+                    className={`flex border-b group transition-colors ${
+                      hasConflict
+                        ? 'border-red-200 bg-red-50/40 hover:bg-red-50/70'
+                        : 'border-gray-100 hover:bg-gray-50'
+                    }`}
+                    style={{ minHeight: 52 }}
+                  >
                     {/* Sticky kennel label */}
                     <div
-                      className="shrink-0 sticky left-0 z-10 bg-white group-hover:bg-gray-50 border-r border-gray-200 px-3 flex flex-col justify-center"
+                      className={`shrink-0 sticky left-0 z-10 border-r px-3 flex flex-col justify-center transition-colors ${
+                        hasConflict
+                          ? 'bg-red-50 group-hover:bg-red-50/80 border-red-200'
+                          : 'bg-white group-hover:bg-gray-50 border-gray-200'
+                      }`}
                       style={{ width: KENNEL_COL }}
                     >
-                      <span className="font-mono font-bold text-gray-900 text-sm leading-tight">{k.code}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-bold text-gray-900 text-sm leading-tight">{k.code}</span>
+                        {hasConflict && (
+                          <span
+                            className="text-xs font-bold text-red-600 bg-red-100 border border-red-300 rounded px-1 py-0.5 leading-none"
+                            title="This kennel has overlapping stay assignments"
+                          >
+                            ⚠
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs text-gray-400 truncate leading-tight">{k.name}</span>
                       {k.assigned_staff_name && (
                         <span className="text-xs text-gray-400 truncate leading-tight">👤 {k.assigned_staff_name}</span>
@@ -233,7 +327,7 @@ export default function LinearOccupancy() {
                         />
                       ))}
 
-                      {/* Admin status overlay (Maintenance / Blocked) */}
+                      {/* Admin status overlay */}
                       {isAdminStatus && (
                         <div className="absolute inset-0 flex items-center px-3">
                           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${KENNEL_STATUS_CHIP[k.status]}`}>
@@ -242,19 +336,31 @@ export default function LinearOccupancy() {
                         </div>
                       )}
 
-                      {/* Stay bars — only for operational kennels */}
-                      {!isAdminStatus && bars.map(({ stay, startIdx, endIdx }) => {
-                        const barLeft    = startIdx * DAY_WIDTH + 2
-                        const barWidth   = (endIdx - startIdx + 1) * DAY_WIDTH - 4
-                        const colorClass = STATUS_BAR_COLORS[stay.status] ?? 'bg-gray-400 text-white'
+                      {/* Stay bars */}
+                      {!isAdminStatus && bars.map(({ stay, startIdx, endIdx, conflicted }) => {
+                        const barLeft  = startIdx * DAY_WIDTH + 2
+                        const barWidth = (endIdx - startIdx + 1) * DAY_WIDTH - 4
+
+                        // Conflicted bars render in red regardless of status
+                        const colorClass = conflicted
+                          ? 'bg-red-500 text-white ring-2 ring-red-300 ring-offset-1'
+                          : (STATUS_BAR_COLORS[stay.status] ?? 'bg-gray-400 text-white')
+
                         return (
                           <Link
                             key={stay.id}
                             to={`/bookings/${stay.booking_id}`}
-                            title={`${stay.pet_name} · ${stay.client_name} · ${stay.check_in_date} → ${stay.check_out_date}`}
-                            className={`absolute top-2 bottom-2 rounded flex items-center px-2 overflow-hidden ${colorClass} hover:opacity-90 transition-opacity`}
+                            title={
+                              conflicted
+                                ? `⚠ CONFLICT — ${stay.pet_name} · ${stay.client_name} · ${stay.check_in_date} → ${stay.check_out_date}`
+                                : `${stay.pet_name} · ${stay.client_name} · ${stay.check_in_date} → ${stay.check_out_date}`
+                            }
+                            className={`absolute top-2 bottom-2 rounded flex items-center gap-1 px-2 overflow-hidden hover:opacity-90 transition-opacity ${colorClass}`}
                             style={{ left: barLeft, width: barWidth }}
                           >
+                            {conflicted && (
+                              <span className="text-xs font-bold shrink-0" aria-label="Conflict">⚠</span>
+                            )}
                             <span className="text-xs font-medium truncate whitespace-nowrap">
                               {stay.pet_name}
                             </span>
