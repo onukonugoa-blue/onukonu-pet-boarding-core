@@ -96,3 +96,9 @@ id = "UjMa7VjoVi9AXmqLj6OKd"
 uri = "file://onukonu-pet-boarding-core-v1.5.0.zip"
 type = "unspecified"
 title = "onukonu-pet-boarding-core-v1.5.0.zip"
+
+[[outputs]]
+id = "nGNsIYH8rlsZz96Oll8uM"
+uri = "file://onukonu-pet-boarding-core-v1.5.1.zip"
+type = "unspecified"
+title = "onukonu-pet-boarding-core-v1.5.1.zip"

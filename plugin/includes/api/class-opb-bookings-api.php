@@ -309,28 +309,62 @@ class OPB_Bookings_API extends OPB_REST_Base {
         $check = $this->permission_manage('opb_manage_bookings',$r); if(is_wp_error($check)) return $check;
         global $wpdb;
 
-        $stay_id  = (int)$r['stay_id'];
-        $d        = $r->get_json_params();
+        $stay_id   = (int)$r['stay_id'];
+        $d         = $r->get_json_params();
         $kennel_id = isset($d['kennel_id']) && $d['kennel_id'] !== null && $d['kennel_id'] !== '' ? (int)$d['kennel_id'] : null;
 
-        // Verify stay exists and is assignable (not completed / no show)
+        // Verify stay exists, is assignable, and fetch dates for conflict check
         $stay = $wpdb->get_row($wpdb->prepare(
-            "SELECT id, status FROM {$wpdb->prefix}opb_booking_stays WHERE id=%d", $stay_id
+            "SELECT id, status, check_in_date, check_out_date FROM {$wpdb->prefix}opb_booking_stays WHERE id=%d", $stay_id
         ), ARRAY_A);
-        if (!$stay) return $this->error('not_found','Stay not found',404);
-        if (in_array($stay['status'], ['Completed','No show'])) {
-            return $this->error('invalid','Cannot assign kennel to a completed or no-show stay');
+        if (!$stay) return $this->error('not_found', 'Stay not found', 404);
+        if (in_array($stay['status'], ['Completed', 'No show'])) {
+            return $this->error('invalid', 'Cannot assign a kennel to a completed or no-show stay');
         }
 
         $update = ['kennel_id' => $kennel_id, 'kennel' => null];
+
         if ($kennel_id) {
+            // Validate kennel is active and operational
             $kennel_row = $wpdb->get_row($wpdb->prepare(
-                "SELECT code, status FROM {$wpdb->prefix}opb_kennels WHERE id=%d AND is_active=1", $kennel_id
+                "SELECT id, code, status FROM {$wpdb->prefix}opb_kennels WHERE id=%d AND is_active=1", $kennel_id
             ), ARRAY_A);
-            if (!$kennel_row) return $this->error('not_found','Kennel not found or inactive',404);
+            if (!$kennel_row) return $this->error('not_found', 'Kennel not found or inactive', 404);
             if (in_array($kennel_row['status'], ['Maintenance', 'Blocked'])) {
                 return $this->error('invalid', 'Cannot assign a Maintenance or Blocked kennel to a stay', 422);
             }
+
+            // Conflict check: is this kennel already allocated to another stay
+            // whose dates overlap this stay's dates?
+            // Overlap condition: A.check_in < B.check_out AND A.check_out > B.check_in
+            $conflict = $wpdb->get_row($wpdb->prepare(
+                "SELECT bs.id, p.name AS pet_name, bs.check_in_date, bs.check_out_date
+                 FROM {$wpdb->prefix}opb_booking_stays bs
+                 JOIN {$wpdb->prefix}opb_pets p ON p.id = bs.pet_id
+                 WHERE bs.kennel_id = %d
+                   AND bs.id != %d
+                   AND bs.check_in_date < %s
+                   AND bs.check_out_date > %s
+                   AND bs.status NOT IN ('Completed', 'No show')",
+                $kennel_id,
+                $stay_id,
+                $stay['check_out_date'],
+                $stay['check_in_date']
+            ), ARRAY_A);
+
+            if ($conflict) {
+                return $this->error(
+                    'conflict',
+                    sprintf(
+                        'Kennel is already assigned to %s (%s → %s). Please choose a different kennel or resolve the existing assignment first.',
+                        $conflict['pet_name'],
+                        $conflict['check_in_date'],
+                        $conflict['check_out_date']
+                    ),
+                    409
+                );
+            }
+
             $update['kennel'] = $kennel_row['code'];
         }
 
@@ -347,13 +381,15 @@ class OPB_Bookings_API extends OPB_REST_Base {
         $check = $this->permission_check($r); if(is_wp_error($check)) return $check;
         global $wpdb;
 
-        $branch_id = $this->branch_filter((int)($r->get_param('branch_id')??0));
+        $branch_id = $this->branch_filter((int)($r->get_param('branch_id') ?? 0));
         $from      = sanitize_text_field($r->get_param('from') ?? date('Y-m-d'));
         $to        = sanitize_text_field($r->get_param('to')   ?? date('Y-m-d', strtotime('+13 days')));
 
-        $args  = [$from,$to,$from,$to];
+        // Correct overlap condition: stay overlaps [from,to] when
+        //   check_in_date <= $to  AND  check_out_date >= $from
+        $args  = [$to, $from];
         $b_sql = '';
-        if($branch_id){ $b_sql=' AND bk.branch_id=%d'; $args[]=$branch_id; }
+        if ($branch_id) { $b_sql = ' AND bk.branch_id=%d'; $args[] = $branch_id; }
 
         $stays = $wpdb->get_results($wpdb->prepare(
             "SELECT bs.id, bs.kennel, bs.kennel_id, bs.status, bs.check_in_date, bs.check_out_date,
@@ -362,21 +398,23 @@ class OPB_Bookings_API extends OPB_REST_Base {
                     c.name as client_name, c.phone as client_phone,
                     bk.id as booking_id, bk.branch_id
              FROM {$wpdb->prefix}opb_booking_stays bs
-             JOIN {$wpdb->prefix}opb_bookings bk ON bk.id=bs.booking_id
-             JOIN {$wpdb->prefix}opb_pets p ON p.id=bs.pet_id
-             JOIN {$wpdb->prefix}opb_clients c ON c.id=bk.client_id
-             WHERE bs.check_in_date<=%s AND bs.check_out_date>=%s
-                AND bs.status NOT IN ('No show')$b_sql
+             JOIN {$wpdb->prefix}opb_bookings bk ON bk.id = bs.booking_id
+             JOIN {$wpdb->prefix}opb_pets p ON p.id = bs.pet_id
+             JOIN {$wpdb->prefix}opb_clients c ON c.id = bk.client_id
+             WHERE bs.check_in_date <= %s
+               AND bs.check_out_date >= %s
+               AND bs.status NOT IN ('No show')
+               $b_sql
              ORDER BY bs.kennel, bs.check_in_date",
             ...$args
-        ),ARRAY_A);
+        ), ARRAY_A);
 
         // Build day-range array
         $days = [];
         $dt   = new DateTime($from);
         $end  = new DateTime($to);
-        while($dt<=$end){ $days[]=$dt->format('Y-m-d'); $dt->modify('+1 day'); }
+        while ($dt <= $end) { $days[] = $dt->format('Y-m-d'); $dt->modify('+1 day'); }
 
-        return $this->success(['days'=>$days,'stays'=>$stays,'from'=>$from,'to'=>$to]);
+        return $this->success(['days' => $days, 'stays' => $stays, 'from' => $from, 'to' => $to]);
     }
 }

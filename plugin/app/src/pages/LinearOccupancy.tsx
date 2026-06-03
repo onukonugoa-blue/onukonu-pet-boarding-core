@@ -9,10 +9,10 @@ import { useBranchStore } from '../store/branch'
 const DAY_WIDTH = 80
 const KENNEL_COL = 140
 
+// Issue 2: Board and Timeline must agree — same status colours, same exclusions
 const STATUS_BAR_COLORS: Record<string, string> = {
-  Active:    'bg-green-500 text-white',
-  Upcoming:  'bg-blue-500 text-white',
-  Completed: 'bg-gray-400 text-white',
+  Active:   'bg-green-500 text-white',
+  Upcoming: 'bg-blue-500 text-white',
 }
 
 const KENNEL_STATUS_CHIP: Record<string, string> = {
@@ -49,13 +49,13 @@ interface StayBar {
 export default function LinearOccupancy() {
   const today = new Date().toISOString().slice(0, 10)
 
-  const [kennels, setKennels]   = useState<Kennel[]>([])
-  const [days, setDays]         = useState<string[]>([])
-  const [stays, setStays]       = useState<BookingStay[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [error, setError]       = useState('')
-  const [fromDate, setFromDate] = useState(today)
-  const [toDate, setToDate]     = useState(addDays(today, 6))
+  const [kennels, setKennels]         = useState<Kennel[]>([])
+  const [days, setDays]               = useState<string[]>([])
+  const [stays, setStays]             = useState<BookingStay[]>([])
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState('')
+  const [fromDate, setFromDate]       = useState(today)
+  const [toDate, setToDate]           = useState(addDays(today, 6))
   const [pendingFrom, setPendingFrom] = useState(today)
   const [pendingTo, setPendingTo]     = useState(addDays(today, 6))
 
@@ -75,9 +75,17 @@ export default function LinearOccupancy() {
       ])
       setKennels(ks)
       setDays(board.days ?? [])
-      setStays((board.stays ?? []).filter((s: BookingStay) => s.kennel_id))
+
+      // Issue 2: same exclusion rules as the Board
+      // — only show stays that have a kennel assigned
+      // — exclude Completed and No show (PHP already excludes No show; filter Completed here)
+      setStays(
+        (board.stays ?? []).filter(
+          (s: BookingStay) => s.kennel_id && s.status !== 'Completed'
+        )
+      )
     } catch (e: any) {
-      setError(e.message ?? 'Failed to load data')
+      setError(e.message ?? 'Failed to load timeline')
     } finally {
       setLoading(false)
     }
@@ -94,9 +102,11 @@ export default function LinearOccupancy() {
     load(pendingFrom, pendingTo, selectedBranch)
   }
 
+  // Issue 2: fix type-safe comparison — PHP ARRAY_A returns all values as strings;
+  // cast both sides to Number so "5" === 5 comparisons don't silently fail.
   const staysByKennel = (kennelId: number): StayBar[] => {
     return stays
-      .filter((s) => s.kennel_id === kennelId)
+      .filter((s) => Number(s.kennel_id) === Number(kennelId))
       .map((s) => {
         const startIdx = Math.max(0, daysBetween(fromDate, s.check_in_date))
         const endIdx   = Math.min(days.length - 1, daysBetween(fromDate, s.check_out_date))
@@ -105,7 +115,6 @@ export default function LinearOccupancy() {
       .filter((b) => b.endIdx >= b.startIdx)
   }
 
-  const todayIdx = daysBetween(fromDate, today)
   const totalWidth = days.length * DAY_WIDTH
 
   return (
@@ -113,7 +122,7 @@ export default function LinearOccupancy() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Kennel Board</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Occupancy view — stay assignments over a date range</p>
+          <p className="text-sm text-gray-500 mt-0.5">Timeline — kennel assignments across a date range</p>
         </div>
       </div>
 
@@ -154,7 +163,7 @@ export default function LinearOccupancy() {
           Apply
         </button>
         {!loading && (
-          <span className="text-xs text-gray-400">{days.length} days · {kennels.length} kennels</span>
+          <span className="text-xs text-gray-400">{days.length} days · {kennels.length} kennels · {stays.length} assigned stays</span>
         )}
       </div>
 
@@ -178,7 +187,7 @@ export default function LinearOccupancy() {
                   className="shrink-0 sticky left-0 z-10 bg-gray-50 border-r border-gray-200 px-3 py-2"
                   style={{ width: KENNEL_COL }}
                 />
-                {days.map((day, i) => {
+                {days.map((day) => {
                   const { dow, date } = formatDayHeader(day)
                   const isToday = day === today
                   return (
@@ -196,12 +205,12 @@ export default function LinearOccupancy() {
 
               {/* Kennel rows */}
               {kennels.map((k) => {
-                const bars   = staysByKennel(k.id)
+                const bars          = staysByKennel(k.id)
                 const isAdminStatus = k.status === 'Maintenance' || k.status === 'Blocked'
 
                 return (
                   <div key={k.id} className="flex border-b border-gray-100 hover:bg-gray-50 group" style={{ minHeight: 52 }}>
-                    {/* Kennel info — sticky */}
+                    {/* Sticky kennel label */}
                     <div
                       className="shrink-0 sticky left-0 z-10 bg-white group-hover:bg-gray-50 border-r border-gray-200 px-3 flex flex-col justify-center"
                       style={{ width: KENNEL_COL }}
@@ -213,9 +222,9 @@ export default function LinearOccupancy() {
                       )}
                     </div>
 
-                    {/* Timeline area */}
+                    {/* Timeline grid */}
                     <div className="relative flex-1" style={{ width: totalWidth, minHeight: 52 }}>
-                      {/* Day column backgrounds / today highlight */}
+                      {/* Day column backgrounds */}
                       {days.map((day, i) => (
                         <div
                           key={day}
@@ -224,7 +233,7 @@ export default function LinearOccupancy() {
                         />
                       ))}
 
-                      {/* Admin status overlay */}
+                      {/* Admin status overlay (Maintenance / Blocked) */}
                       {isAdminStatus && (
                         <div className="absolute inset-0 flex items-center px-3">
                           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${KENNEL_STATUS_CHIP[k.status]}`}>
@@ -233,10 +242,10 @@ export default function LinearOccupancy() {
                         </div>
                       )}
 
-                      {/* Stay bars */}
+                      {/* Stay bars — only for operational kennels */}
                       {!isAdminStatus && bars.map(({ stay, startIdx, endIdx }) => {
-                        const barLeft  = startIdx * DAY_WIDTH + 2
-                        const barWidth = (endIdx - startIdx + 1) * DAY_WIDTH - 4
+                        const barLeft    = startIdx * DAY_WIDTH + 2
+                        const barWidth   = (endIdx - startIdx + 1) * DAY_WIDTH - 4
                         const colorClass = STATUS_BAR_COLORS[stay.status] ?? 'bg-gray-400 text-white'
                         return (
                           <Link
@@ -253,7 +262,7 @@ export default function LinearOccupancy() {
                         )
                       })}
 
-                      {/* Available indicator when no stays and not admin status */}
+                      {/* Free indicator */}
                       {!isAdminStatus && bars.length === 0 && (
                         <div className="absolute inset-0 flex items-center px-3">
                           <span className="text-xs text-green-500 font-medium">Free</span>
