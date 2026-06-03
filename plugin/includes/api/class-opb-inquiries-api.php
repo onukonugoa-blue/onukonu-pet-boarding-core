@@ -36,6 +36,10 @@ class OPB_Inquiries_API extends OPB_REST_Base {
             [ 'methods' => 'POST', 'callback' => [ $this, 'send_onboarding' ], 'permission_callback' => fn($r)=>$this->permission_manage('opb_manage_clients',$r) ],
         ] );
 
+        register_rest_route( $ns, '/inquiries/(?P<id>\d+)/resend-onboarding', [
+            [ 'methods' => 'POST', 'callback' => [ $this, 'resend_onboarding' ], 'permission_callback' => fn($r)=>$this->permission_manage('opb_manage_clients',$r) ],
+        ] );
+
         register_rest_route( $ns, '/inquiries/(?P<id>\d+)/reject', [
             [ 'methods' => 'POST', 'callback' => [ $this, 'reject' ], 'permission_callback' => fn($r)=>$this->permission_manage('opb_manage_clients',$r) ],
         ] );
@@ -277,6 +281,53 @@ class OPB_Inquiries_API extends OPB_REST_Base {
             'whatsapp_url'     => $wa_url,
             'delivery_method'  => $method,
             'sent_at'          => current_time('mysql'),
+        ]);
+    }
+
+    // ── Resend Onboarding Link ─────────────────────────────────────────────────
+
+    public function resend_onboarding( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+        $check = $this->permission_manage('opb_manage_clients',$r); if(is_wp_error($check)) return $check;
+        global $wpdb;
+
+        $id      = (int)$r['id'];
+        $inquiry = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}opb_inquiries WHERE id=%d", $id
+        ), ARRAY_A);
+
+        if (!$inquiry) return $this->error('not_found','Inquiry not found.',404);
+
+        if (in_array($inquiry['status'], ['CONVERTED','REJECTED','ARCHIVED'], true)) {
+            return $this->error('closed','Cannot resend — this inquiry is no longer active.',410);
+        }
+
+        if (empty($inquiry['token'])) {
+            return $this->error('no_token','No onboarding token found for this inquiry.',400);
+        }
+
+        // Refresh sent timestamp without changing status
+        $user = wp_get_current_user();
+        $wpdb->update("{$wpdb->prefix}opb_inquiries",[
+            'onboarding_sent_at' => current_time('mysql'),
+            'onboarding_sent_by' => $user->ID,
+        ],['id'=>$id]);
+
+        $onboarding_url = OPB_Onboarding_Handler::onboarding_url($inquiry['token']);
+
+        // Re-fire the customer email (skips silently if no email on file)
+        OPB_Notifications::notify_customer_onboarding_link($inquiry, $onboarding_url);
+
+        // Build WhatsApp URL so the frontend can open it if needed
+        $wa_url = OPB_Onboarding_Handler::whatsapp_url(
+            $inquiry['phone'],
+            $inquiry['owner_name'],
+            $inquiry['token']
+        );
+
+        return $this->success([
+            'onboarding_url'  => $onboarding_url,
+            'whatsapp_url'    => $wa_url,
+            'resent_at'       => current_time('mysql'),
         ]);
     }
 

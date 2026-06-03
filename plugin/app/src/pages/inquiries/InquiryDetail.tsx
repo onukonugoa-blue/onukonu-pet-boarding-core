@@ -28,6 +28,10 @@ export default function InquiryDetail() {
   const [branches, setBranches]                 = useState<{ id: number; name: string }[]>([])
   const [convertError, setConvertError]         = useState('')
 
+  // Resend
+  const [resending, setResending]       = useState(false)
+  const [resentAt, setResentAt]         = useState<string | null>(null)
+
   // Reject
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [rejectReason, setRejectReason]       = useState('')
@@ -146,6 +150,19 @@ export default function InquiryDetail() {
     }
   }
 
+  async function handleResend() {
+    setResending(true)
+    try {
+      const res = await inquiriesApi.resendOnboarding(Number(id))
+      setResentAt(res.resent_at)
+      setTimeout(() => setResentAt(null), 6000)
+    } catch (e: any) {
+      alert(e.message || 'Failed to resend.')
+    } finally {
+      setResending(false)
+    }
+  }
+
   async function handleArchive() {
     if (!confirm('Archive this inquiry?')) return
     try {
@@ -194,6 +211,16 @@ export default function InquiryDetail() {
                 className="text-sm bg-green-700 text-white px-3 py-1.5 rounded-lg hover:bg-green-600 font-medium"
               >
                 ✓ Convert to Client
+              </button>
+            )}
+            {['ONBOARDING_SENT','ONBOARDING_COMPLETED','READY_FOR_REVIEW'].includes(inquiry.status) && (
+              <button
+                onClick={handleResend}
+                disabled={resending}
+                title="Resend the onboarding link by email without changing the status"
+                className="text-sm bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-100 disabled:opacity-50"
+              >
+                {resending ? 'Resending…' : '↺ Resend Link'}
               </button>
             )}
             <button
@@ -271,6 +298,12 @@ export default function InquiryDetail() {
         <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-800">
           ✓ Onboarding link sent via {sendResult.delivery_method} at {fmt.datetime(sendResult.sent_at)}.
           <button onClick={() => setSendResult(null)} className="ml-3 text-green-600 underline text-xs">Dismiss</button>
+        </div>
+      )}
+
+      {resentAt && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-sm text-indigo-800">
+          ↺ Onboarding link resent by email at {fmt.datetime(resentAt)}. Status unchanged.
         </div>
       )}
 

@@ -170,6 +170,11 @@ export const inquiriesApi = {
 
   convert: (id: number, branchId: number) =>
     api.post<ConvertResult>(`/inquiries/${id}/convert`, { branch_id: branchId }),
+
+  resendOnboarding: (id: number) =>
+    api.post<{ onboarding_url: string; whatsapp_url: string; resent_at: string }>(
+      `/inquiries/${id}/resend-onboarding`
+    ),
 }
 
 export const STATUS_LABELS: Record<InquiryStatus, string> = {
