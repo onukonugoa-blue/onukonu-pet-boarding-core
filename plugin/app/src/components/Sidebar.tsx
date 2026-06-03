@@ -13,6 +13,7 @@ const ALL_LINKS: NavItem[] = [
   { to: '/bookings', label: 'Bookings',     icon: '📋', roles: ['opb_reception', 'opb_branch_manager', 'opb_super_admin'] },
   { to: '/kennel',   label: 'Kennel Board', icon: '🏠', roles: ['opb_reception', 'opb_branch_manager', 'opb_super_admin'] },
   { to: '/invoices', label: 'Invoices',     icon: '🧾', roles: ['opb_reception', 'opb_branch_manager', 'opb_super_admin'] },
+  { to: '/inquiries',label: 'Inquiries',    icon: '📩', roles: ['opb_reception', 'opb_branch_manager', 'opb_super_admin'] },
   { to: '/tasks',    label: 'Tasks',        icon: '✓'  },
   { to: '/expenses', label: 'Expenses',     icon: '💰', roles: ['opb_branch_manager', 'opb_super_admin'] },
   { to: '/reports',  label: 'Reports',      icon: '📊', roles: ['opb_branch_manager', 'opb_super_admin'] },
@@ -70,7 +71,7 @@ export default function Sidebar({ open, onClose }: Props) {
         </nav>
 
         <div className="p-3 border-t border-blue-700">
-          <p className="text-xs text-blue-400">v1.5.0</p>
+          <p className="text-xs text-blue-400">v1.7.0</p>
         </div>
       </aside>
     </>

@@ -43,13 +43,20 @@ function InvoicesIcon() {
     </svg>
   )
 }
+function InquiriesIcon() {
+  return (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    </svg>
+  )
+}
 
 const BOTTOM_NAV: NavItem[] = [
-  { to: '/',         label: 'Home',     icon: <HomeIcon />,     end: true },
-  { to: '/clients',  label: 'Clients',  icon: <ClientsIcon />,  roles: ['opb_reception', 'opb_branch_manager', 'opb_super_admin'] },
-  { to: '/bookings', label: 'Bookings', icon: <BookingsIcon />, roles: ['opb_reception', 'opb_branch_manager', 'opb_super_admin'] },
-  { to: '/kennel',   label: 'Kennel',   icon: <KennelIcon />,   roles: ['opb_reception', 'opb_branch_manager', 'opb_super_admin'] },
-  { to: '/invoices', label: 'Invoices', icon: <InvoicesIcon />, roles: ['opb_reception', 'opb_branch_manager', 'opb_super_admin'] },
+  { to: '/',          label: 'Home',      icon: <HomeIcon />,      end: true },
+  { to: '/clients',   label: 'Clients',   icon: <ClientsIcon />,   roles: ['opb_reception', 'opb_branch_manager', 'opb_super_admin'] },
+  { to: '/bookings',  label: 'Bookings',  icon: <BookingsIcon />,  roles: ['opb_reception', 'opb_branch_manager', 'opb_super_admin'] },
+  { to: '/inquiries', label: 'Inquiries', icon: <InquiriesIcon />, roles: ['opb_reception', 'opb_branch_manager', 'opb_super_admin'] },
+  { to: '/invoices',  label: 'Invoices',  icon: <InvoicesIcon />,  roles: ['opb_reception', 'opb_branch_manager', 'opb_super_admin'] },
 ]
 
 function getVisibleBottomNav(): NavItem[] {

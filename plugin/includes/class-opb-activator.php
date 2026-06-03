@@ -374,6 +374,134 @@ class OPB_Activator {
             KEY idx_branch (branch_id)
         ) ENGINE=InnoDB $charset;";
 
+        // ── Inquiry & Onboarding Pipeline ─────────────────────────────────────────
+
+        $tables[] = "CREATE TABLE {$wpdb->prefix}opb_inquiries (
+            id                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            token               CHAR(64)     NOT NULL,
+            branch_id           TINYINT UNSIGNED,
+            owner_name          VARCHAR(150) NOT NULL,
+            phone               VARCHAR(25)  NOT NULL,
+            email               VARCHAR(150),
+            pet_name            VARCHAR(100),
+            pet_type            VARCHAR(50),
+            desired_check_in    DATE,
+            desired_check_out   DATE,
+            message             TEXT,
+            status              ENUM('NEW','CONTACTED','ONBOARDING_SENT','ONBOARDING_COMPLETED','READY_FOR_REVIEW','CONVERTED','REJECTED','ARCHIVED') NOT NULL DEFAULT 'NEW',
+            existing_client_id  INT UNSIGNED,
+            onboarding_sent_at  DATETIME,
+            onboarding_sent_by  BIGINT UNSIGNED,
+            delivery_method     ENUM('EMAIL','WHATSAPP','MANUAL'),
+            converted_client_id INT UNSIGNED,
+            converted_at        DATETIME,
+            converted_by        BIGINT UNSIGNED,
+            ip_address          VARCHAR(45),
+            source              VARCHAR(100) NOT NULL DEFAULT 'web_form',
+            created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uq_token (token),
+            KEY idx_phone (phone),
+            KEY idx_status (status),
+            KEY idx_branch (branch_id)
+        ) ENGINE=InnoDB $charset;";
+
+        $tables[] = "CREATE TABLE {$wpdb->prefix}opb_inquiry_notes (
+            id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            inquiry_id      INT UNSIGNED NOT NULL,
+            note            TEXT         NOT NULL,
+            created_by      BIGINT UNSIGNED,
+            created_by_name VARCHAR(150),
+            created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_inquiry (inquiry_id)
+        ) ENGINE=InnoDB $charset;";
+
+        $tables[] = "CREATE TABLE {$wpdb->prefix}opb_onboarding_clients (
+            id                       INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            inquiry_id               INT UNSIGNED NOT NULL,
+            name                     VARCHAR(150),
+            phone                    VARCHAR(25),
+            email                    VARCHAR(150),
+            address                  TEXT,
+            local_guardian_name      VARCHAR(150),
+            local_guardian_contact   VARCHAR(25),
+            emergency_contact_name   VARCHAR(150),
+            emergency_contact_phone  VARCHAR(25),
+            notes                    TEXT,
+            tc_accepted              TINYINT(1)   NOT NULL DEFAULT 0,
+            tc_accepted_at           DATETIME,
+            tc_version               VARCHAR(20)  NOT NULL DEFAULT '1.0',
+            tc_ip                    VARCHAR(45),
+            completed_at             DATETIME,
+            created_at               DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at               DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uq_inquiry (inquiry_id),
+            KEY idx_inquiry (inquiry_id)
+        ) ENGINE=InnoDB $charset;";
+
+        $tables[] = "CREATE TABLE {$wpdb->prefix}opb_onboarding_pets (
+            id                        INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            inquiry_id                INT UNSIGNED NOT NULL,
+            onboarding_client_id      INT UNSIGNED,
+            name                      VARCHAR(100),
+            pet_type                  ENUM('Dog','Cat','Other'),
+            breed                     VARCHAR(100),
+            gender                    ENUM('Male','Female','Unknown'),
+            breed_size                VARCHAR(20),
+            coat                      VARCHAR(50),
+            weight_kg                 DECIMAL(5,2),
+            birthday                  DATE,
+            microchip_number          VARCHAR(50),
+            neutered_or_spayed        TINYINT(1),
+            vaccination_status        ENUM('Vaccinated','Not vaccinated','Unknown') DEFAULT 'Unknown',
+            anti_rabies_date          DATE,
+            dhppil_date               DATE,
+            corona_date               DATE,
+            kennel_cough_date         DATE,
+            tick_prevention           TINYINT(1) DEFAULT 0,
+            last_tick_prevention_date DATE,
+            tick_prevention_method    VARCHAR(100),
+            ongoing_medication        TINYINT(1) DEFAULT 0,
+            medication_detail         TEXT,
+            major_illness_history     TEXT,
+            deworming_date            DATE,
+            vet_name                  VARCHAR(150),
+            vet_contact               VARCHAR(25),
+            dietary_preference        VARCHAR(100),
+            additional_meals          TEXT,
+            preferences_or_allergies  TEXT,
+            first_walk_schedule       VARCHAR(100),
+            second_walk_schedule      VARCHAR(100),
+            third_walk_schedule       VARCHAR(100),
+            consent_photos            TINYINT(1) DEFAULT 0,
+            social_media_handle       VARCHAR(100),
+            special_occasion          VARCHAR(100),
+            special_occasion_date     DATE,
+            additional_notes          TEXT,
+            created_at                DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at                DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_inquiry (inquiry_id)
+        ) ENGINE=InnoDB $charset;";
+
+        $tables[] = "CREATE TABLE {$wpdb->prefix}opb_onboarding_documents (
+            id                   INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            inquiry_id           INT UNSIGNED NOT NULL,
+            onboarding_pet_id    INT UNSIGNED,
+            doc_type             ENUM('owner_id','vaccination_card','rabies_cert','kennel_cough_cert','medical_report','pet_photo','other') NOT NULL DEFAULT 'other',
+            label                VARCHAR(150),
+            file_url             TEXT         NOT NULL,
+            file_path            TEXT,
+            file_mime            VARCHAR(100),
+            uploaded_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_inquiry (inquiry_id),
+            KEY idx_pet (onboarding_pet_id)
+        ) ENGINE=InnoDB $charset;";
+
         foreach ( $tables as $sql ) {
             dbDelta( $sql );
         }

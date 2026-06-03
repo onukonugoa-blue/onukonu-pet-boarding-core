@@ -113,47 +113,68 @@ function renderPage(activeTab) {
     title = 'Analysis';
     content = `<div class="card doc-content">${simpleMarkdown(analysis)}</div>`;
   } else if (activeTab === 'plugin') {
-    title = 'Plugin';
-    const licenseContent = readFileSafe('plugin/License.md');
+    title = 'Plugin v1.7.0';
     content = `
       <div class="card">
-        <h2>Plugin Directory</h2>
-        <p>The <code>plugin/</code> directory is where the WordPress plugin code will be built. Currently contains:</p>
+        <h2>Plugin — v1.7.0</h2>
+        <p>The <code>plugin/</code> directory contains the complete WordPress plugin. Install by uploading
+        <strong>onukonu-pet-boarding-core-v1.7.0.zip</strong> via WP Admin → Plugins → Add New → Upload.</p>
+
+        <h3>v1.7.0 — Inquiry &amp; Onboarding Pipeline</h3>
         <ul>
-          <li><strong>License.md</strong> — License placeholder</li>
+          <li><strong>5 new DB tables</strong> — opb_inquiries, opb_inquiry_notes, opb_onboarding_clients, opb_onboarding_pets, opb_onboarding_documents</li>
+          <li><strong>Public Inquiry Form</strong> — standalone page at <code>/opb-inquiry/</code> (no login required)</li>
+          <li><strong>Onboarding Portal</strong> — multi-step form at <code>/opb-onboard/{token}/</code> with document upload + T&amp;C acceptance</li>
+          <li><strong>Staff Inquiries module</strong> — list, detail, notes, status management in the React SPA</li>
+          <li><strong>Send Onboarding</strong> — WhatsApp wa.me link, Email (manual record), or Manual modes</li>
+          <li><strong>Duplicate detection</strong> — phone + email cross-check against existing clients before conversion</li>
+          <li><strong>Convert to Client</strong> — explicit staff action only; creates Client + Pets + Documents from staging tables</li>
         </ul>
-        <div class="status-box">
-          <h3>Plugin Status</h3>
-          <p>The WordPress plugin code is yet to be scaffolded. The architecture documentation is complete and approved.</p>
-          <h4>Planned Plugin Structure:</h4>
-          <pre><code>plugin/
-├── onukonu-pet-boarding-core.php   (main plugin file)
-├── includes/
-│   ├── class-opb-activator.php     (DB table creation)
-│   ├── class-opb-deactivator.php
-│   ├── class-opb-loader.php
-│   └── class-opb-api.php           (REST API registration)
-├── admin/
-│   └── class-opb-admin.php         (WP admin page + SPA mount)
-├── api/
-│   ├── endpoints/
-│   │   ├── class-opb-clients-api.php
-│   │   ├── class-opb-pets-api.php
-│   │   ├── class-opb-bookings-api.php
-│   │   ├── class-opb-invoices-api.php
-│   │   └── ...
-│   └── class-opb-rest-controller.php
-├── frontend/
-│   ├── src/                         (React SPA source)
-│   │   ├── App.tsx
-│   │   ├── pages/
-│   │   ├── components/
-│   │   └── api/
-│   ├── dist/                        (built assets, enqueued by WP)
-│   └── package.json
-└── migration/
-    └── class-opb-import.php         (CSV/XLSX migration engine)</code></pre>
-        </div>
+
+        <h3>REST Endpoints Added</h3>
+        <table>
+          <thead><tr><th>Method</th><th>Endpoint</th><th>Auth</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td>POST</td><td>/wp-json/opb/v1/public/inquiry</td><td>None</td><td>Submit public inquiry</td></tr>
+            <tr><td>GET</td><td>/wp-json/opb/v1/public/onboarding/{token}</td><td>None</td><td>Fetch onboarding form data</td></tr>
+            <tr><td>POST</td><td>/wp-json/opb/v1/public/onboarding/{token}</td><td>None</td><td>Submit onboarding form</td></tr>
+            <tr><td>POST</td><td>/wp-json/opb/v1/public/onboarding/{token}/upload</td><td>None</td><td>Upload document</td></tr>
+            <tr><td>POST</td><td>/wp-json/opb/v1/public/onboarding/{token}/accept-terms</td><td>None</td><td>Accept T&amp;C</td></tr>
+            <tr><td>GET</td><td>/wp-json/opb/v1/inquiries</td><td>Staff</td><td>List inquiries</td></tr>
+            <tr><td>GET</td><td>/wp-json/opb/v1/inquiries/{id}</td><td>Staff</td><td>Inquiry detail</td></tr>
+            <tr><td>PUT</td><td>/wp-json/opb/v1/inquiries/{id}</td><td>Staff</td><td>Update status</td></tr>
+            <tr><td>POST</td><td>/wp-json/opb/v1/inquiries/{id}/notes</td><td>Staff</td><td>Add note</td></tr>
+            <tr><td>POST</td><td>/wp-json/opb/v1/inquiries/{id}/send-onboarding</td><td>Staff</td><td>Send onboarding link</td></tr>
+            <tr><td>POST</td><td>/wp-json/opb/v1/inquiries/{id}/reject</td><td>Staff</td><td>Reject inquiry</td></tr>
+            <tr><td>POST</td><td>/wp-json/opb/v1/inquiries/{id}/archive</td><td>Staff</td><td>Archive inquiry</td></tr>
+            <tr><td>GET</td><td>/wp-json/opb/v1/inquiries/{id}/duplicate-check</td><td>Staff</td><td>Check for existing client</td></tr>
+            <tr><td>POST</td><td>/wp-json/opb/v1/inquiries/{id}/convert</td><td>Manager+</td><td>Convert to client (irreversible)</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Pipeline Flow</h3>
+        <pre><code>Public Inquiry Form (/opb-inquiry/)
+  → NEW inquiry created in opb_inquiries
+  → Staff reviews in SPA /inquiries
+  → Staff sends onboarding link (WhatsApp / Email / Manual)
+  → Status → ONBOARDING_SENT
+  → Customer fills form at /opb-onboard/{token}/
+      - Owner details, pet details, uploads, T&C acceptance
+  → Status → ONBOARDING_COMPLETED → READY_FOR_REVIEW
+  → Staff reviews all submitted data
+  → Staff clicks "Convert to Client" (branch required)
+      - Duplicate check shown (phone + email)
+      - Creates opb_clients + opb_pets + copies documents
+  → Status → CONVERTED, redirect to new client profile</code></pre>
+
+        <h3>Architecture Notes</h3>
+        <ul>
+          <li>Operational records (clients, pets, bookings) are NEVER auto-created — only by explicit staff "Convert" action</li>
+          <li>Token: 64-char hex (32 bytes), UNIQUE in opb_inquiries. URL: <code>/opb-onboard/{token}/</code></li>
+          <li>Files stored in <code>wp-content/uploads/opb-onboarding/{token}/</code>. Max 10 MB, images + PDF only</li>
+          <li>WhatsApp: wa.me link only (no Meta API). Opens browser with pre-filled message.</li>
+          <li>T&amp;C version constant: <code>OPB_Onboarding_Handler::TC_VERSION = '1.0'</code></li>
+        </ul>
       </div>
     `;
   }
