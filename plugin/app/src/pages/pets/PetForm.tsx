@@ -10,9 +10,13 @@ const INITIAL: Partial<PetDetail> = {
 }
 
 export default function PetForm() {
-  const { id } = useParams<{ id: string }>()
+  const { id, clientId: routeClientId } = useParams<{ id?: string; clientId?: string }>()
   const [sp] = useSearchParams()
-  const clientId = Number(sp.get('client_id') ?? 0)
+  // clientId comes from the route param on /clients/:clientId/pets/new,
+  // or from ?client_id= as a fallback (e.g. direct links).
+  const clientId = routeClientId ? Number(routeClientId) : Number(sp.get('client_id') ?? 0)
+  // isEdit is true only when the pet :id param is present — i.e. /pets/:id/edit.
+  // On /clients/:clientId/pets/new the :id param is absent, so isEdit is correctly false.
   const isEdit = Boolean(id)
   const navigate = useNavigate()
   const [form, setForm] = useState<Partial<PetDetail>>(INITIAL)

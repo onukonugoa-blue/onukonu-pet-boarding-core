@@ -36,7 +36,7 @@ export default function App() {
         <Route path="/clients/new"             element={<ClientForm />} />
         <Route path="/clients/:id"             element={<ClientProfile />} />
         <Route path="/clients/:id/edit"        element={<ClientForm />} />
-        <Route path="/clients/:id/pets/new"    element={<PetForm />} />
+        <Route path="/clients/:clientId/pets/new" element={<PetForm />} />
         <Route path="/pets/:id"                element={<PetProfile />} />
         <Route path="/pets/:id/edit"           element={<PetForm />} />
         <Route path="/bookings"                element={<BookingList />} />
