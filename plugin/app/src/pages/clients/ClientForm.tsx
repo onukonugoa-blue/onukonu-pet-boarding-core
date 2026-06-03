@@ -17,6 +17,13 @@ interface DuplicateInfo {
   phone: string
 }
 
+interface EmailMatchInfo {
+  id: number
+  name: string
+  phone: string
+  email: string
+}
+
 export default function ClientForm() {
   const { id } = useParams<{ id: string }>()
   const isEdit = Boolean(id)
@@ -27,6 +34,8 @@ export default function ClientForm() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [duplicate, setDuplicate] = useState<DuplicateInfo | null>(null)
+  const [emailMatch, setEmailMatch] = useState<EmailMatchInfo | null>(null)
+  const [emailMatchDismissed, setEmailMatchDismissed] = useState(false)
 
   useEffect(() => {
     if (isEdit) {
@@ -35,8 +44,34 @@ export default function ClientForm() {
   }, [id])
 
   const set = (k: keyof Client, v: unknown) => {
-    setDuplicate(null)
+    if (k === 'email') {
+      setEmailMatch(null)
+      setEmailMatchDismissed(false)
+    }
+    if (k === 'phone') setDuplicate(null)
     setForm((f) => ({ ...f, [k]: v }))
+  }
+
+  const handleEmailBlur = async () => {
+    const email = form.email?.trim()
+    if (!email || isEdit) return
+    try {
+      const result = await clientsApi.list({ search: email, per_page: 10 })
+      const exact = result.data.find(
+        (c) => c.email?.toLowerCase() === email.toLowerCase()
+      )
+      if (exact) {
+        setEmailMatch({
+          id: exact.id,
+          name: exact.name,
+          phone: exact.phone,
+          email: exact.email!,
+        })
+        setEmailMatchDismissed(false)
+      }
+    } catch {
+      // Non-critical — silently ignore lookup errors
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,7 +134,40 @@ export default function ClientForm() {
         </div>
         <div className="form-group">
           <label className="form-label">Email</label>
-          <input className="form-input" type="email" value={form.email ?? ''} onChange={(e) => set('email', e.target.value)} />
+          <input
+            className="form-input"
+            type="email"
+            value={form.email ?? ''}
+            onChange={(e) => set('email', e.target.value)}
+            onBlur={handleEmailBlur}
+          />
+          {emailMatch && !emailMatchDismissed && (
+            <div className="mt-1 rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 flex items-start justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold text-yellow-800">Possible duplicate — this email is already on record</p>
+                <p className="text-xs text-yellow-700 mt-0.5">
+                  <span className="font-medium">{emailMatch.name}</span>
+                  <span className="mx-1.5 text-yellow-400">·</span>
+                  {emailMatch.phone}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/clients/${emailMatch.id}`)}
+                  className="text-xs font-medium text-yellow-800 underline hover:text-yellow-900 mt-1"
+                >
+                  View existing client →
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEmailMatchDismissed(true)}
+                className="text-yellow-500 hover:text-yellow-700 text-lg leading-none flex-shrink-0"
+                aria-label="Dismiss"
+              >
+                ×
+              </button>
+            </div>
+          )}
         </div>
         <div className="form-group">
           <label className="form-label">Home Branch</label>
