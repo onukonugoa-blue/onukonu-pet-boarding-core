@@ -167,13 +167,21 @@ class OPB_Inquiries_API extends OPB_REST_Base {
             ), ARRAY_A);
         }
 
+        $link_log = $wpdb->get_results($wpdb->prepare(
+            "SELECT id, event_type, token_suffix, actor_name, notes, created_at
+             FROM {$wpdb->prefix}opb_onboarding_link_log
+             WHERE inquiry_id=%d ORDER BY created_at ASC",
+            $id
+        ), ARRAY_A);
+
         return $this->success([
-            'inquiry'         => $inquiry,
-            'notes'           => $notes,
+            'inquiry'           => $inquiry,
+            'notes'             => $notes,
             'onboarding_client' => $ob_client,
-            'onboarding_pets' => $ob_pets,
-            'documents'       => $ob_docs,
-            'existing_client' => $existing_client,
+            'onboarding_pets'   => $ob_pets,
+            'documents'         => $ob_docs,
+            'existing_client'   => $existing_client,
+            'link_log'          => $link_log ?: [],
         ]);
     }
 
@@ -279,6 +287,20 @@ class OPB_Inquiries_API extends OPB_REST_Base {
         // regardless of the chosen delivery method.
         OPB_Notifications::notify_customer_onboarding_link( $inquiry, $onboarding_url );
 
+        // Log the send event and increment counter
+        $wpdb->insert("{$wpdb->prefix}opb_onboarding_link_log",[
+            'inquiry_id'   => $id,
+            'event_type'   => 'SENT',
+            'token_suffix' => substr($inquiry['token'], -8),
+            'actor_id'     => $user->ID,
+            'actor_name'   => $user->display_name,
+            'notes'        => 'via ' . $method,
+        ]);
+        $wpdb->query($wpdb->prepare(
+            "UPDATE {$wpdb->prefix}opb_inquiries SET token_send_count = token_send_count + 1 WHERE id = %d",
+            $id
+        ));
+
         return $this->success([
             'onboarding_url'   => $onboarding_url,
             'whatsapp_url'     => $wa_url,
@@ -309,6 +331,7 @@ class OPB_Inquiries_API extends OPB_REST_Base {
         }
 
         // Issue a new token so the old link is immediately invalidated
+        $old_suffix = substr($inquiry['token'], -8);
         $new_token  = OPB_Onboarding_Handler::generate_token();
         $expires_at = gmdate( 'Y-m-d H:i:s', strtotime( '+30 days' ) );
 
@@ -326,6 +349,28 @@ class OPB_Inquiries_API extends OPB_REST_Base {
 
         // Re-fire the customer email (skips silently if no email on file)
         OPB_Notifications::notify_customer_onboarding_link($inquiry, $onboarding_url);
+
+        // Log: old token rotated, new token sent; increment counter
+        $wpdb->insert("{$wpdb->prefix}opb_onboarding_link_log",[
+            'inquiry_id'   => $id,
+            'event_type'   => 'ROTATED',
+            'token_suffix' => $old_suffix,
+            'actor_id'     => $user->ID,
+            'actor_name'   => $user->display_name,
+            'notes'        => 'Old link invalidated on resend',
+        ]);
+        $wpdb->insert("{$wpdb->prefix}opb_onboarding_link_log",[
+            'inquiry_id'   => $id,
+            'event_type'   => 'SENT',
+            'token_suffix' => substr($new_token, -8),
+            'actor_id'     => $user->ID,
+            'actor_name'   => $user->display_name,
+            'notes'        => 'New link issued',
+        ]);
+        $wpdb->query($wpdb->prepare(
+            "UPDATE {$wpdb->prefix}opb_inquiries SET token_send_count = token_send_count + 1 WHERE id = %d",
+            $id
+        ));
 
         // Build WhatsApp URL so the frontend can open it if needed
         $wa_url = OPB_Onboarding_Handler::whatsapp_url(

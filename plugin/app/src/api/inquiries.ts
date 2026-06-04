@@ -19,6 +19,8 @@ export interface Inquiry {
   onboarding_sent_at?: string
   onboarding_sent_by?: number
   delivery_method?: 'EMAIL' | 'WHATSAPP' | 'MANUAL'
+  token_expires_at?: string
+  token_send_count?: number
   converted_client_id?: number
   converted_at?: string
   converted_by?: number
@@ -29,6 +31,15 @@ export interface Inquiry {
   note_count?: number
   doc_count?: number
   onboarding_url?: string
+}
+
+export interface LinkLogEntry {
+  id: number
+  event_type: 'SENT' | 'OPENED' | 'ROTATED'
+  token_suffix: string
+  actor_name?: string
+  notes?: string
+  created_at: string
 }
 
 export type InquiryStatus =
@@ -121,6 +132,7 @@ export interface InquiryDetail {
   onboarding_pets: OnboardingPet[]
   documents: OnboardingDocument[]
   existing_client: ExistingClient | null
+  link_log: LinkLogEntry[]
 }
 
 export interface SendOnboardingResult {

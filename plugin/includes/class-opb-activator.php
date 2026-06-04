@@ -395,6 +395,7 @@ class OPB_Activator {
             onboarding_sent_by  BIGINT UNSIGNED,
             delivery_method     ENUM('EMAIL','WHATSAPP','MANUAL'),
             token_expires_at    DATETIME,
+            token_send_count    INT UNSIGNED NOT NULL DEFAULT 0,
             converted_client_id INT UNSIGNED,
             converted_at        DATETIME,
             converted_by        BIGINT UNSIGNED,
@@ -407,6 +408,20 @@ class OPB_Activator {
             KEY idx_phone (phone),
             KEY idx_status (status),
             KEY idx_branch (branch_id)
+        ) ENGINE=InnoDB $charset;";
+
+        $tables[] = "CREATE TABLE {$wpdb->prefix}opb_onboarding_link_log (
+            id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            inquiry_id   INT UNSIGNED NOT NULL,
+            event_type   ENUM('SENT','OPENED','ROTATED') NOT NULL,
+            token_suffix CHAR(8)      NOT NULL,
+            actor_id     BIGINT UNSIGNED,
+            actor_name   VARCHAR(150),
+            notes        VARCHAR(255),
+            created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_inquiry (inquiry_id),
+            KEY idx_event (event_type)
         ) ENGINE=InnoDB $charset;";
 
         $tables[] = "CREATE TABLE {$wpdb->prefix}opb_inquiry_notes (

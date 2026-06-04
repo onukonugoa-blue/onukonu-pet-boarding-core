@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { inquiriesApi, STATUS_LABELS, STATUS_COLORS } from '../../api/inquiries'
-import type { InquiryDetail as IDetail, InquiryStatus, ExistingClient, SendOnboardingResult } from '../../api/inquiries'
+import type { InquiryDetail as IDetail, InquiryStatus, ExistingClient, SendOnboardingResult, LinkLogEntry } from '../../api/inquiries'
 import { fmt } from '../../api/client'
 
 export default function InquiryDetail() {
@@ -156,6 +156,7 @@ export default function InquiryDetail() {
       const res = await inquiriesApi.resendOnboarding(Number(id))
       setResentAt(res.resent_at)
       setTimeout(() => setResentAt(null), 6000)
+      await load()
     } catch (e: any) {
       alert(e.message || 'Failed to resend.')
     } finally {
@@ -177,7 +178,7 @@ export default function InquiryDetail() {
   if (error)   return <div className="p-8 text-center text-red-600">{error}</div>
   if (!data)   return null
 
-  const { inquiry, notes, onboarding_client, onboarding_pets, documents, existing_client } = data
+  const { inquiry, notes, onboarding_client, onboarding_pets, documents, existing_client, link_log } = data
   const isTerminal = ['CONVERTED', 'REJECTED', 'ARCHIVED'].includes(inquiry.status)
   const canConvert = inquiry.status === 'READY_FOR_REVIEW' || inquiry.status === 'ONBOARDING_COMPLETED'
 
@@ -554,6 +555,15 @@ export default function InquiryDetail() {
               </div>
             </div>
           )}
+
+          {/* Link Activity */}
+          {((inquiry.token_send_count ?? 0) > 0 || link_log.length > 0) && (
+            <LinkActivity
+              log={link_log}
+              sendCount={inquiry.token_send_count ?? 0}
+              expiresAt={inquiry.token_expires_at}
+            />
+          )}
         </div>
       </div>
 
@@ -680,6 +690,85 @@ function Row({ label, value }: { label: string; value?: string | null | number }
     <div>
       <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</div>
       <div className="text-sm text-gray-800 mt-0.5">{value}</div>
+    </div>
+  )
+}
+
+function LinkActivity({
+  log,
+  sendCount,
+  expiresAt,
+}: {
+  log: LinkLogEntry[]
+  sendCount: number
+  expiresAt?: string
+}) {
+  const expired = expiresAt ? new Date(expiresAt) < new Date() : false
+
+  const EVENT_ICON: Record<LinkLogEntry['event_type'], string> = {
+    SENT:    '📨',
+    OPENED:  '👁',
+    ROTATED: '↺',
+  }
+  const EVENT_LABEL: Record<LinkLogEntry['event_type'], string> = {
+    SENT:    'Sent',
+    OPENED:  'Opened',
+    ROTATED: 'Rotated',
+  }
+  const EVENT_COLORS: Record<LinkLogEntry['event_type'], string> = {
+    SENT:    'bg-purple-100 text-purple-700',
+    OPENED:  'bg-blue-100 text-blue-700',
+    ROTATED: 'bg-orange-100 text-orange-700',
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-semibold text-gray-900">Link Activity</h2>
+        {sendCount > 0 && (
+          <span className="text-xs bg-purple-100 text-purple-800 font-semibold px-2.5 py-1 rounded-full">
+            {sendCount} send{sendCount !== 1 ? 's' : ''}
+          </span>
+        )}
+      </div>
+
+      {expiresAt && (
+        <div className={`text-xs px-2.5 py-1.5 rounded-lg mb-3 flex items-center gap-1.5 ${
+          expired
+            ? 'bg-red-50 text-red-700 border border-red-200'
+            : 'bg-green-50 text-green-700 border border-green-200'
+        }`}>
+          <span>{expired ? '⚠' : '✓'}</span>
+          <span>{expired ? 'Link expired' : 'Link valid'} · expires {fmt.date(expiresAt)}</span>
+        </div>
+      )}
+
+      <div className="space-y-2 max-h-60 overflow-y-auto">
+        {log.length === 0 ? (
+          <p className="text-xs text-gray-400">No link activity yet.</p>
+        ) : (
+          [...log].reverse().map(entry => (
+            <div key={entry.id} className="flex items-start gap-2">
+              <span className={`mt-0.5 flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${EVENT_COLORS[entry.event_type]}`}>
+                {EVENT_ICON[entry.event_type]}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-xs font-semibold text-gray-700">{EVENT_LABEL[entry.event_type]}</span>
+                  <span className="text-xs text-gray-400 font-mono">…{entry.token_suffix}</span>
+                  {entry.actor_name && (
+                    <span className="text-xs text-gray-400">· {entry.actor_name}</span>
+                  )}
+                </div>
+                <div className="text-xs text-gray-400">{fmt.datetime(entry.created_at)}</div>
+                {entry.notes && (
+                  <div className="text-xs text-gray-400 italic">{entry.notes}</div>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   )
 }

@@ -143,6 +143,25 @@ class OPB_Public_API extends OPB_REST_Base {
             ) ) ?? '';
         }
 
+        // Debounced OPENED event — only one entry per 30-minute window
+        $recent = $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}opb_onboarding_link_log
+             WHERE inquiry_id = %d AND event_type = 'OPENED'
+               AND created_at > DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+             LIMIT 1",
+            $inquiry['id']
+        ) );
+        if ( ! $recent ) {
+            $wpdb->insert( "{$wpdb->prefix}opb_onboarding_link_log", [
+                'inquiry_id'   => $inquiry['id'],
+                'event_type'   => 'OPENED',
+                'token_suffix' => substr( $token, -8 ),
+                'actor_id'     => null,
+                'actor_name'   => 'Customer',
+                'notes'        => 'Onboarding form viewed',
+            ] );
+        }
+
         return $this->success( [
             'inquiry'     => [
                 'owner_name'         => $inquiry['owner_name'],
