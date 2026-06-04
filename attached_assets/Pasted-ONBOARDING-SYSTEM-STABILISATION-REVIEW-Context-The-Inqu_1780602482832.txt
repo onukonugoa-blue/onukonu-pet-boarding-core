@@ -1,0 +1,236 @@
+ONBOARDING SYSTEM STABILISATION REVIEW
+
+Context
+
+The Inquiry / Onboarding module has been successfully implemented and the plugin now activates correctly.
+
+Two issues remain:
+
+1. Onboarding email delivery does not appear to be using the site's intended email infrastructure.
+2. Onboarding links load the public page but the onboarding form never appears and remains in a loading state.
+
+This task is a stabilisation and root-cause investigation.
+
+Do not add new features.
+
+Do not redesign the inquiry workflow.
+
+Focus on identifying and correcting the underlying issues.
+
+---
+
+ISSUE 1 — EMAIL DELIVERY REVIEW
+
+Review the onboarding email delivery implementation.
+
+Determine:
+
+- How onboarding emails are currently sent.
+- Whether WordPress wp_mail() is being used.
+- Whether the site's configured SMTP/mail plugin is being used.
+- Which From address is generated.
+- Whether the mail system is bypassing the site's SPF/DKIM/DMARC-compliant configuration.
+
+Requirement:
+
+The onboarding workflow must use the site's existing WordPress mail infrastructure.
+
+Do NOT create a separate mail transport.
+
+Do NOT implement a custom SMTP client.
+
+Do NOT bypass WordPress mail configuration.
+
+The onboarding module should inherit whatever mail transport, SMTP plugin, and authenticated sending identity the site already uses.
+
+Expected outcome:
+
+- Onboarding emails originate from the site's configured mail identity.
+- Existing SPF, DKIM, and DMARC protections remain authoritative.
+- No separate mail configuration is required inside OPB.
+
+Provide a root-cause analysis of the current behaviour.
+
+---
+
+ISSUE 2 — ONBOARDING LINK LOADS FOREVER
+
+Current behaviour:
+
+- Staff generates onboarding link.
+- Link opens correctly.
+- Public onboarding page loads.
+- Form never appears.
+- Loading spinner continues indefinitely.
+
+Review the complete onboarding flow.
+
+Trace:
+
+Generate Link
+↓
+Store Token
+↓
+Email / WhatsApp Delivery
+↓
+Public Link Access
+↓
+Token Validation
+↓
+Load Onboarding Record
+↓
+Display Form
+
+Determine exactly where the flow is failing.
+
+---
+
+TOKEN LIFECYCLE REVIEW
+
+Review the onboarding token architecture.
+
+Determine:
+
+- How tokens are generated.
+- How tokens are stored.
+- Whether tokens expire.
+- Whether tokens are single-use.
+- Whether tokens are invalidated after submission.
+- Whether multiple active onboarding links can exist for the same inquiry.
+
+Document current behaviour.
+
+---
+
+RECOMMENDED TOKEN MODEL
+
+Implement a clear lifecycle if one does not already exist.
+
+Suggested attributes:
+
+- token
+- created_at
+- expires_at
+- used_at
+- completed_at
+- is_active
+
+Recommended behaviour:
+
+Generate Onboarding Link
+↓
+Token Created
+↓
+Valid for configurable period (e.g. 30 days)
+↓
+Customer Completes Form
+↓
+Token Marked Used
+↓
+Link No Longer Editable
+
+---
+
+RESEND ONBOARDING
+
+Support:
+
+Resend Onboarding
+
+Behaviour:
+
+- Generate new token
+- Invalidate previous token
+- Preserve onboarding data
+- Preserve inquiry history
+
+Only one active onboarding link should exist at any time.
+
+---
+
+ERROR HANDLING
+
+Infinite loading is not acceptable.
+
+The onboarding page must explicitly handle:
+
+- Invalid Token
+- Expired Token
+- Used Token
+- Missing Onboarding Record
+- API Failure
+- Token Lookup Failure
+
+Display clear messages such as:
+
+"Invalid onboarding link."
+
+"This onboarding link has expired."
+
+"This onboarding form has already been completed."
+
+Do not leave users on a perpetual spinner.
+
+---
+
+API & FRONTEND REVIEW
+
+Review:
+
+- Public onboarding route
+- Token lookup endpoint
+- Public onboarding API
+- Frontend fetch logic
+- Loading state management
+- Error state management
+
+Determine:
+
+1. Is the token reaching the backend?
+2. Is the token found?
+3. Is the onboarding record loaded?
+4. Is the API returning an error?
+5. Is the frontend swallowing the error?
+
+Provide root-cause analysis before implementing changes.
+
+---
+
+SECURITY
+
+Do not introduce:
+
+- WordPress users
+- Customer accounts
+- Passwords
+- Login systems
+
+The onboarding token remains the access mechanism.
+
+Public users should only be able to access their onboarding record.
+
+---
+
+DELIVERABLES
+
+Provide:
+
+- Root cause of email delivery behaviour
+- Root cause of onboarding loading failure
+- Current token lifecycle analysis
+- Token lifecycle improvements
+- Files changed
+- API changes
+- Frontend changes
+- Commit hash
+- Production ZIP
+
+Success Criteria
+
+- Onboarding emails use the site's existing WordPress mail infrastructure.
+- Correct authenticated sender identity is used.
+- Onboarding links open successfully.
+- Onboarding forms load successfully.
+- Invalid, expired, or used links show clear messages.
+- No infinite loading states remain.
+- Token lifecycle is documented and operationally sound.

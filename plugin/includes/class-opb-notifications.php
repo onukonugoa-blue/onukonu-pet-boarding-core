@@ -125,8 +125,6 @@ class OPB_Notifications {
 
         $headers = [
             'Content-Type: text/html; charset=UTF-8',
-            'From: ' . $facility . ' <' . get_option( 'admin_email' ) . '>',
-            'Reply-To: ' . get_option( 'admin_email' ),
         ];
 
         wp_mail( $email, $subject, $body, $headers );
@@ -179,8 +177,6 @@ class OPB_Notifications {
 
         $headers = [
             'Content-Type: text/html; charset=UTF-8',
-            'From: ' . $facility . ' <' . get_option( 'admin_email' ) . '>',
-            'Reply-To: ' . get_option( 'admin_email' ),
         ];
 
         wp_mail( $email, $subject, $body, $headers );
@@ -280,7 +276,6 @@ class OPB_Notifications {
 
         $headers = [
             'Content-Type: text/html; charset=UTF-8',
-            'From: ' . self::facility_name() . ' <' . get_option( 'admin_email' ) . '>',
         ];
 
         wp_mail( $to, $subject, $html_body, $headers );

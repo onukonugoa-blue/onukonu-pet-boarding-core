@@ -7,6 +7,7 @@ class OPB_Activator {
 
     public static function activate(): void {
         self::create_tables();
+        flush_rewrite_rules( false );
     }
 
     public static function create_tables(): void {
@@ -393,6 +394,7 @@ class OPB_Activator {
             onboarding_sent_at  DATETIME,
             onboarding_sent_by  BIGINT UNSIGNED,
             delivery_method     ENUM('EMAIL','WHATSAPP','MANUAL'),
+            token_expires_at    DATETIME,
             converted_client_id INT UNSIGNED,
             converted_at        DATETIME,
             converted_by        BIGINT UNSIGNED,

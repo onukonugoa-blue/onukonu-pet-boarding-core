@@ -254,11 +254,14 @@ class OPB_Inquiries_API extends OPB_REST_Base {
 
         $user = wp_get_current_user();
 
+        $expires_at = gmdate( 'Y-m-d H:i:s', strtotime( '+30 days' ) );
+
         $wpdb->update("{$wpdb->prefix}opb_inquiries",[
             'status'             => 'ONBOARDING_SENT',
             'onboarding_sent_at' => current_time('mysql'),
             'onboarding_sent_by' => $user->ID,
             'delivery_method'    => $method,
+            'token_expires_at'   => $expires_at,
         ],['id'=>$id]);
 
         $onboarding_url = OPB_Onboarding_Handler::onboarding_url($inquiry['token']);
@@ -305,14 +308,21 @@ class OPB_Inquiries_API extends OPB_REST_Base {
             return $this->error('no_token','No onboarding token found for this inquiry.',400);
         }
 
-        // Refresh sent timestamp without changing status
+        // Issue a new token so the old link is immediately invalidated
+        $new_token  = OPB_Onboarding_Handler::generate_token();
+        $expires_at = gmdate( 'Y-m-d H:i:s', strtotime( '+30 days' ) );
+
         $user = wp_get_current_user();
         $wpdb->update("{$wpdb->prefix}opb_inquiries",[
+            'token'              => $new_token,
+            'token_expires_at'   => $expires_at,
             'onboarding_sent_at' => current_time('mysql'),
             'onboarding_sent_by' => $user->ID,
         ],['id'=>$id]);
 
-        $onboarding_url = OPB_Onboarding_Handler::onboarding_url($inquiry['token']);
+        $inquiry['token'] = $new_token;
+
+        $onboarding_url = OPB_Onboarding_Handler::onboarding_url($new_token);
 
         // Re-fire the customer email (skips silently if no email on file)
         OPB_Notifications::notify_customer_onboarding_link($inquiry, $onboarding_url);

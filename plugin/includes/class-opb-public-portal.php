@@ -406,7 +406,21 @@ textarea{resize:vertical;min-height:70px}
 
   async function loadData(){
     try {
-      const res  = await fetch(API + '/public/onboarding/' + TOKEN);
+      const ctrl    = new AbortController();
+      const timeout = setTimeout(function(){ ctrl.abort(); }, 15000);
+      let res;
+      try {
+        res = await fetch(API + '/public/onboarding/' + TOKEN, { signal: ctrl.signal });
+      } catch(fetchErr) {
+        if (fetchErr && fetchErr.name === 'AbortError') {
+          showErrorScreen('The request timed out. Please check your connection and refresh the page.');
+        } else {
+          showErrorScreen('Network error. Please check your connection and refresh the page.');
+        }
+        return;
+      } finally {
+        clearTimeout(timeout);
+      }
       const json = await res.json();
       if (!res.ok) { showErrorScreen(json.message || 'Link not found or expired.'); return; }
 

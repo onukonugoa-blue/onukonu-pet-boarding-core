@@ -408,6 +408,11 @@ class OPB_Public_API extends OPB_REST_Base {
         if ( ! $row ) {
             return $this->error( 'not_found', 'Onboarding link not found or expired.', 404 );
         }
+
+        if ( ! empty( $row['token_expires_at'] ) && strtotime( $row['token_expires_at'] ) < time() ) {
+            return $this->error( 'expired', 'This onboarding link has expired. Please contact us to request a new link.', 410 );
+        }
+
         return $row;
     }
 
