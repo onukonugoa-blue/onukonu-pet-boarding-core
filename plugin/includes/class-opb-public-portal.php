@@ -406,25 +406,15 @@ textarea{resize:vertical;min-height:70px}
 
   async function loadData(){
     const apiUrl = API + '/public/onboarding/' + TOKEN;
-    console.log('[OPB] STEP 1 — token (last 8):', TOKEN.slice(-8));
-    console.log('[OPB] STEP 2 — API URL:', apiUrl);
-
-    // NOTE: AbortController must stay live through body reading, not just headers.
-    // Bug fix: do NOT clearTimeout until after res.json() resolves.
     const ctrl    = new AbortController();
-    const timeout = setTimeout(function(){
-      console.warn('[OPB] STEP 3 — TIMEOUT after 20 s, aborting');
-      ctrl.abort();
-    }, 20000);
+    const timeout = setTimeout(function(){ ctrl.abort(); }, 20000);
 
     try {
       let res;
-      console.log('[OPB] STEP 3 — fetch starting…');
       try {
         res = await fetch(apiUrl, { signal: ctrl.signal });
       } catch(fetchErr) {
         clearTimeout(timeout);
-        console.error('[OPB] STEP 3 FAIL — fetch threw:', fetchErr.name, fetchErr.message);
         if (fetchErr && fetchErr.name === 'AbortError') {
           showErrorScreen('The request timed out. Please check your connection and refresh the page.');
         } else {
@@ -433,56 +423,38 @@ textarea{resize:vertical;min-height:70px}
         return;
       }
 
-      console.log('[OPB] STEP 4 — headers received. HTTP status:', res.status, res.statusText);
-      console.log('[OPB] STEP 4 — X-OPB-Step header:', res.headers.get('X-OPB-Step'));
-      console.log('[OPB] STEP 4 — Content-Type:', res.headers.get('Content-Type'));
-
       let rawText;
       try {
-        console.log('[OPB] STEP 5 — reading body (res.text())…');
         rawText = await res.text();
         clearTimeout(timeout);
       } catch(bodyErr) {
         clearTimeout(timeout);
-        console.error('[OPB] STEP 5 FAIL — body read threw:', bodyErr.name, bodyErr.message);
         showErrorScreen('Failed to read server response. Please refresh the page.');
         return;
       }
-
-      console.log('[OPB] STEP 5 OK — body length:', rawText.length, 'chars');
-      console.log('[OPB] STEP 5 — raw body (first 500 chars):', rawText.slice(0, 500));
 
       let json;
       try {
         json = JSON.parse(rawText);
       } catch(parseErr) {
-        console.error('[OPB] STEP 6 FAIL — JSON.parse threw:', parseErr.message);
-        console.error('[OPB] STEP 6 — full raw body:', rawText);
-        showErrorScreen('Server returned an unexpected response. Check the browser console for details.');
+        showErrorScreen('Server returned an unexpected response. Please refresh the page.');
         return;
       }
 
-      console.log('[OPB] STEP 6 OK — parsed JSON keys:', Object.keys(json));
-
       if (!res.ok) {
-        console.error('[OPB] STEP 7 FAIL — HTTP', res.status, '— error code:', json.code, '— message:', json.message);
         showErrorScreen(json.message || 'Link not found or expired.');
         return;
       }
-
-      console.log('[OPB] STEP 7 OK — success response. inquiry.owner_name:', json.inquiry && json.inquiry.owner_name);
 
       inquiry      = json.inquiry   || {};
       existingPets = json.pets      || [];
       existingDocs = json.documents || [];
       tcAccepted   = !!(json.client && json.client.tc_accepted);
 
-      console.log('[OPB] STEP 8 — hiding loading, showing app');
       document.getElementById('header-sub').textContent = 'Welcome, ' + (inquiry.owner_name || '') + '!';
       document.getElementById('loading-screen').style.display = 'none';
       document.getElementById('app').style.display = 'block';
 
-      console.log('[OPB] STEP 9 — prefilling client, building pets/docs');
       prefillClient(json.client);
       buildPets(existingPets);
       buildDocSections();
@@ -493,10 +465,8 @@ textarea{resize:vertical;min-height:70px}
         document.getElementById('s4-submit').disabled = false;
         updateStepIndicator(4);
       }
-      console.log('[OPB] STEP 9 DONE — page fully loaded');
     } catch(e) {
       clearTimeout(timeout);
-      console.error('[OPB] OUTER CATCH — unexpected error:', e.name, e.message, e.stack);
       showErrorScreen('Network error. Please refresh the page.');
     }
   }

@@ -117,39 +117,26 @@ class OPB_Public_API extends OPB_REST_Base {
 
         $token        = $r['token'];
         $token_suffix = substr( $token, -8 );
-        error_log( "[OPB get_onboarding] STEP 1 — token_suffix=…{$token_suffix}" );
 
-        // ── Step 2: token → inquiry ────────────────────────────────────────────
         $inquiry = $this->get_inquiry_by_token( $token );
-        if ( is_wp_error( $inquiry ) ) {
-            error_log( "[OPB get_onboarding] STEP 2 FAIL — " . $inquiry->get_error_code() . ': ' . $inquiry->get_error_message() );
-            return $inquiry;
-        }
-        error_log( "[OPB get_onboarding] STEP 2 OK — inquiry_id={$inquiry['id']} status={$inquiry['status']} expires={$inquiry['token_expires_at']}" );
+        if ( is_wp_error( $inquiry ) ) return $inquiry;
 
-        // ── Step 3: ob_client ──────────────────────────────────────────────────
         $ob_client = $wpdb->get_row( $wpdb->prepare(
             "SELECT * FROM {$wpdb->prefix}opb_onboarding_clients WHERE inquiry_id = %d",
             $inquiry['id']
         ), ARRAY_A );
-        error_log( "[OPB get_onboarding] STEP 3 ob_client=" . ( $ob_client ? 'found' : 'null' ) . ' db_error=' . ( $wpdb->last_error ?: 'none' ) );
 
-        // ── Step 4: ob_pets ────────────────────────────────────────────────────
         $ob_pets = $wpdb->get_results( $wpdb->prepare(
             "SELECT * FROM {$wpdb->prefix}opb_onboarding_pets WHERE inquiry_id = %d ORDER BY id ASC",
             $inquiry['id']
         ), ARRAY_A );
-        error_log( "[OPB get_onboarding] STEP 4 pets=" . count( (array) $ob_pets ) . ' db_error=' . ( $wpdb->last_error ?: 'none' ) );
 
-        // ── Step 5: ob_docs ────────────────────────────────────────────────────
         $ob_docs = $wpdb->get_results( $wpdb->prepare(
             "SELECT id, onboarding_pet_id, doc_type, label, file_url, file_mime, uploaded_at
              FROM {$wpdb->prefix}opb_onboarding_documents WHERE inquiry_id = %d",
             $inquiry['id']
         ), ARRAY_A );
-        error_log( "[OPB get_onboarding] STEP 5 docs=" . count( (array) $ob_docs ) . ' db_error=' . ( $wpdb->last_error ?: 'none' ) );
 
-        // ── Step 6: branch name ────────────────────────────────────────────────
         $branch_name = '';
         if ( $inquiry['branch_id'] ) {
             $branch_name = $wpdb->get_var( $wpdb->prepare(
@@ -157,13 +144,10 @@ class OPB_Public_API extends OPB_REST_Base {
                 $inquiry['branch_id']
             ) ) ?? '';
         }
-        error_log( "[OPB get_onboarding] STEP 6 branch='{$branch_name}' db_error=" . ( $wpdb->last_error ?: 'none' ) );
 
-        // ── Step 7: OPENED event (debounced) ───────────────────────────────────
-        // Guard: only run if the link_log table actually exists (pre-v1.7.2 installs)
-        $log_table = "{$wpdb->prefix}opb_onboarding_link_log";
+        // Debounced OPENED event — guard for pre-v1.7.2 installs where table may not exist yet
+        $log_table    = "{$wpdb->prefix}opb_onboarding_link_log";
         $table_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $log_table ) );
-        error_log( "[OPB get_onboarding] STEP 7 log_table_exists=" . ( $table_exists ? 'yes' : 'no' ) );
 
         if ( $table_exists ) {
             $recent = $wpdb->get_var( $wpdb->prepare(
@@ -173,10 +157,8 @@ class OPB_Public_API extends OPB_REST_Base {
                  LIMIT 1",
                 $inquiry['id']
             ) );
-            error_log( "[OPB get_onboarding] STEP 7a recent_open=" . ( $recent ? $recent : 'none' ) . ' db_error=' . ( $wpdb->last_error ?: 'none' ) );
-
             if ( ! $recent ) {
-                $inserted = $wpdb->insert( $log_table, [
+                $wpdb->insert( $log_table, [
                     'inquiry_id'   => $inquiry['id'],
                     'event_type'   => 'OPENED',
                     'token_suffix' => $token_suffix,
@@ -184,12 +166,10 @@ class OPB_Public_API extends OPB_REST_Base {
                     'actor_name'   => 'Customer',
                     'notes'        => 'Onboarding form viewed',
                 ] );
-                error_log( "[OPB get_onboarding] STEP 7b insert=" . ( $inserted !== false ? 'ok' : 'FAILED' ) . ' db_error=' . ( $wpdb->last_error ?: 'none' ) );
             }
         }
 
-        // ── Step 8: build and return response ─────────────────────────────────
-        $response_data = [
+        return $this->success( [
             'inquiry'    => [
                 'owner_name'       => $inquiry['owner_name'],
                 'phone'            => $inquiry['phone'],
@@ -207,13 +187,7 @@ class OPB_Public_API extends OPB_REST_Base {
             'documents'  => $ob_docs,
             'tc_version' => OPB_Onboarding_Handler::TC_VERSION,
             'facility'   => get_bloginfo( 'name' ) ?: 'Onukonu Pet Boarding',
-        ];
-        error_log( '[OPB get_onboarding] STEP 8 returning 200 OK — keys=' . implode( ',', array_keys( $response_data ) ) );
-
-        $resp = $this->success( $response_data );
-        $resp->header( 'X-OPB-Step', '8-ok' );
-        $resp->header( 'X-OPB-Inquiry', (string) $inquiry['id'] );
-        return $resp;
+        ] );
     }
 
     // ── Submit Onboarding (client + pets) ──────────────────────────────────────

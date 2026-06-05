@@ -138,3 +138,9 @@ id = "-_zhWhXSbckaFi_bLo-4d"
 uri = "file://onukonu-pet-boarding-core-v1.7.2-debug.zip"
 type = "unspecified"
 title = "v1.7.2-debug — Instrumented build"
+
+[[outputs]]
+id = "qNUqCgQSRHinbWOLXfV7b"
+uri = "file://onukonu-pet-boarding-core-v1.7.3.zip"
+type = "unspecified"
+title = "onukonu-pet-boarding-core v1.7.3 — Production"
