@@ -71,7 +71,7 @@ export default function Sidebar({ open, onClose }: Props) {
         </nav>
 
         <div className="p-3 border-t border-blue-700">
-          <p className="text-xs text-blue-400">v1.7.0</p>
+          <p className="text-xs text-blue-400">v1.8.0</p>
         </div>
       </aside>
     </>

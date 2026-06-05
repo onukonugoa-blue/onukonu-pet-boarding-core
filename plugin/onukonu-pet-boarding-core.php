@@ -3,7 +3,7 @@
  * Plugin Name: Onukonu Pet Boarding Core
  * Plugin URI:  https://onukonu.com
  * Description: Replacement platform for the discontinued boarding SaaS. Manages clients, pets, bookings, invoices, payments, and operations across three branches.
- * Version:     1.7.3
+ * Version:     1.8.0
  * Author:      Onukonu Pet Homestyle Boarding
  * License:     GPL-2.0-or-later
  * Text Domain: opb
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'OPB_VERSION',     '1.7.3' );
+define( 'OPB_VERSION',     '1.8.0' );
 define( 'OPB_PLUGIN_FILE', __FILE__ );
 define( 'OPB_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
 define( 'OPB_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
@@ -46,6 +46,7 @@ require_once OPB_PLUGIN_DIR . 'includes/migration/adapters/class-opb-expenses-ad
 require_once OPB_PLUGIN_DIR . 'includes/migration/adapters/class-opb-services-adapter.php';
 require_once OPB_PLUGIN_DIR . 'includes/migration/adapters/class-opb-addons-adapter.php';
 
+require_once OPB_PLUGIN_DIR . 'includes/class-opb-customizations.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-onboarding-handler.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-notifications.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-public-portal.php';
@@ -65,6 +66,7 @@ require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-reports-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-kennels-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-public-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-inquiries-api.php';
+require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-customizations-api.php';
 require_once OPB_PLUGIN_DIR . 'admin/class-opb-admin-page.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-portal.php';
 
@@ -105,8 +107,9 @@ function opb_register_rest_routes(): void {
     ( new OPB_Import_API()    )->register_routes();
     ( new OPB_Reports_API()   )->register_routes();
     ( new OPB_Kennels_API()   )->register_routes();
-    ( new OPB_Public_API()    )->register_routes();
-    ( new OPB_Inquiries_API() )->register_routes();
+    ( new OPB_Public_API()         )->register_routes();
+    ( new OPB_Inquiries_API()      )->register_routes();
+    ( new OPB_Customizations_API() )->register_routes();
 }
 
 function opb_register_admin_menu(): void {

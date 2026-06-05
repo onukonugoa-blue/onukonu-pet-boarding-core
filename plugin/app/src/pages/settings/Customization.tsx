@@ -1,0 +1,421 @@
+import { useEffect, useState, useCallback } from 'react'
+import { Link } from 'react-router-dom'
+import { customizationsApi } from '../../api/customizations'
+import type { CustomizationItem, PreviewResult } from '../../api/customizations'
+
+type Tab = 'facility' | 'legal' | 'onboarding' | 'inquiry' | 'preview' | 'export'
+
+const TABS: { id: Tab; label: string; icon: string }[] = [
+  { id: 'facility',  label: 'Facility Info',        icon: '🏢' },
+  { id: 'legal',     label: 'Legal & T&C',          icon: '📜' },
+  { id: 'onboarding',label: 'Onboarding Messages',  icon: '📨' },
+  { id: 'inquiry',   label: 'Inquiry Messages',     icon: '📩' },
+  { id: 'preview',   label: 'Preview',              icon: '👁' },
+  { id: 'export',    label: 'Export',               icon: '⬇' },
+]
+
+const VALID_PLACEHOLDERS = ['{{CLIENT_NAME}}', '{{FACILITY_NAME}}', '{{ONBOARDING_LINK}}', '{{PHONE}}', '{{EMAIL}}']
+
+const PLACEHOLDER_HINT: Record<string, string> = {
+  facility:   '',
+  legal:      '{{FACILITY_NAME}}',
+  onboarding: '{{CLIENT_NAME}} · {{FACILITY_NAME}} · {{ONBOARDING_LINK}} · {{PHONE}} · {{EMAIL}}',
+  inquiry:    '{{CLIENT_NAME}} · {{FACILITY_NAME}} · {{PHONE}} · {{EMAIL}}',
+}
+
+function canEdit(): boolean {
+  const roles: string[] = window.OPB?.user?.roles ?? []
+  return roles.includes('administrator') || roles.includes('opb_super_admin')
+}
+
+function validatePlaceholders(text: string): string[] {
+  const matches = text.match(/\{\{[A-Z0-9_]+\}\}/g) ?? []
+  return [...new Set(matches.filter((m) => !VALID_PLACEHOLDERS.includes(m)))]
+}
+
+function toHtmlParagraphs(text: string): string {
+  return text
+    .split(/\n\n+/)
+    .map((p) => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+    .join('')
+}
+
+function metaLine(item: CustomizationItem): string {
+  if (item.is_default) return 'Using default value'
+  const parts: string[] = []
+  if (item.updated_at) parts.push(`Saved ${new Date(item.updated_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`)
+  return parts.join(' · ') || 'Saved'
+}
+
+interface FieldProps {
+  item: CustomizationItem
+  value: string
+  onChange: (key: string, val: string) => void
+  readOnly: boolean
+}
+
+function SettingField({ item, value, onChange, readOnly }: FieldProps) {
+  const invalid = item.type !== 'richtext' ? validatePlaceholders(value) : []
+  const isDirty = value !== item.value
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center justify-between mb-1 gap-2">
+        <label className="form-label mb-0 font-semibold">{item.label}</label>
+        <span className={`text-xs ${item.is_default && !isDirty ? 'text-gray-400' : 'text-blue-600'}`}>
+          {isDirty ? '● unsaved' : metaLine(item)}
+        </span>
+      </div>
+
+      {item.type === 'text' && (
+        <input
+          type="text"
+          className="form-input"
+          value={value}
+          onChange={(e) => onChange(item.key, e.target.value)}
+          disabled={readOnly}
+          placeholder={item.label}
+        />
+      )}
+
+      {(item.type === 'textarea' || item.type === 'richtext') && (
+        <textarea
+          className={`form-input font-mono text-sm ${item.type === 'richtext' ? 'min-h-[220px]' : 'min-h-[110px]'}`}
+          value={value}
+          onChange={(e) => onChange(item.key, e.target.value)}
+          disabled={readOnly}
+          placeholder={item.label}
+        />
+      )}
+
+      {item.type === 'richtext' && (
+        <p className="text-xs text-gray-400 mt-1">HTML is supported. Changes are rendered on public onboarding pages.</p>
+      )}
+
+      {invalid.length > 0 && (
+        <div className="mt-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+          ⚠ Unknown placeholder{invalid.length > 1 ? 's' : ''}: {invalid.join(', ')}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function Customization() {
+  const [activeTab, setActiveTab] = useState<Tab>('facility')
+  const [items, setItems] = useState<CustomizationItem[]>([])
+  const [edits, setEdits] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [saveMsg, setSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  // Preview state
+  const [previewKey, setPreviewKey] = useState('')
+  const [previewResult, setPreviewResult] = useState<PreviewResult | null>(null)
+  const [previewing, setPreviewing] = useState(false)
+
+  // Export state
+  const [exporting, setExporting] = useState(false)
+
+  const editable = canEdit()
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const data = await customizationsApi.getAll()
+      setItems(data)
+      const init: Record<string, string> = {}
+      data.forEach((d) => { init[d.key] = d.value })
+      setEdits(init)
+    } catch (e: any) {
+      setSaveMsg({ type: 'error', text: e.message ?? 'Failed to load settings.' })
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const handleChange = (key: string, val: string) => {
+    setEdits((prev) => ({ ...prev, [key]: val }))
+    setSaveMsg(null)
+  }
+
+  const tabItems = items.filter((i) => i.category === activeTab)
+  const dirtyKeys = tabItems.filter((i) => edits[i.key] !== undefined && edits[i.key] !== i.value).map((i) => i.key)
+  const hasDirty = dirtyKeys.length > 0
+
+  const handleSave = async () => {
+    if (!editable || !hasDirty) return
+    setSaving(true)
+    setSaveMsg(null)
+    try {
+      for (const key of dirtyKeys) {
+        const updated = await customizationsApi.update(key, edits[key])
+        setItems((prev) => prev.map((it) => (it.key === key ? updated : it)))
+      }
+      setSaveMsg({ type: 'success', text: `${dirtyKeys.length} setting${dirtyKeys.length > 1 ? 's' : ''} saved.` })
+    } catch (e: any) {
+      setSaveMsg({ type: 'error', text: e.message ?? 'Failed to save.' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handlePreview = async () => {
+    if (!previewKey) return
+    setPreviewing(true)
+    setPreviewResult(null)
+    try {
+      const result = await customizationsApi.preview(previewKey)
+      setPreviewResult(result)
+    } catch (e: any) {
+      setSaveMsg({ type: 'error', text: e.message ?? 'Preview failed.' })
+    } finally {
+      setPreviewing(false)
+    }
+  }
+
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      const data = await customizationsApi.export()
+      const json = JSON.stringify(data, null, 2)
+      const blob = new Blob([json], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `opb-customizations-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e: any) {
+      setSaveMsg({ type: 'error', text: e.message ?? 'Export failed.' })
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const previewableItems = items.filter(
+    (i) => i.type !== 'text' || i.category === 'onboarding' || i.category === 'inquiry'
+  )
+
+  return (
+    <div className="max-w-3xl">
+      <div className="flex items-center gap-3 mb-5">
+        <Link to="/settings" className="text-blue-600 hover:underline text-sm">← Settings</Link>
+        <span className="text-gray-400">/</span>
+        <h1 className="page-title mb-0">Customization</h1>
+      </div>
+
+      {!editable && (
+        <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+          You have view-only access. Contact an administrator to make changes.
+        </div>
+      )}
+
+      {/* Tab bar */}
+      <div className="flex gap-1 border-b border-gray-200 mb-6 overflow-x-auto">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => { setActiveTab(t.id); setSaveMsg(null) }}
+            className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors
+              ${activeTab === t.id
+                ? 'border-blue-600 text-blue-700'
+                : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'}`}
+          >
+            <span>{t.icon}</span>
+            <span>{t.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Save feedback */}
+      {saveMsg && (
+        <div className={`mb-4 px-4 py-3 rounded-lg text-sm border ${
+          saveMsg.type === 'success'
+            ? 'bg-green-50 border-green-200 text-green-800'
+            : 'bg-red-50 border-red-200 text-red-800'
+        }`}>
+          {saveMsg.type === 'success' ? '✓ ' : '⚠ '}{saveMsg.text}
+        </div>
+      )}
+
+      {/* ── Content sections ───────────────────────────────────────────── */}
+
+      {loading ? (
+        <div className="card text-center py-12 text-gray-400">Loading customizations…</div>
+      ) : activeTab === 'preview' ? (
+        <PreviewTab
+          items={previewableItems}
+          previewKey={previewKey}
+          setPreviewKey={setPreviewKey}
+          result={previewResult}
+          onPreview={handlePreview}
+          previewing={previewing}
+        />
+      ) : activeTab === 'export' ? (
+        <ExportTab onExport={handleExport} exporting={exporting} />
+      ) : (
+        <>
+          <div className="card">
+            {PLACEHOLDER_HINT[activeTab] && (
+              <div className="mb-5 px-3 py-2.5 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700">
+                <span className="font-semibold">Supported placeholders:</span>{' '}
+                {PLACEHOLDER_HINT[activeTab].split(' · ').map((p) => (
+                  <code key={p} className="mx-0.5 bg-blue-100 px-1 rounded font-mono">{p}</code>
+                ))}
+              </div>
+            )}
+
+            {activeTab === 'legal' && (
+              <div className="mb-5 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600">
+                <span className="font-semibold">T&C versioning:</span> Update <code className="bg-gray-100 px-1 rounded font-mono">T&C Version</code> whenever you make substantive changes to the terms. The version is recorded when customers accept the terms during onboarding.
+              </div>
+            )}
+
+            {tabItems.map((item) => (
+              <SettingField
+                key={item.key}
+                item={item}
+                value={edits[item.key] ?? item.value}
+                onChange={handleChange}
+                readOnly={!editable}
+              />
+            ))}
+          </div>
+
+          {editable && (
+            <div className="flex items-center justify-between mt-4">
+              <span className="text-sm text-gray-400">
+                {hasDirty ? `${dirtyKeys.length} unsaved change${dirtyKeys.length > 1 ? 's' : ''}` : 'All changes saved'}
+              </span>
+              <button
+                onClick={handleSave}
+                disabled={saving || !hasDirty}
+                className="btn-primary disabled:opacity-50"
+              >
+                {saving ? 'Saving…' : 'Save Section'}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── Preview tab ────────────────────────────────────────────────────────────────
+
+interface PreviewTabProps {
+  items: CustomizationItem[]
+  previewKey: string
+  setPreviewKey: (k: string) => void
+  result: PreviewResult | null
+  onPreview: () => void
+  previewing: boolean
+}
+
+function PreviewTab({ items, previewKey, setPreviewKey, result, onPreview, previewing }: PreviewTabProps) {
+  const templateItems = items.filter((i) =>
+    ['textarea', 'richtext'].includes(i.type) ||
+    (i.type === 'text' && (i.key.includes('subject') || i.key.includes('message')))
+  )
+
+  return (
+    <div className="space-y-5">
+      <div className="card">
+        <h2 className="font-semibold text-gray-900 mb-4">Preview Template</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Select a template to see how it renders with sample data. This uses the same renderer as production.
+        </p>
+
+        <div className="flex gap-3">
+          <select
+            className="form-select flex-1"
+            value={previewKey}
+            onChange={(e) => setPreviewKey(e.target.value)}
+          >
+            <option value="">— Select a template —</option>
+            {templateItems.map((i) => (
+              <option key={i.key} value={i.key}>[{i.category}] {i.label}</option>
+            ))}
+          </select>
+          <button
+            onClick={onPreview}
+            disabled={!previewKey || previewing}
+            className="btn-primary whitespace-nowrap disabled:opacity-50"
+          >
+            {previewing ? 'Previewing…' : 'Preview'}
+          </button>
+        </div>
+      </div>
+
+      {result && (
+        <>
+          {result.warnings.length > 0 && (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 space-y-1">
+              <p className="font-semibold">⚠ Placeholder warnings</p>
+              {result.warnings.map((w, i) => <p key={i}>{w}</p>)}
+            </div>
+          )}
+
+          <div className="card">
+            <h3 className="font-semibold text-gray-800 mb-3 text-sm uppercase tracking-wide">Rendered Output</h3>
+            <div
+              className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm whitespace-pre-wrap font-mono leading-relaxed text-gray-800"
+              style={{ maxHeight: 320, overflowY: 'auto' }}
+            >
+              {result.rendered}
+            </div>
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-gray-800 mb-3 text-sm uppercase tracking-wide">Sample Values Used</h3>
+            <table className="data-table">
+              <thead>
+                <tr><th>Placeholder</th><th>Sample Value</th></tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {Object.entries(result.context).map(([k, v]) => (
+                  <tr key={k}>
+                    <td><code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded font-mono">{`{{${k}}}`}</code></td>
+                    <td className="text-gray-600 text-sm">{v}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── Export tab ─────────────────────────────────────────────────────────────────
+
+function ExportTab({ onExport, exporting }: { onExport: () => void; exporting: boolean }) {
+  return (
+    <div className="card space-y-4">
+      <h2 className="font-semibold text-gray-900">Export Configuration</h2>
+      <p className="text-sm text-gray-600">
+        Download all customization settings as a JSON file. The export includes every setting key, its current value, category, and last-modified metadata.
+      </p>
+      <p className="text-sm text-gray-600">
+        Use this for backup, recovery, or migration between environments. Import is not yet available — use this file as a reference to restore settings manually if needed.
+      </p>
+      <div className="pt-2">
+        <button
+          onClick={onExport}
+          disabled={exporting}
+          className="btn-primary disabled:opacity-50"
+        >
+          {exporting ? 'Preparing…' : '⬇ Download JSON Export'}
+        </button>
+      </div>
+      <p className="text-xs text-gray-400">
+        Exported file includes: setting_key · setting_value · category · is_default · updated_at · updated_by
+      </p>
+    </div>
+  )
+}

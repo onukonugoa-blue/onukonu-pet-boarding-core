@@ -190,7 +190,7 @@ export default function InquiryList() {
 
       {totalPages > 1 && (
         <div className="mt-4">
-          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          <Pagination page={page} totalPages={totalPages} total={total} perPage={30} onPage={setPage} />
         </div>
       )}
     </div>

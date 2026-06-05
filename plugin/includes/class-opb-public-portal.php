@@ -40,7 +40,7 @@ class OPB_Public_Portal {
     // ── Inquiry Form ───────────────────────────────────────────────────────────
 
     private static function render_inquiry_form(): void {
-        $facility   = esc_html( get_bloginfo( 'name' ) ?: 'Onukonu Pet Boarding' );
+        $facility   = esc_html( OPB_Customizations::facility_name() );
         $api_base   = esc_js( rest_url( 'opb/v1' ) );
         $nonce      = esc_js( wp_create_nonce( 'wp_rest' ) );
         $home_url   = esc_url( home_url( '/' ) );
@@ -213,9 +213,19 @@ HTML;
     // ── Onboarding Form ────────────────────────────────────────────────────────
 
     private static function render_onboarding_form( string $token ): void {
-        $facility  = esc_html( get_bloginfo( 'name' ) ?: 'Onukonu Pet Boarding' );
-        $api_base  = esc_js( rest_url( 'opb/v1' ) );
-        $token_js  = esc_js( $token );
+        $facility_raw       = OPB_Customizations::facility_name();
+        $facility           = esc_html( $facility_raw );
+        $api_base           = esc_js( rest_url( 'opb/v1' ) );
+        $token_js           = esc_js( $token );
+        $tc_html_content    = wp_kses_post(
+            OPB_Customizations::render( 'tc_html', [ 'FACILITY_NAME' => esc_html( $facility_raw ) ] )
+        );
+        $step_instruction   = esc_html(
+            OPB_Customizations::render( 'onboarding_step_instruction', [ 'FACILITY_NAME' => esc_html( $facility_raw ) ] )
+        );
+        $completion_message = esc_html(
+            OPB_Customizations::render( 'onboarding_completion_message', [ 'FACILITY_NAME' => esc_html( $facility_raw ) ] )
+        );
 
         echo <<<HTML
 <!doctype html>
@@ -347,7 +357,7 @@ textarea{resize:vertical;min-height:70px}
     <div id="step-3" style="display:none">
       <div class="card">
         <h2>📎 Document Uploads</h2>
-        <p style="font-size:.85rem;color:#4a5568;margin-bottom:16px">Upload any relevant documents. All are optional but help speed up your onboarding.</p>
+        <p style="font-size:.85rem;color:#4a5568;margin-bottom:16px">{$step_instruction}</p>
         <div id="s3-alert"></div>
         <div id="doc-pet-sections"></div>
         <div class="nav-row">
@@ -364,15 +374,7 @@ textarea{resize:vertical;min-height:70px}
         <div id="s4-alert"></div>
         <div class="tc-block">
           <h4>Boarding Terms &amp; Conditions</h4>
-          <p><strong>1. Health &amp; Vaccination:</strong> All pets must be up-to-date on core vaccinations (Anti-Rabies, DHPPiL, Kennel Cough) before boarding. {$facility} reserves the right to refuse boarding to pets that do not meet vaccination requirements.</p>
-          <p><strong>2. Health Disclosure:</strong> The owner agrees to disclose all known medical conditions, ongoing medications, dietary restrictions, and behavioural issues. {$facility} will not be held liable for undisclosed conditions.</p>
-          <p><strong>3. Emergency Medical Treatment:</strong> In the event of a medical emergency, {$facility} will attempt to contact the owner and/or emergency contact immediately. If the owner cannot be reached, {$facility} may authorise necessary veterinary treatment at the owner's expense.</p>
-          <p><strong>4. Liability:</strong> {$facility} exercises all reasonable care for boarded pets but is not liable for injury, illness, or death resulting from pre-existing conditions, acts of other animals, or circumstances beyond our control.</p>
-          <p><strong>5. Behaviour:</strong> Pets that display aggressive behaviour posing a risk to staff or other animals may be isolated or returned to the owner. No refund will be issued in such cases.</p>
-          <p><strong>6. Pick-Up:</strong> Pets not collected within 24 hours after the agreed check-out date without prior notice may incur additional charges. {$facility} reserves the right to seek animal control assistance after 72 hours of no contact.</p>
-          <p><strong>7. Photography &amp; Media:</strong> With consent, {$facility} may photograph or video your pet for social media and marketing purposes. Consent can be withdrawn at any time.</p>
-          <p><strong>8. Payment:</strong> Full payment is due at or before pick-up unless a prior arrangement has been made. Overdue balances may attract late fees.</p>
-          <p><strong>9. Changes:</strong> {$facility} reserves the right to update these terms. Continued use of boarding services constitutes acceptance of current terms.</p>
+          {$tc_html_content}
         </div>
         <div class="check-row">
           <input type="checkbox" id="tc-checkbox">
@@ -391,7 +393,7 @@ textarea{resize:vertical;min-height:70px}
       <div class="card" style="text-align:center;padding:40px 24px">
         <div style="font-size:3.5rem;margin-bottom:16px">🎉</div>
         <h2 style="justify-content:center;color:#276749;font-size:1.2rem;margin-bottom:8px">Onboarding Complete!</h2>
-        <p style="color:#4a5568;line-height:1.7">Thank you for completing your onboarding with <strong>{$facility}</strong>.<br>Our team will review your information and contact you to confirm your booking details.</p>
+        <p style="color:#4a5568;line-height:1.7">{$completion_message}</p>
       </div>
     </div>
   </div>

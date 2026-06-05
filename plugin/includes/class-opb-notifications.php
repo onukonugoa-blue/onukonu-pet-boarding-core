@@ -84,7 +84,18 @@ class OPB_Notifications {
 
         $facility    = self::facility_name();
         $client_name = $inquiry['owner_name'];
-        $subject     = "We've received your inquiry — {$facility}";
+
+        $subject = OPB_Customizations::render( 'inquiry_ack_subject', [
+            'CLIENT_NAME'   => $client_name,
+            'FACILITY_NAME' => $facility,
+        ] );
+
+        $ack_text = OPB_Customizations::render( 'inquiry_ack_message', [
+            'CLIENT_NAME'   => $client_name,
+            'FACILITY_NAME' => $facility,
+            'PHONE'         => $inquiry['phone'] ?? '',
+            'EMAIL'         => $email,
+        ] );
 
         $pet_line = '';
         if ( ! empty( $inquiry['pet_name'] ) ) {
@@ -103,8 +114,7 @@ class OPB_Notifications {
         }
 
         $body = self::wrap_html( $subject,
-            '<p style="color:#374151;margin:0 0 16px">Hi <strong>' . esc_html( $client_name ) . '</strong>,</p>'
-            . '<p style="color:#374151;margin:0 0 20px">Thank you for reaching out to <strong>' . esc_html( $facility ) . '</strong>! We\'ve received your boarding inquiry and our team will review it and get back to you shortly.</p>'
+            '<p style="color:#374151;margin:0 0 20px">' . nl2br( esc_html( $ack_text ) ) . '</p>'
             . '<table style="width:100%;border-collapse:collapse;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-bottom:24px">'
             . '<tr><td style="padding:8px 12px;color:#6b7280;width:120px">Name</td><td style="padding:8px 12px"><strong>' . esc_html( $client_name ) . '</strong></td></tr>'
             . '<tr><td style="padding:8px 12px;color:#6b7280">Phone</td><td style="padding:8px 12px">' . esc_html( $inquiry['phone'] ) . '</td></tr>'
@@ -119,7 +129,6 @@ class OPB_Notifications {
             . '<li>Once reviewed, we confirm availability and finalise your booking.</li>'
             . '</ol>'
             . '</div>'
-            . '<p style="color:#374151;margin:0 0 4px">If you have any immediate questions, feel free to reply to this email or contact us directly.</p>'
             . '<p style="color:#374151;margin:0">We look forward to welcoming your pet! 🐾</p>'
         );
 
@@ -146,7 +155,19 @@ class OPB_Notifications {
 
         $facility    = self::facility_name();
         $client_name = $inquiry['owner_name'];
-        $subject     = "Your onboarding link — {$facility}";
+
+        $subject = OPB_Customizations::render( 'onboarding_email_subject', [
+            'CLIENT_NAME'   => $client_name,
+            'FACILITY_NAME' => $facility,
+        ] );
+
+        $body_text = OPB_Customizations::render( 'onboarding_email_body', [
+            'CLIENT_NAME'     => $client_name,
+            'FACILITY_NAME'   => $facility,
+            'ONBOARDING_LINK' => $onboarding_url,
+            'PHONE'           => $inquiry['phone'] ?? '',
+            'EMAIL'           => $email,
+        ] );
 
         $pet_line = '';
         if ( ! empty( $inquiry['pet_name'] ) ) {
@@ -156,12 +177,8 @@ class OPB_Notifications {
         }
 
         $body = self::wrap_html( $subject,
-            '<p style="color:#374151;margin:0 0 16px">Hi <strong>' . esc_html( $client_name ) . '</strong>,</p>'
-            . '<p style="color:#374151;margin:0 0 16px">Thank you for choosing <strong>' . esc_html( $facility ) . '</strong>. '
-            . 'We\'ve reviewed your inquiry and we\'re ready to get you onboarded.</p>'
+            '<p style="color:#374151;margin:0 0 16px">' . nl2br( esc_html( $body_text ) ) . '</p>'
             . $pet_line
-            . '<p style="color:#374151;margin:0 0 24px">Please use the secure link below to complete your pet\'s profile, '
-            . 'upload any required documents, and review our boarding terms &amp; conditions.</p>'
             . '<div style="text-align:center;margin-bottom:24px">'
             . '<a href="' . esc_url( $onboarding_url ) . '" '
             . 'style="display:inline-block;background:#1e3a8a;color:#fff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:700;font-size:16px">'
@@ -282,7 +299,7 @@ class OPB_Notifications {
     }
 
     private static function facility_name(): string {
-        return get_bloginfo( 'name' ) ?: 'Onukonu Pet Boarding';
+        return OPB_Customizations::facility_name();
     }
 
     /**

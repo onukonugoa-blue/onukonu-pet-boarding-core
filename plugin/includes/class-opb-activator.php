@@ -519,6 +519,19 @@ class OPB_Activator {
             KEY idx_pet (onboarding_pet_id)
         ) ENGINE=InnoDB $charset;";
 
+        // ── Customization subsystem ───────────────────────────────────────────
+        $tables[] = "CREATE TABLE {$wpdb->prefix}opb_customizations (
+            id            INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+            setting_key   VARCHAR(100)  NOT NULL,
+            setting_value LONGTEXT      NOT NULL,
+            category      VARCHAR(50)   NOT NULL DEFAULT '',
+            updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            updated_by    BIGINT UNSIGNED,
+            PRIMARY KEY (id),
+            UNIQUE KEY uq_setting_key (setting_key),
+            KEY idx_category (category)
+        ) ENGINE=InnoDB $charset;";
+
         foreach ( $tables as $sql ) {
             dbDelta( $sql );
         }
