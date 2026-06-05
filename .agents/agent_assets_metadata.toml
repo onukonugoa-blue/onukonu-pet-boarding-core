@@ -144,3 +144,9 @@ id = "qNUqCgQSRHinbWOLXfV7b"
 uri = "file://onukonu-pet-boarding-core-v1.7.3.zip"
 type = "unspecified"
 title = "onukonu-pet-boarding-core v1.7.3 — Production"
+
+[[outputs]]
+id = "aylvXaS5XJ2V8iPYKJR7r"
+uri = "file://onukonu-pet-boarding-core-v1.8.0.zip"
+type = "unspecified"
+title = "onukonu-pet-boarding-core-v1.8.0.zip"
