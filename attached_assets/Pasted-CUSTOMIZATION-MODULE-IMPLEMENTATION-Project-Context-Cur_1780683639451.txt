@@ -1,0 +1,372 @@
+CUSTOMIZATION MODULE IMPLEMENTATION
+
+Project Context
+
+Current baseline:
+
+Git commit:
+"Update to production version 1.7.3 with bug fixes and cleaned debug logs"
+
+This build is considered stable.
+
+The goal of this task is to introduce a centralized Customization subsystem.
+
+This is a new feature.
+
+Do not redesign any existing operational workflows.
+
+Do not alter booking, client, pet, kennel, inquiry, onboarding, invoice, or payment logic.
+
+The purpose is to move business-owned content out of code and into configurable settings.
+
+---
+
+## OBJECTIVE
+
+Create:
+
+Settings
+└── Customization
+
+This becomes the authoritative source for:
+
+* Terms & Conditions
+* Legal text
+* WhatsApp templates
+* Email templates
+* Onboarding instructions
+* Facility information
+* Public operational messaging
+
+Future wording changes must not require code changes or deployment.
+
+---
+
+## NAVIGATION
+
+Add:
+
+Settings
+└── Customization
+
+Access:
+
+* Admin = View + Edit
+* Manager = View Only
+
+---
+
+## STORAGE
+
+Create new table:
+
+opb_customizations
+
+Fields:
+
+id
+setting_key (unique)
+setting_value (longtext)
+category
+updated_at
+updated_by
+
+Use a flat key/value model.
+
+Do not create separate tables for every content type.
+
+---
+
+## SETTING REGISTRY
+
+Create a central registry of supported settings.
+
+Examples:
+
+FACILITY
+
+facility_name
+facility_phone
+facility_email
+facility_website
+facility_hours
+
+LEGAL
+
+tc_version
+tc_html
+privacy_notice
+additional_policies
+operational_notes
+
+ONBOARDING
+
+onboarding_email_subject
+onboarding_email_body
+onboarding_whatsapp_message
+onboarding_resend_message
+onboarding_completion_message
+onboarding_step_instruction
+
+INQUIRY
+
+inquiry_ack_subject
+inquiry_ack_message
+inquiry_followup_message
+inquiry_acceptance_message
+inquiry_rejection_message
+
+Avoid magic strings scattered throughout the codebase.
+
+---
+
+## SECTION 1 — TERMS & CONDITIONS
+
+Create editable rich-text fields:
+
+* Boarding Terms & Conditions
+* Additional Policies
+* Privacy Notice
+* Operational Notes
+
+Onboarding pages must render these values dynamically.
+
+No hardcoded legal text should remain in source files.
+
+---
+
+## SECTION 2 — ONBOARDING COMMUNICATIONS
+
+Create editable templates:
+
+* Onboarding Email Subject
+* Onboarding Email Body
+* Onboarding WhatsApp Message
+* Resend Onboarding Message
+* Onboarding Completion Message
+* Onboarding Step Instructions
+
+Supported placeholders:
+
+{{CLIENT_NAME}}
+{{FACILITY_NAME}}
+{{ONBOARDING_LINK}}
+{{PHONE}}
+{{EMAIL}}
+
+---
+
+## SECTION 3 — INQUIRY COMMUNICATIONS
+
+Create editable templates:
+
+* Inquiry Acknowledgement Subject
+* Inquiry Acknowledgement Message
+* Inquiry Follow-Up Message
+* Inquiry Acceptance Message
+* Inquiry Rejection Message
+
+---
+
+## SECTION 4 — FACILITY INFORMATION
+
+Editable values:
+
+* Facility Name
+* Support Phone
+* Support Email
+* Website
+* Business Hours
+
+These values must be reusable inside templates.
+
+Facility Name should override the default WordPress site name when OPB-generated communications are rendered.
+
+---
+
+## SECTION 5 — TEMPLATE ENGINE
+
+Create one shared rendering engine.
+
+All placeholders must be resolved through the same renderer.
+
+Preview rendering and production rendering must use the same code path.
+
+Do not create separate renderers.
+
+---
+
+## SECTION 6 — TEMPLATE PREVIEW
+
+Create a Preview tab.
+
+Allow administrators to:
+
+* Select a template
+* Preview rendered output
+* View placeholder substitutions
+
+Use sample values.
+
+Examples:
+
+CLIENT_NAME = Demo Customer
+
+FACILITY_NAME = Demo Facility
+
+ONBOARDING_LINK = https://example.com/onboard/abc123
+
+---
+
+## SECTION 7 — TEMPLATE VALIDATION
+
+Validate placeholders.
+
+Examples:
+
+Valid:
+
+{{CLIENT_NAME}}
+
+Invalid:
+
+{{CLIENTNAME}}
+
+Display warnings for unsupported placeholders.
+
+Prevent accidental template mistakes.
+
+---
+
+## SECTION 8 — TERMS VERSIONING
+
+Track:
+
+* Version Number
+* Updated At
+* Updated By
+
+When onboarding acceptance occurs in future workflows:
+
+The accepted version should be available for recording.
+
+Do not redesign onboarding.
+
+Simply ensure version metadata exists and is maintained.
+
+---
+
+## SECTION 9 — EXPORT
+
+Add:
+
+Customization
+→ Export Configuration
+
+Export all settings as JSON.
+
+Include:
+
+* setting_key
+* setting_value
+* category
+* updated_at
+* updated_by
+
+Purpose:
+
+* Backup
+* Recovery
+* Migration
+
+---
+
+## IMPORT
+
+Do NOT implement import in this milestone.
+
+Export only.
+
+Import can be implemented later after the configuration model has matured.
+
+---
+
+## MIGRATION REQUIREMENT
+
+Review all hardcoded business-facing text currently present in:
+
+* Emails
+* WhatsApp messages
+* Onboarding pages
+* Inquiry communications
+* Public operational pages
+
+Move them into the customization layer.
+
+Existing behaviour should remain unchanged from the user's perspective.
+
+---
+
+## ROLE SECURITY
+
+Admin:
+
+* View
+* Edit
+* Export
+
+Manager:
+
+* View only
+
+Other roles:
+
+* No access
+
+---
+
+## IMPLEMENTATION APPROACH
+
+Before coding:
+
+1. Audit current hardcoded business text.
+2. Identify every communication template.
+3. Identify every legal/policy block.
+4. Present implementation plan.
+5. Then implement.
+
+---
+
+## DELIVERABLES
+
+Provide:
+
+* Database schema
+* Registry design
+* API endpoints
+* UI screens
+* Template engine
+* Placeholder validation
+* Preview implementation
+* Export implementation
+* Migrated templates
+* Files changed
+* Commit hash
+* Production ZIP
+
+SUCCESS CRITERIA
+
+Business-facing content is no longer hardcoded.
+
+Terms & Conditions are centrally managed.
+
+Email and WhatsApp templates are centrally managed.
+
+Preview matches production rendering.
+
+Configuration is exportable.
+
+Future wording changes require no code deployment.
+
+Do not touch onboarding token logic, inquiry workflow, kennel workflow, client workflow, or routing. This milestone is configuration management only.
+
