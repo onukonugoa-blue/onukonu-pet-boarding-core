@@ -1,6 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const PORT = 5000;
 const HOST = '0.0.0.0';
@@ -71,12 +72,77 @@ function getLegacyStats() {
   return stats;
 }
 
+function getPluginVersion() {
+  const php = readFileSafe('plugin/onukonu-pet-boarding-core.php');
+  if (!php) return null;
+  const m = php.match(/\*\s+Version:\s+([^\r\n]+)/);
+  return m ? m[1].trim() : null;
+}
+
+function getPluginMeta() {
+  const php = readFileSafe('plugin/onukonu-pet-boarding-core.php');
+  if (!php) return {};
+  const get = (field) => {
+    const m = php.match(new RegExp(`\\*\\s+${field}:\\s+([^\\r\\n]+)`));
+    return m ? m[1].trim() : '';
+  };
+  return {
+    version:     get('Version'),
+    pluginName:  get('Plugin Name'),
+    description: get('Description'),
+    author:      get('Author'),
+  };
+}
+
+function getGitLog() {
+  try {
+    const raw = execSync(
+      'git --no-optional-locks log --format="%H|%h|%as|%s" --all',
+      { encoding: 'utf8', timeout: 5000 }
+    ).trim();
+
+    if (!raw) return [];
+
+    return raw.split('\n').map(line => {
+      const [hash, shortHash, date, ...subjectParts] = line.split('|');
+      return {
+        hash:      hash.trim(),
+        shortHash: shortHash.trim(),
+        date:      date.trim(),
+        subject:   subjectParts.join('|').trim(),
+      };
+    }).filter(c => c.hash);
+  } catch {
+    return [];
+  }
+}
+
+function getGitHead() {
+  try {
+    return execSync('git --no-optional-locks rev-parse HEAD', { encoding: 'utf8', timeout: 3000 }).trim();
+  } catch {
+    return null;
+  }
+}
+
+function formatDate(iso) {
+  try {
+    return new Date(iso).toLocaleDateString('en-IN', {
+      day: 'numeric', month: 'long', year: 'numeric',
+    });
+  } catch {
+    return iso;
+  }
+}
+
 function renderPage(activeTab) {
   const readme = readFileSafe('README.md') || '# No README found';
   const architecture = readFileSafe('docs/ARCHITECTURE.md') || '# No ARCHITECTURE.md found';
   const analysis = readFileSafe('docs/ANALYSIS.md') || '# No ANALYSIS.md found';
   const legacyStats = getLegacyStats();
   const tree = getPluginTree();
+  const pluginMeta = getPluginMeta();
+  const pluginVersion = pluginMeta.version || '—';
 
   let content = '';
   let title = '';
@@ -113,12 +179,33 @@ function renderPage(activeTab) {
     title = 'Analysis';
     content = `<div class="card doc-content">${simpleMarkdown(analysis)}</div>`;
   } else if (activeTab === 'plugin') {
-    title = 'Plugin v1.7.0';
+    title = `Plugin v${pluginVersion}`;
     content = `
       <div class="card">
-        <h2>Plugin — v1.7.0</h2>
+        <h2>Plugin — v${escapeHtml(pluginVersion)}</h2>
         <p>The <code>plugin/</code> directory contains the complete WordPress plugin. Install by uploading
-        <strong>onukonu-pet-boarding-core-v1.7.0.zip</strong> via WP Admin → Plugins → Add New → Upload.</p>
+        <strong>onukonu-pet-boarding-core-v${escapeHtml(pluginVersion)}.zip</strong> via WP Admin → Plugins → Add New → Upload.</p>
+
+        <h3>v1.8.0 — Customization Module</h3>
+        <ul>
+          <li><strong>New DB table</strong> — opb_customizations (key/value store for all configurable content)</li>
+          <li><strong>22 configurable settings</strong> — across Facility Info, Legal &amp; T&amp;C, Onboarding Messages, and Inquiry Messages</li>
+          <li><strong>Template engine</strong> — <code>OPB_Customizations::render()</code> replaces <code>{{PLACEHOLDER}}</code> tokens in all outbound messages</li>
+          <li><strong>Preview mode</strong> — render any template with sample data before saving</li>
+          <li><strong>Export endpoint</strong> — download all customizations as JSON snapshot</li>
+          <li><strong>Access control</strong> — read: any staff; write: <code>opb_manage_settings</code> / administrator only</li>
+        </ul>
+
+        <h3>REST Endpoints (v1.8.0)</h3>
+        <table>
+          <thead><tr><th>Method</th><th>Endpoint</th><th>Auth</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td>GET</td><td>/wp-json/opb/v1/settings/customizations</td><td>Staff</td><td>List all settings</td></tr>
+            <tr><td>PUT</td><td>/wp-json/opb/v1/settings/customizations/{key}</td><td>Admin</td><td>Update one setting</td></tr>
+            <tr><td>GET</td><td>/wp-json/opb/v1/settings/customizations/export</td><td>Admin</td><td>JSON export snapshot</td></tr>
+            <tr><td>POST</td><td>/wp-json/opb/v1/settings/customizations/preview</td><td>Admin</td><td>Render template with sample data</td></tr>
+          </tbody>
+        </table>
 
         <h3>v1.7.0 — Inquiry &amp; Onboarding Pipeline</h3>
         <ul>
@@ -131,7 +218,7 @@ function renderPage(activeTab) {
           <li><strong>Convert to Client</strong> — explicit staff action only; creates Client + Pets + Documents from staging tables</li>
         </ul>
 
-        <h3>REST Endpoints Added</h3>
+        <h3>REST Endpoints (v1.7.0)</h3>
         <table>
           <thead><tr><th>Method</th><th>Endpoint</th><th>Auth</th><th>Purpose</th></tr></thead>
           <tbody>
@@ -175,6 +262,90 @@ function renderPage(activeTab) {
           <li>WhatsApp: wa.me link only (no Meta API). Opens browser with pre-filled message.</li>
           <li>T&amp;C version constant: <code>OPB_Onboarding_Handler::TC_VERSION = '1.0'</code></li>
         </ul>
+      </div>
+    `;
+  } else if (activeTab === 'changelog') {
+    title = 'Changelog';
+    const commits = getGitLog();
+    const head = getGitHead();
+
+    const grouped = {};
+    for (const c of commits) {
+      if (!grouped[c.date]) grouped[c.date] = [];
+      grouped[c.date].push(c);
+    }
+
+    const commitRows = commits.length === 0
+      ? '<tr><td colspan="3"><em>No git history available.</em></td></tr>'
+      : commits.map(c => {
+          const isHead = head && c.hash === head;
+          return `
+            <tr>
+              <td style="white-space:nowrap;font-family:monospace;font-size:12px;color:#718096">
+                ${escapeHtml(c.shortHash)}
+                ${isHead ? '<span class="tag-head">HEAD</span>' : ''}
+              </td>
+              <td style="white-space:nowrap;color:#718096;font-size:13px">${escapeHtml(formatDate(c.date))}</td>
+              <td>${escapeHtml(c.subject)}</td>
+            </tr>`;
+        }).join('');
+
+    const timelineItems = Object.entries(grouped)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([date, cs]) => {
+        const items = cs.map(c => {
+          const isHead = head && c.hash === head;
+          return `
+            <div class="tl-item">
+              <div class="tl-dot${isHead ? ' tl-dot-head' : ''}"></div>
+              <div class="tl-body">
+                <code class="tl-hash">${escapeHtml(c.shortHash)}</code>
+                ${isHead ? '<span class="tag-head">HEAD</span>' : ''}
+                <span class="tl-subject">${escapeHtml(c.subject)}</span>
+              </div>
+            </div>`;
+        }).join('');
+        return `
+          <div class="tl-date-group">
+            <div class="tl-date-label">${escapeHtml(formatDate(date))}</div>
+            ${items}
+          </div>`;
+      }).join('');
+
+    content = `
+      <div class="card">
+        <h2>Plugin Version</h2>
+        <div class="version-row">
+          <div class="version-box">
+            <div class="version-num">v${escapeHtml(pluginVersion)}</div>
+            <div class="version-sub">${escapeHtml(pluginMeta.pluginName || 'Onukonu Pet Boarding Core')}</div>
+          </div>
+          <div class="version-meta">
+            <p>${escapeHtml(pluginMeta.description || '')}</p>
+            ${head ? `<p style="margin-top:6px;font-family:monospace;font-size:12px;color:#718096">HEAD: ${escapeHtml(head)}</p>` : ''}
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Commit Timeline</h2>
+        ${commits.length === 0
+          ? '<p style="color:#718096">No git history available.</p>'
+          : `<div class="timeline">${timelineItems}</div>`}
+      </div>
+
+      <div class="card">
+        <h2>All Commits</h2>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:90px">Hash</th>
+              <th style="width:160px">Date</th>
+              <th>Message</th>
+            </tr>
+          </thead>
+          <tbody>${commitRows}</tbody>
+        </table>
       </div>
     `;
   }
@@ -221,6 +392,23 @@ function renderPage(activeTab) {
     .badge { background: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600; }
     .badge.green { background: #f0fff4; color: #276749; border-color: #9ae6b4; }
     .badge.orange { background: #fffaf0; color: #c05621; border-color: #fbd38d; }
+
+    /* Changelog */
+    .version-row { display: flex; align-items: flex-start; gap: 24px; flex-wrap: wrap; }
+    .version-box { background: #1a365d; color: white; border-radius: 8px; padding: 16px 24px; min-width: 140px; text-align: center; }
+    .version-num { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+    .version-sub { font-size: 11px; color: #90cdf4; margin-top: 4px; }
+    .version-meta { flex: 1; padding-top: 4px; }
+    .tag-head { display: inline-block; background: #4299e1; color: white; font-size: 10px; font-weight: 700; border-radius: 3px; padding: 1px 5px; margin-left: 6px; vertical-align: middle; letter-spacing: 0.3px; }
+    .timeline { padding-left: 4px; }
+    .tl-date-group { margin-bottom: 20px; }
+    .tl-date-label { font-size: 12px; font-weight: 700; color: #a0aec0; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; padding-left: 22px; }
+    .tl-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; padding-left: 4px; }
+    .tl-dot { width: 10px; height: 10px; border-radius: 50%; background: #cbd5e0; border: 2px solid #a0aec0; margin-top: 4px; flex-shrink: 0; }
+    .tl-dot-head { background: #4299e1; border-color: #2b6cb0; }
+    .tl-body { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+    .tl-hash { background: #edf2f7; color: #718096; padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+    .tl-subject { font-size: 14px; color: #2d3748; }
   </style>
 </head>
 <body>
@@ -236,6 +424,7 @@ function renderPage(activeTab) {
     <a href="/architecture" class="${activeTab === 'architecture' ? 'active' : ''}">Architecture</a>
     <a href="/analysis" class="${activeTab === 'analysis' ? 'active' : ''}">Analysis</a>
     <a href="/plugin" class="${activeTab === 'plugin' ? 'active' : ''}">Plugin</a>
+    <a href="/changelog" class="${activeTab === 'changelog' ? 'active' : ''}">Changelog</a>
   </nav>
   <main class="main">
     <div class="badges">
@@ -243,7 +432,7 @@ function renderPage(activeTab) {
       <span class="badge">893 Clients</span>
       <span class="badge">~1,912 Bookings</span>
       <span class="badge green">Docs Ready</span>
-      <span class="badge orange">Plugin: In Progress</span>
+      <span class="badge orange">v${escapeHtml(pluginVersion)}</span>
     </div>
     ${content}
   </main>
@@ -257,6 +446,7 @@ const server = http.createServer((req, res) => {
   if (url === '/architecture') tab = 'architecture';
   else if (url === '/analysis') tab = 'analysis';
   else if (url === '/plugin') tab = 'plugin';
+  else if (url === '/changelog') tab = 'changelog';
   else if (url !== '/') {
     res.writeHead(301, { Location: '/' });
     res.end();
