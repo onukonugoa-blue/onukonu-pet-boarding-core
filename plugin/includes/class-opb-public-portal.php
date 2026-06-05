@@ -563,7 +563,7 @@ textarea{resize:vertical;min-height:70px}
     const breedSizes = ['Toy','Small','Medium','Large','X-Large'];
     const vacStatuses = ['Vaccinated','Not vaccinated','Unknown'];
     const dietOpts = ['Veg','Non-Veg','Home Food','Commercial Dry','Commercial Wet','Raw','Other'];
-    return \`
+    return `
       <div class="pet-block-header">
         <strong>Pet #\${idx}</strong>
         <button type="button" class="btn btn-danger btn-sm remove-pet">Remove</button>
@@ -632,7 +632,7 @@ textarea{resize:vertical;min-height:70px}
       </div>
       <div class="field"><label>Additional Notes</label><textarea data-field="additional_notes">\${esc(p.additional_notes||'')}</textarea></div>
       <div class="check-row"><input type="checkbox" data-field="consent_photos"\${chk(p.consent_photos)}><label>I consent to photos/videos of this pet being shared on social media</label></div>
-    \`;
+    `;
   }
 
   function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -700,7 +700,7 @@ textarea{resize:vertical;min-height:70px}
       {v:'other',l:'Other'},
     ];
     const opts = types.map(function(t){ return '<option value="'+t.v+'">'+t.l+'</option>'; }).join('');
-    return \`<h3>\${esc(petName)}</h3>
+    return `<h3>\${esc(petName)}</h3>
       <div data-pet-id="\${esc(petId)}">
         <div class="row" style="margin-bottom:8px">
           <div class="field"><label>Document Type</label><select data-doc-type>\${opts}</select></div>
@@ -711,7 +711,7 @@ textarea{resize:vertical;min-height:70px}
           <div>📎 Click to upload (JPG, PNG, PDF · max 10MB)</div>
         </div>
         <div class="doc-grid"></div>
-      </div>\`;
+      </div>`;
   }
 
   function appendDocItem(grid, doc){
