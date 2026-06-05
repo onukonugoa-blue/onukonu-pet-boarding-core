@@ -3,24 +3,31 @@ import { Link } from 'react-router-dom'
 import { customizationsApi } from '../../api/customizations'
 import type { CustomizationItem, PreviewResult } from '../../api/customizations'
 
-type Tab = 'facility' | 'legal' | 'onboarding' | 'inquiry' | 'preview' | 'export'
+type Tab = 'facility' | 'legal' | 'onboarding' | 'inquiry' | 'invoice' | 'preview' | 'export'
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'facility',  label: 'Facility Info',        icon: '🏢' },
   { id: 'legal',     label: 'Legal & T&C',          icon: '📜' },
   { id: 'onboarding',label: 'Onboarding Messages',  icon: '📨' },
   { id: 'inquiry',   label: 'Inquiry Messages',     icon: '📩' },
+  { id: 'invoice',   label: 'Invoice & Delivery',   icon: '🧾' },
   { id: 'preview',   label: 'Preview',              icon: '👁' },
   { id: 'export',    label: 'Export',               icon: '⬇' },
 ]
 
-const VALID_PLACEHOLDERS = ['{{CLIENT_NAME}}', '{{FACILITY_NAME}}', '{{ONBOARDING_LINK}}', '{{PHONE}}', '{{EMAIL}}']
+const VALID_PLACEHOLDERS = [
+  '{{CLIENT_NAME}}', '{{FACILITY_NAME}}', '{{ONBOARDING_LINK}}',
+  '{{PHONE}}', '{{EMAIL}}',
+  '{{INVOICE_NUMBER}}', '{{INVOICE_LINK}}', '{{INVOICE_TOTAL}}',
+  '{{INVOICE_PAID}}', '{{INVOICE_DUE}}',
+]
 
 const PLACEHOLDER_HINT: Record<string, string> = {
   facility:   '',
   legal:      '{{FACILITY_NAME}}',
   onboarding: '{{CLIENT_NAME}} · {{FACILITY_NAME}} · {{ONBOARDING_LINK}} · {{PHONE}} · {{EMAIL}}',
   inquiry:    '{{CLIENT_NAME}} · {{FACILITY_NAME}} · {{PHONE}} · {{EMAIL}}',
+  invoice:    '{{CLIENT_NAME}} · {{FACILITY_NAME}} · {{INVOICE_NUMBER}} · {{INVOICE_LINK}} · {{INVOICE_TOTAL}} · {{INVOICE_PAID}} · {{INVOICE_DUE}}',
 }
 
 function canEdit(): boolean {

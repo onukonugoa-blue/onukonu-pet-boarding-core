@@ -542,6 +542,20 @@ class OPB_Activator {
              ADD COLUMN IF NOT EXISTS kennel_id INT UNSIGNED NULL AFTER kennel"
         );
 
+        // Invoice document columns — token for public URL + generation timestamp (idempotent)
+        $wpdb->query(
+            "ALTER TABLE {$wpdb->prefix}opb_invoices
+             ADD COLUMN IF NOT EXISTS doc_token VARCHAR(64) NULL"
+        );
+        $wpdb->query(
+            "ALTER TABLE {$wpdb->prefix}opb_invoices
+             ADD COLUMN IF NOT EXISTS doc_generated_at DATETIME NULL"
+        );
+        $wpdb->query(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_invoice_doc_token
+             ON {$wpdb->prefix}opb_invoices (doc_token)"
+        );
+
         // Promote phone index to UNIQUE to enforce client identity (idempotent).
         // Phone is the primary operational identifier for a client.
         // Skip if the unique key already exists.

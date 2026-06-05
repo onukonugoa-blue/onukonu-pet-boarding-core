@@ -17,6 +17,11 @@ class OPB_Customizations {
         'ONBOARDING_LINK',
         'PHONE',
         'EMAIL',
+        'INVOICE_NUMBER',
+        'INVOICE_LINK',
+        'INVOICE_TOTAL',
+        'INVOICE_PAID',
+        'INVOICE_DUE',
     ];
 
     const REGISTRY = [
@@ -177,6 +182,50 @@ If you have any questions, feel free to reach out.',
             'label'    => 'Rejection Message',
             'type'     => 'textarea',
             'default'  => '',
+        ],
+
+        // ── INVOICE ───────────────────────────────────────────────────────────
+        'invoice_email_subject' => [
+            'category' => 'invoice',
+            'label'    => 'Email Subject',
+            'type'     => 'text',
+            'default'  => 'Invoice #{{INVOICE_NUMBER}} from {{FACILITY_NAME}}',
+        ],
+        'invoice_email_intro' => [
+            'category' => 'invoice',
+            'label'    => 'Email Introduction',
+            'type'     => 'textarea',
+            'default'  => 'Hi {{CLIENT_NAME}},
+
+Please find your invoice from {{FACILITY_NAME}} below. If you have any questions, feel free to reach out.',
+        ],
+        'invoice_footer_note' => [
+            'category' => 'invoice',
+            'label'    => 'Invoice Footer Note',
+            'type'     => 'textarea',
+            'default'  => 'Thank you for choosing {{FACILITY_NAME}}! We look forward to seeing you and your pet again.',
+        ],
+        'invoice_payment_note' => [
+            'category' => 'invoice',
+            'label'    => 'Payment Note',
+            'type'     => 'textarea',
+            'default'  => 'Payment is due at the time of pick-up. Please contact us if you have any questions about this invoice.',
+        ],
+        'invoice_whatsapp_message' => [
+            'category' => 'invoice',
+            'label'    => 'WhatsApp Message',
+            'type'     => 'textarea',
+            'default'  => 'Hi {{CLIENT_NAME}}, here is your invoice #{{INVOICE_NUMBER}} from {{FACILITY_NAME}}.
+
+💰 Total: {{INVOICE_TOTAL}}
+✅ Paid:  {{INVOICE_PAID}}
+🔴 Due:   {{INVOICE_DUE}}
+
+View your invoice here:
+{{INVOICE_LINK}}
+
+Thank you! 🐾
+{{FACILITY_NAME}}',
         ],
     ];
 
@@ -353,6 +402,11 @@ If you have any questions, feel free to reach out.',
             'ONBOARDING_LINK' => 'https://example.com/opb-onboard/abc123demo',
             'PHONE'           => '+91 98765 43210',
             'EMAIL'           => 'demo@example.com',
+            'INVOICE_NUMBER'  => 'INV-0042',
+            'INVOICE_LINK'    => 'https://example.com/opb-invoice/abc123demo/',
+            'INVOICE_TOTAL'   => '₹4,500.00',
+            'INVOICE_PAID'    => '₹2,000.00',
+            'INVOICE_DUE'     => '₹2,500.00',
         ];
     }
 }

@@ -1,0 +1,2 @@
+- [Invoice document engine](invoice-document-engine.md) — v1.9.0 feature; token-gated HTML invoices, email via wp_mail, WhatsApp via wa.me; stored in uploads/opb-invoices/{id}/
+- [Plugin build process](plugin-build.md) — tsc+vite are local only; use ./node_modules/.bin/tsc and ./node_modules/.bin/vite build; zip must be created via Node.js script (zip binary unavailable)
