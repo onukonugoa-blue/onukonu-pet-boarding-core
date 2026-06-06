@@ -137,6 +137,10 @@ class OPB_Invoices_API extends OPB_REST_Base {
             'payment_status'   => OPB_Invoice_Generator::resolve_payment_status($revenue,$paid),
         ],['id'=>$id]);
 
+        if ( OPB_Invoice_Document::get_info( $id ) ) {
+            try { OPB_Invoice_Document::generate( $id ); } catch ( \Throwable $e ) { /* non-fatal */ }
+        }
+
         return $this->get_item($r);
     }
 
@@ -163,6 +167,11 @@ class OPB_Invoices_API extends OPB_REST_Base {
         ]);
 
         OPB_Invoice_Generator::sync_payment_totals($id);
+
+        if ( OPB_Invoice_Document::get_info( $id ) ) {
+            try { OPB_Invoice_Document::generate( $id ); } catch ( \Throwable $e ) { /* non-fatal */ }
+        }
+
         return $this->get_item($r);
     }
 }
