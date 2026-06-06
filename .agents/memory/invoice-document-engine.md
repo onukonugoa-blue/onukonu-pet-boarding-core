@@ -1,35 +1,39 @@
 ---
 name: Invoice document engine
-description: Architecture decisions for the v1.9.0 invoice document/delivery feature
+description: Architecture decisions for OPB_Invoice_Document across v1.9 and v2.0
 ---
 
-## Feature summary
-- **Class**: `OPB_Invoice_Document` in `plugin/includes/class-opb-invoice-document.php`
-- **REST API**: `OPB_Invoice_Delivery_API` in `plugin/includes/api/class-opb-invoice-delivery-api.php`
-- **React API**: `plugin/app/src/api/invoice-delivery.ts`
-- **UI panel**: `InvoiceDetail.tsx` — delivery card between summary and line items
+## v2.0.0 (current)
 
-## DB changes (idempotent ALTERs in activator)
-- `opb_invoices.doc_token VARCHAR(64) NULL` — 64-char hex token for public URL
-- `opb_invoices.doc_generated_at DATETIME NULL`
-- Unique index `uq_invoice_doc_token`
+**Primary document:** PDF generated with mPDF, stored at `uploads/opb-invoices/{id}/invoice.pdf`
+**Legacy fallback:** HTML file at `uploads/opb-invoices/{id}/invoice.html` (still written for backward compat)
+**Public token URL:** `/opb-invoice/{64-char-hex}/` — shows a clean summary page with "Download PDF" button (not the full invoice HTML)
 
-## Public URL pattern
-- Rewrite rule: `^opb-invoice/([a-f0-9]{64})/?$` → query var `opb_invoice`
-- Served by `OPB_Invoice_Document::serve()` after token→invoice_id DB lookup
-- No auth required; `?print=1` triggers auto-print dialog for PDF export
-- HTML stored at `wp-content/uploads/opb-invoices/{id}/invoice.html`
+**Email:** PDF attached via `wp_mail()` `$attachments` parameter. Throws RuntimeException if PDF file does not exist yet — caller must generate first.
 
-## REST routes
-- `POST /opb/v1/invoices/{id}/document/generate` — generate/regen
-- `GET  /opb/v1/invoices/{id}/document` — get stored info
-- `POST /opb/v1/invoices/{id}/send-email` — send via wp_mail (body: `{to}`)
-- `GET  /opb/v1/invoices/{id}/whatsapp-link` — returns `{url, message, phone}`
+**WhatsApp:** `wa.me/` link with rendered message template. `{{INVOICE_LINK}}` resolves to the public summary page URL.
 
-## Customizations added (category: invoice)
-- `invoice_email_subject`, `invoice_email_intro`, `invoice_footer_note`
-- `invoice_payment_note`, `invoice_whatsapp_message`
-- New VALID_PLACEHOLDERS: `INVOICE_NUMBER`, `INVOICE_LINK`, `INVOICE_TOTAL`, `INVOICE_PAID`, `INVOICE_DUE`
-- New tab in Customization.tsx: "Invoice & Delivery" (id: invoice)
+**Audit trail:** `opb_invoice_audit` table. Events: `generated`, `regenerated`, `email_sent`, `whatsapp_shared`.
 
-**Why:** No PDF library dependency — browser print-to-PDF keeps the plugin self-contained on shared hosting (Hostinger). Token prevents public listing; no auth for the public invoice view URL so clients can open it without a WP account.
+**v2.0.0 DB additions on opb_invoices:**
+- `doc_pdf_path VARCHAR(500)` — relative path under uploads/
+- `doc_generated_by BIGINT UNSIGNED` — WP user ID who triggered generation
+
+**Key methods:**
+- `generate(int $invoice_id)` — writes HTML + PDF, updates row, logs audit event
+- `generate_pdf()` — private; mPDF instance with A4 config, calls `build_pdf_html()`, outputs to file
+- `img_src(string $key)` — resolves media setting key to base64 data URI (falls back to URL for mPDF reliability)
+- `get_audit(int $invoice_id)` — returns audit rows newest-first
+- `log_audit_event()` — private; inserts row into opb_invoice_audit
+
+**Why PDF over HTML:** mPDF produces a stable, printable, non-editable client-facing document. Chosen over TCPDF for better UTF-8 and CSS support.
+
+---
+
+## v1.9.0 (prior)
+
+- **Class**: `OPB_Invoice_Document`
+- DB changes: `opb_invoices.doc_token VARCHAR(64)`, `doc_generated_at DATETIME`, unique index `uq_invoice_doc_token`
+- Public URL served HTML invoice; `?print=1` triggered browser print dialog
+- No PDF — kept plugin self-contained (no Composer dependency)
+- REST routes: generate, get info, send-email, whatsapp-link

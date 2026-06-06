@@ -162,3 +162,9 @@ id = "d5a16mv1xG8A_j09AZZc_"
 uri = "file://onukonu-pet-boarding-core-v1.9.0-17cde4b.zip"
 type = "unspecified"
 title = "Onukonu Pet Boarding Core v1.9.0 — Invoice Document Engine"
+
+[[outputs]]
+id = "75AvH-ZCSjGuDF3Y76Diq"
+uri = "file://onukonu-pet-boarding-core-v2.0.0.zip"
+type = "unspecified"
+title = "onukonu-pet-boarding-core-v2.0.0.zip"

@@ -572,6 +572,31 @@ class OPB_Activator {
             $wpdb->query( "ALTER TABLE {$wpdb->prefix}opb_clients ADD UNIQUE KEY uq_phone (phone)" );
         }
 
+        // v2.0.0 — PDF engine: store PDF path and generating user on the invoice row
+        $wpdb->query(
+            "ALTER TABLE {$wpdb->prefix}opb_invoices
+             ADD COLUMN IF NOT EXISTS doc_pdf_path VARCHAR(500) NULL"
+        );
+        $wpdb->query(
+            "ALTER TABLE {$wpdb->prefix}opb_invoices
+             ADD COLUMN IF NOT EXISTS doc_generated_by BIGINT UNSIGNED NULL"
+        );
+
+        // v2.0.0 — Invoice audit trail table (idempotent)
+        $wpdb->query(
+            "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}opb_invoice_audit (
+                id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                invoice_id   INT UNSIGNED NOT NULL,
+                event        ENUM('generated','regenerated','email_sent','whatsapp_shared') NOT NULL,
+                performed_by BIGINT UNSIGNED NULL,
+                performed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                meta         JSON NULL,
+                PRIMARY KEY (id),
+                KEY idx_invoice (invoice_id),
+                KEY idx_event (event)
+            ) ENGINE=InnoDB $charset"
+        );
+
         update_option( 'opb_db_version', OPB_VERSION );
     }
 }

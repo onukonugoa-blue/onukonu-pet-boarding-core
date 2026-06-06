@@ -4,10 +4,11 @@
  *
  * REST routes for the invoice document engine.
  *
- * POST /invoices/{id}/document/generate  — generate (or regenerate) HTML document
- * GET  /invoices/{id}/document            — get stored document metadata
- * POST /invoices/{id}/send-email          — send invoice via email
+ * POST /invoices/{id}/document/generate  — generate (or regenerate) PDF document
+ * GET  /invoices/{id}/document            — get stored document metadata (incl. pdf_url)
+ * POST /invoices/{id}/send-email          — send invoice via email (PDF attached)
  * GET  /invoices/{id}/whatsapp-link       — get WhatsApp sharing URL + message
+ * GET  /invoices/{id}/audit               — get audit trail for this invoice
  */
 class OPB_Invoice_Delivery_API extends OPB_REST_Base {
 
@@ -41,6 +42,14 @@ class OPB_Invoice_Delivery_API extends OPB_REST_Base {
             [
                 'methods'             => 'GET',
                 'callback'            => [ $this, 'whatsapp_link' ],
+                'permission_callback' => [ $this, 'permission_check' ],
+            ],
+        ] );
+
+        register_rest_route( $this->namespace, '/invoices/(?P<id>\d+)/audit', [
+            [
+                'methods'             => 'GET',
+                'callback'            => [ $this, 'get_audit' ],
                 'permission_callback' => [ $this, 'permission_check' ],
             ],
         ] );
@@ -94,5 +103,13 @@ class OPB_Invoice_Delivery_API extends OPB_REST_Base {
             $code = str_contains( $e->getMessage(), 'not found' ) ? 404 : 500;
             return $this->error( 'whatsapp_link_failed', $e->getMessage(), $code );
         }
+    }
+
+    public function get_audit( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+        $check = $this->permission_check( $r );
+        if ( is_wp_error( $check ) ) return $check;
+
+        $id = (int) $r['id'];
+        return $this->success( OPB_Invoice_Document::get_audit( $id ) );
     }
 }

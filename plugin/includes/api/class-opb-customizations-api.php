@@ -42,6 +42,15 @@ class OPB_Customizations_API extends OPB_REST_Base {
             ],
         ] );
 
+        // ── Media upload (registered before parameterised route) ─────────────
+        register_rest_route( $this->namespace, '/settings/customizations/upload-media', [
+            [
+                'methods'             => 'POST',
+                'callback'            => [ $this, 'upload_media' ],
+                'permission_callback' => [ $this, 'permission_edit' ],
+            ],
+        ] );
+
         // ── Update one key ────────────────────────────────────────────────────
         register_rest_route( $this->namespace, '/settings/customizations/(?P<key>[a-z_]+)', [
             [
@@ -123,6 +132,45 @@ class OPB_Customizations_API extends OPB_REST_Base {
             'plugin_version' => OPB_VERSION,
             'settings'       => $export,
         ] );
+    }
+
+    public function upload_media( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+        $check = $this->permission_edit( $r );
+        if ( is_wp_error( $check ) ) return $check;
+
+        $files = $r->get_file_params();
+        if ( empty( $files['file'] ) ) {
+            return $this->error( 'invalid', 'No file uploaded. Send a multipart/form-data request with field name "file".' );
+        }
+
+        $key = sanitize_key( (string) ( $r->get_param( 'key' ) ?? '' ) );
+        if ( $key ) {
+            if ( ! isset( OPB_Customizations::REGISTRY[ $key ] ) ) {
+                return $this->error( 'not_found', 'Unknown setting key: ' . $key, 404 );
+            }
+            if ( OPB_Customizations::REGISTRY[ $key ]['type'] !== 'media' ) {
+                return $this->error( 'invalid', 'Setting "' . $key . '" is not a media field.' );
+            }
+        }
+
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/media.php';
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+
+        $attachment_id = media_handle_upload( 'file', 0 );
+        if ( is_wp_error( $attachment_id ) ) {
+            return $this->error( 'upload_failed', $attachment_id->get_error_message() );
+        }
+
+        if ( $key ) {
+            OPB_Customizations::set( $key, (string) $attachment_id );
+        }
+
+        return $this->success( [
+            'attachment_id' => $attachment_id,
+            'url'           => wp_get_attachment_url( $attachment_id ),
+            'key'           => $key ?: null,
+        ], 201 );
     }
 
     public function preview( WP_REST_Request $r ): WP_REST_Response|WP_Error {

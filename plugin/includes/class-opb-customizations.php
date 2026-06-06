@@ -184,6 +184,62 @@ If you have any questions, feel free to reach out.',
             'default'  => '',
         ],
 
+        // ── INVOICE BRANDING ──────────────────────────────────────────────────
+        'invoice_banner_image' => [
+            'category' => 'invoice_branding',
+            'label'    => 'Facility Banner Image',
+            'type'     => 'media',
+            'default'  => '',
+        ],
+        'invoice_logo_image' => [
+            'category' => 'invoice_branding',
+            'label'    => 'Facility Logo',
+            'type'     => 'media',
+            'default'  => '',
+        ],
+        'invoice_payment_qr_image' => [
+            'category' => 'invoice_branding',
+            'label'    => 'Payment QR Image',
+            'type'     => 'media',
+            'default'  => '',
+        ],
+        'invoice_footer_text' => [
+            'category' => 'invoice_branding',
+            'label'    => 'Invoice Footer Text',
+            'type'     => 'textarea',
+            'default'  => '',
+        ],
+        'invoice_payment_instructions' => [
+            'category' => 'invoice_branding',
+            'label'    => 'Payment Instructions',
+            'type'     => 'textarea',
+            'default'  => 'Payment is accepted via Cash, UPI, or Bank Transfer.',
+        ],
+        'invoice_bank_details' => [
+            'category' => 'invoice_branding',
+            'label'    => 'Bank Details',
+            'type'     => 'textarea',
+            'default'  => '',
+        ],
+        'invoice_upi_id' => [
+            'category' => 'invoice_branding',
+            'label'    => 'UPI ID',
+            'type'     => 'text',
+            'default'  => '',
+        ],
+        'invoice_thank_you_message' => [
+            'category' => 'invoice_branding',
+            'label'    => 'Thank You Message',
+            'type'     => 'text',
+            'default'  => 'Thank you for choosing {{FACILITY_NAME}}!',
+        ],
+        'invoice_terms_text' => [
+            'category' => 'invoice_branding',
+            'label'    => 'Invoice Terms',
+            'type'     => 'richtext',
+            'default'  => '',
+        ],
+
         // ── INVOICE ───────────────────────────────────────────────────────────
         'invoice_email_subject' => [
             'category' => 'invoice',
@@ -364,6 +420,34 @@ Thank you! 🐾
             }
         }
         return array_values( array_unique( $invalid ) );
+    }
+
+    // ── Media helpers ─────────────────────────────────────────────────────────
+
+    /**
+     * Resolve a media setting to a public URL.
+     * The stored value is a WordPress attachment ID (integer as string).
+     */
+    public static function get_media_url( string $key ): string {
+        $attachment_id = (int) self::get( $key );
+        if ( ! $attachment_id ) {
+            return '';
+        }
+        $url = wp_get_attachment_url( $attachment_id );
+        return $url ?: '';
+    }
+
+    /**
+     * Resolve a media setting to the absolute server file path.
+     * Returns empty string if the attachment or file cannot be found.
+     */
+    public static function get_media_path( string $key ): string {
+        $attachment_id = (int) self::get( $key );
+        if ( ! $attachment_id ) {
+            return '';
+        }
+        $file = get_attached_file( $attachment_id );
+        return ( $file && file_exists( $file ) ) ? $file : '';
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

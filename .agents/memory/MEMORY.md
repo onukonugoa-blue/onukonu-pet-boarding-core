@@ -1,2 +1,3 @@
-- [Invoice document engine](invoice-document-engine.md) — v1.9.0 feature; token-gated HTML invoices, email via wp_mail, WhatsApp via wa.me; stored in uploads/opb-invoices/{id}/
-- [Plugin build process](plugin-build.md) — tsc+vite are local only; use ./node_modules/.bin/tsc and ./node_modules/.bin/vite build; zip must be created via Node.js script (zip binary unavailable)
+- [Invoice document engine](invoice-document-engine.md) — v2.0.0: mPDF PDF generation, PDF email attachment, public summary page with PDF download, full audit trail in opb_invoice_audit
+- [Plugin build process](plugin-build.md) — tsc+vite are local only; ZIP must be built with Python zipfile (zip binary unavailable; archiver npm has non-standard API); normalise pre-1980 timestamps from Composer vendor files
+- [mPDF integration](mpdf-integration.md) — mPDF installed via Composer into plugin/vendor/; require vendor/autoload.php before all other requires; use table-based layout in PDF HTML (no flex/grid); images via base64 data URI for reliability on shared hosting

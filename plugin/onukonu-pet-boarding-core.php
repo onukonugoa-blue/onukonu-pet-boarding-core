@@ -3,7 +3,7 @@
  * Plugin Name: Onukonu Pet Boarding Core
  * Plugin URI:  https://onukonu.com
  * Description: Replacement platform for the discontinued boarding SaaS. Manages clients, pets, bookings, invoices, payments, and operations across three branches.
- * Version:     1.9.0
+ * Version:     2.0.0
  * Author:      Onukonu Pet Homestyle Boarding
  * License:     GPL-2.0-or-later
  * Text Domain: opb
@@ -15,10 +15,13 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'OPB_VERSION',     '1.9.0' );
+define( 'OPB_VERSION',     '2.0.0' );
 define( 'OPB_PLUGIN_FILE', __FILE__ );
 define( 'OPB_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
 define( 'OPB_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
+
+// Composer autoloader — must come before any class that depends on vendor packages (e.g. mPDF)
+require_once OPB_PLUGIN_DIR . 'vendor/autoload.php';
 
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-activator.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-deactivator.php';
