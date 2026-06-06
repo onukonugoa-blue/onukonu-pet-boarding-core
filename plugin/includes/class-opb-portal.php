@@ -51,8 +51,8 @@ class OPB_Portal {
 
         if ( get_query_var( 'opb_manifest' ) ) {
             header( 'Content-Type: application/manifest+json; charset=utf-8' );
-            header( 'Cache-Control: no-cache' );
-            readfile( OPB_PLUGIN_DIR . 'assets/manifest.json' );
+            header( 'Cache-Control: no-cache, must-revalidate' );
+            echo wp_json_encode( self::build_manifest(), JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT );
             exit;
         }
 
@@ -222,6 +222,69 @@ if ('serviceWorker' in navigator) {
         }
         wp_redirect( self::portal_url() );
         exit;
+    }
+
+    // ── Manifest builder ──────────────────────────────────────────────────────
+
+    /**
+     * Build the Web App Manifest array dynamically from OPB Customization settings.
+     * Falls back to static defaults when customizations are not yet configured.
+     */
+    private static function build_manifest(): array {
+        $facility_name = OPB_Customizations::get( 'facility_name' );
+        if ( empty( $facility_name ) ) {
+            $facility_name = 'OPB – Pet Boarding';
+        }
+
+        $icon_base = '/wp-content/plugins/onukonu-pet-boarding-core/assets/icons/';
+
+        return [
+            'name'             => $facility_name,
+            'short_name'       => 'OPB',
+            'description'      => 'Staff portal for ' . $facility_name . ' operations',
+            'start_url'        => '/portal/',
+            'scope'            => '/portal/',
+            'display'          => 'standalone',
+            'display_override' => [ 'standalone', 'minimal-ui', 'browser' ],
+            'orientation'      => 'portrait',
+            'theme_color'      => '#1e3a5f',
+            'background_color' => '#ffffff',
+            'lang'             => 'en',
+            'icons'            => [
+                [
+                    'src'     => $icon_base . 'icon-192.png',
+                    'sizes'   => '192x192',
+                    'type'    => 'image/png',
+                    'purpose' => 'any',
+                ],
+                [
+                    'src'     => $icon_base . 'icon-512.png',
+                    'sizes'   => '512x512',
+                    'type'    => 'image/png',
+                    'purpose' => 'any',
+                ],
+                [
+                    'src'     => $icon_base . 'icon-maskable.png',
+                    'sizes'   => '512x512',
+                    'type'    => 'image/png',
+                    'purpose' => 'maskable',
+                ],
+                [
+                    'src'     => $icon_base . 'icon-192.svg',
+                    'sizes'   => '192x192',
+                    'type'    => 'image/svg+xml',
+                    'purpose' => 'any',
+                ],
+                [
+                    'src'     => $icon_base . 'icon-512.svg',
+                    'sizes'   => '512x512',
+                    'type'    => 'image/svg+xml',
+                    'purpose' => 'any',
+                ],
+            ],
+            'screenshots'  => [],
+            'categories'   => [ 'business', 'utilities' ],
+        ];
     }
 
     // ── Utilities ──────────────────────────────────────────────────────────────

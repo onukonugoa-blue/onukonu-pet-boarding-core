@@ -4,17 +4,20 @@
  * Strategy:
  *   - Plugin JS/CSS bundles  → cache-first (immutable hashed filenames)
  *   - Plugin images/icons    → cache-first
+ *   - App manifest & SW self → cache-first
  *   - /wp-json/  REST calls  → network only (never cached)
  *   - Everything else        → network only
  *
- * The cache is versioned by OPB_VERSION embedded at plugin build time.
- * A hard refresh or plugin update bumps the version and purges stale caches.
+ * Push notification foundation is present but subscriptions are not
+ * activated. The event listeners are stubs ready for future use.
  */
 
-const CACHE_VERSION  = 'opb-1.3.0';
+const CACHE_VERSION  = 'opb-2.0.0';
 const ASSET_ORIGIN   = self.location.origin;
 const ASSET_PATTERNS = [
     /\/wp-content\/plugins\/onukonu-pet-boarding-core\/assets\//,
+    /\/opb-manifest\.json$/,
+    /\/opb-sw\.js$/,
 ];
 const NEVER_CACHE = [
     /\/wp-json\//,
@@ -61,7 +64,7 @@ self.addEventListener('fetch', (event) => {
                 if (cached) return cached;
 
                 return fetch(request).then((response) => {
-                    // Only cache valid 2xx responses
+                    // Only cache valid 2xx same-origin responses
                     if (response && response.status === 200 && response.type === 'basic') {
                         cache.put(request, response.clone());
                     }
@@ -70,4 +73,58 @@ self.addEventListener('fetch', (event) => {
             })
         )
     );
+});
+
+// ── Push notification foundation (stubs — not yet activated) ──────────────────
+//
+// These listeners are intentionally empty. When push notifications are
+// enabled in a future release, the subscription flow (VAPID key exchange,
+// PushManager.subscribe, server-side endpoint registration) will be added
+// without changing this structural skeleton.
+
+self.addEventListener('push', (event) => {
+    if (!event.data) return;
+
+    let payload;
+    try {
+        payload = event.data.json();
+    } catch {
+        payload = { title: 'OPB', body: event.data.text() };
+    }
+
+    const title   = payload.title   ?? 'OPB';
+    const options = {
+        body:  payload.body  ?? '',
+        icon:  payload.icon  ?? '/wp-content/plugins/onukonu-pet-boarding-core/assets/icons/icon-192.png',
+        badge: payload.badge ?? '/wp-content/plugins/onukonu-pet-boarding-core/assets/icons/icon-192.png',
+        tag:   payload.tag   ?? 'opb-notification',
+        data:  payload.data  ?? {},
+    };
+
+    event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+
+    const targetUrl = event.notification.data?.url ?? '/portal/';
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            for (const client of clientList) {
+                if (client.url.includes('/portal/') && 'focus' in client) {
+                    client.navigate(targetUrl);
+                    return client.focus();
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow(targetUrl);
+            }
+        })
+    );
+});
+
+self.addEventListener('pushsubscriptionchange', (event) => {
+    // Future: re-subscribe and update server-side endpoint
+    event.waitUntil(Promise.resolve());
 });

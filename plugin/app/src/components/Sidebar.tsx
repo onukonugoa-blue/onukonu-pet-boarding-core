@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { usePWAInstall } from '../hooks/usePWAInstall'
 
 interface NavItem {
   to: string
@@ -36,6 +37,7 @@ interface Props { open: boolean; onClose: () => void }
 
 export default function Sidebar({ open, onClose }: Props) {
   const links = getVisibleLinks()
+  const { installState, triggerInstall } = usePWAInstall()
 
   return (
     <>
@@ -70,8 +72,21 @@ export default function Sidebar({ open, onClose }: Props) {
           ))}
         </nav>
 
-        <div className="p-3 border-t border-blue-700">
-          <p className="text-xs text-blue-400">v1.8.0</p>
+        <div className="p-3 border-t border-blue-700 space-y-2">
+          {installState === 'installable' && (
+            <button
+              onClick={triggerInstall}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
+                         text-blue-100 bg-blue-700 hover:bg-blue-600 active:bg-blue-500
+                         transition-colors duration-150 focus:outline-none focus:ring-2
+                         focus:ring-blue-400 focus:ring-offset-1 focus:ring-offset-blue-800"
+              title="Install OPB as an app on this device"
+            >
+              <span className="text-base w-5 text-center" aria-hidden="true">⬇</span>
+              <span>Install Application</span>
+            </button>
+          )}
+          <p className="text-xs text-blue-400">v2.0.0</p>
         </div>
       </aside>
     </>

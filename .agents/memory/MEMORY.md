@@ -1,3 +1,4 @@
+- [PWA implementation](pwa-implementation.md) — PNG icons required for Chrome beforeinstallprompt; manifest served dynamically via PHP from OPB_Customizations; push stubs in sw.js for future use
 - [Invoice document engine](invoice-document-engine.md) — v2.0.0: mPDF PDF generation, PDF email attachment, public summary page with PDF download, full audit trail in opb_invoice_audit
 - [Plugin build process](plugin-build.md) — tsc+vite are local only; ZIP must be built with Python zipfile (zip binary unavailable; archiver npm has non-standard API); normalise pre-1980 timestamps from Composer vendor files
 - [mPDF integration](mpdf-integration.md) — mPDF installed via Composer into plugin/vendor/; require vendor/autoload.php before all other requires; use table-based layout in PDF HTML (no flex/grid); images via base64 data URI for reliability on shared hosting
