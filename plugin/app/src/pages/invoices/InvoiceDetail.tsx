@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { invoicesApi } from '../../api/invoices'
 import type { InvoiceDetail as InvoiceDetailType } from '../../api/invoices'
 import { invoiceDeliveryApi } from '../../api/invoice-delivery'
-import type { InvoiceDocument } from '../../api/invoice-delivery'
+import type { InvoiceDocument, AuditEvent } from '../../api/invoice-delivery'
 import { fmt } from '../../api/client'
 import StatusBadge from '../../components/StatusBadge'
 import Modal from '../../components/Modal'
@@ -38,6 +38,10 @@ export default function InvoiceDetail() {
   const [emailSending, setEmailSending] = useState(false)
   const [emailResult,  setEmailResult]  = useState<{ success: boolean; message: string } | null>(null)
 
+  // Audit trail
+  const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([])
+  const [auditOpen, setAuditOpen] = useState(false)
+
   // WhatsApp (link)
   const [waLoading, setWaLoading] = useState(false)
 
@@ -63,9 +67,16 @@ export default function InvoiceDetail() {
       .finally(() => setDocLoading(false))
   }
 
+  const loadAudit = () => {
+    invoiceDeliveryApi.getAudit(Number(id))
+      .then((events) => setAuditEvents(events))
+      .catch(() => setAuditEvents([]))
+  }
+
   useEffect(() => {
     loadInvoice()
     loadDoc()
+    loadAudit()
   }, [id])
 
   // ── Invoice actions ────────────────────────────────────────────────────────
@@ -109,6 +120,7 @@ export default function InvoiceDetail() {
     try {
       const info = await invoiceDeliveryApi.generateDocument(Number(id))
       setDocInfo(info)
+      loadAudit()
     } catch (e: any) {
       setDocError(e.message ?? 'Failed to generate document.')
     } finally {
@@ -125,6 +137,7 @@ export default function InvoiceDetail() {
         success: res.sent,
         message: res.sent ? `Email sent to ${res.to}` : 'Delivery failed — check your mail server.',
       })
+      if (res.sent) loadAudit()
     } catch (e: any) {
       setEmailResult({ success: false, message: e.message ?? 'Failed to send email.' })
     } finally {
@@ -138,6 +151,7 @@ export default function InvoiceDetail() {
     try {
       const link = await invoiceDeliveryApi.getWhatsAppLink(Number(id))
       window.open(link.url, '_blank', 'noopener')
+      loadAudit()
     } catch (e: any) {
       setDocError(e.message ?? 'Failed to build WhatsApp link.')
     } finally {
@@ -242,17 +256,20 @@ export default function InvoiceDetail() {
                 rel="noopener noreferrer"
                 className="btn-secondary btn-sm whitespace-nowrap"
               >
-                Open
+                Open ↗
               </a>
-              <a
-                href={docInfo.url + '?print=1'}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-secondary btn-sm whitespace-nowrap"
-                title="Opens invoice with auto-print dialog for PDF export"
-              >
-                🖨 Print PDF
-              </a>
+              {docInfo.pdf_url ? (
+                <a
+                  href={docInfo.pdf_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                  className="btn-secondary btn-sm whitespace-nowrap"
+                  title="Download the generated PDF invoice"
+                >
+                  📄 PDF
+                </a>
+              ) : null}
               <button
                 onClick={() => copyUrl(docInfo.url)}
                 className="btn-secondary btn-sm whitespace-nowrap"
@@ -300,8 +317,8 @@ export default function InvoiceDetail() {
               </div>
             )}
 
-            {/* Regenerate */}
-            <div className="pt-1">
+            {/* Regenerate + audit toggle */}
+            <div className="pt-1 flex items-center gap-4">
               <button
                 onClick={handleGenerate}
                 disabled={docGenerating}
@@ -309,7 +326,36 @@ export default function InvoiceDetail() {
               >
                 {docGenerating ? '↻ Regenerating…' : '↻ Regenerate document'}
               </button>
+              {auditEvents.length > 0 && (
+                <button
+                  onClick={() => setAuditOpen((v) => !v)}
+                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors ml-auto"
+                >
+                  {auditOpen ? '▲ Hide activity' : `▼ Activity (${auditEvents.length})`}
+                </button>
+              )}
             </div>
+
+            {/* Audit trail */}
+            {auditOpen && auditEvents.length > 0 && (
+              <div className="border-t pt-3">
+                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Activity Log</h4>
+                <ul className="space-y-1.5">
+                  {auditEvents.map((ev) => (
+                    <li key={ev.id} className="flex items-start gap-2 text-xs text-gray-600">
+                      <span className="mt-0.5 flex-shrink-0">{
+                        ev.event === 'generated'       ? '⚡' :
+                        ev.event === 'regenerated'     ? '↻' :
+                        ev.event === 'email_sent'      ? '📧' :
+                        ev.event === 'whatsapp_shared' ? '💬' : '•'
+                      }</span>
+                      <span className="capitalize">{ev.event.replace('_', ' ')}</span>
+                      <span className="text-gray-400 ml-auto flex-shrink-0">{fmt.datetime(ev.performed_at)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center py-5">

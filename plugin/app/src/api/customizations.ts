@@ -2,10 +2,11 @@ import { api } from './client'
 
 export interface CustomizationItem {
   key: string
-  category: 'facility' | 'legal' | 'onboarding' | 'inquiry'
+  category: 'facility' | 'legal' | 'onboarding' | 'inquiry' | 'invoice' | 'invoice_branding'
   label: string
-  type: 'text' | 'textarea' | 'richtext'
+  type: 'text' | 'textarea' | 'richtext' | 'media'
   value: string
+  media_url?: string
   is_default: boolean
   updated_at: string | null
   updated_by: number | null
@@ -32,6 +33,12 @@ export interface ExportPayload {
   }>
 }
 
+export interface MediaUploadResult {
+  attachment_id: number
+  url: string
+  key: string | null
+}
+
 export const customizationsApi = {
   getAll: () => api.get<CustomizationItem[]>('/settings/customizations'),
 
@@ -42,4 +49,11 @@ export const customizationsApi = {
     api.post<PreviewResult>('/settings/customizations/preview', { key }),
 
   export: () => api.get<ExportPayload>('/settings/customizations/export'),
+
+  uploadMedia: (key: string, file: File): Promise<MediaUploadResult> => {
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('key', key)
+    return api.upload<MediaUploadResult>('/settings/customizations/upload-media', fd)
+  },
 }

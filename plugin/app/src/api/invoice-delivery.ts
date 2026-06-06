@@ -3,7 +3,9 @@ import { api } from './client'
 export interface InvoiceDocument {
   token: string
   url: string
+  pdf_url: string | null
   generated_at: string
+  generated_by: number | null
 }
 
 export interface EmailResult {
@@ -15,6 +17,14 @@ export interface WhatsAppLink {
   url: string
   message: string
   phone: string
+}
+
+export interface AuditEvent {
+  id: number
+  event: 'generated' | 'regenerated' | 'email_sent' | 'whatsapp_shared'
+  performed_by: number | null
+  performed_at: string
+  meta: Record<string, unknown> | null
 }
 
 export const invoiceDeliveryApi = {
@@ -29,4 +39,7 @@ export const invoiceDeliveryApi = {
 
   getWhatsAppLink: (id: number) =>
     api.get<WhatsAppLink>(`/invoices/${id}/whatsapp-link`),
+
+  getAudit: (id: number) =>
+    api.get<AuditEvent[]>(`/invoices/${id}/audit`),
 }

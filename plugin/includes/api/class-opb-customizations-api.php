@@ -83,7 +83,18 @@ class OPB_Customizations_API extends OPB_REST_Base {
         $check = $this->permission_view( $r );
         if ( is_wp_error( $check ) ) return $check;
 
-        return $this->success( array_values( OPB_Customizations::get_all() ) );
+        $items = array_values( OPB_Customizations::get_all() );
+
+        // For media-type settings, resolve the attachment ID to a public URL
+        // so the frontend can render a live preview without an extra round-trip.
+        foreach ( $items as &$item ) {
+            if ( ( $item['type'] ?? '' ) === 'media' ) {
+                $item['media_url'] = OPB_Customizations::get_media_url( $item['key'] );
+            }
+        }
+        unset( $item );
+
+        return $this->success( $items );
     }
 
     public function update_one( WP_REST_Request $r ): WP_REST_Response|WP_Error {
