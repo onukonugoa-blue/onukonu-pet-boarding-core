@@ -38,8 +38,12 @@ EXCLUDE_NAMES    = {
     'appcomposer.json', 'package.json', 'package-lock.json',
     'tsconfig.json', 'vite.config.ts', '.DS_Store', 'Thumbs.db',
     '.editorconfig', '.gitignore', '.gitattributes',
+    'build.sh', 'composer.json', 'composer.lock',
 }
 MIN_DATE = (1980, 1, 1, 0, 0, 0)
+
+# Dotfile/dotdir directories that must be included despite starting with '.'
+ALLOW_DOTDIRS = {'assets/dist/.vite'}
 
 def exclude(rel):
     name = os.path.basename(rel)
@@ -48,12 +52,21 @@ def exclude(rel):
     norm = rel.replace(os.sep, '/')
     return any(norm.startswith(p) for p in EXCLUDE_PREFIXES)
 
+def allow_dotdir(rel_dir):
+    """Return True if a dot-prefixed dir relative to PLUGIN_DIR should be walked."""
+    norm = rel_dir.replace(os.sep, '/')
+    return any(norm == d or norm.startswith(d + '/') for d in ALLOW_DOTDIRS)
+
 import time
 
 count = 0
 with zipfile.ZipFile(OUTPUT, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
     for root, dirs, files in os.walk(PLUGIN_DIR):
-        dirs[:] = [d for d in sorted(dirs) if not d.startswith('.')]
+        rel_root = os.path.relpath(root, PLUGIN_DIR)
+        dirs[:] = [
+            d for d in sorted(dirs)
+            if not d.startswith('.') or allow_dotdir(os.path.join(rel_root, d))
+        ]
         for fname in sorted(files):
             if fname.startswith('.'):
                 continue

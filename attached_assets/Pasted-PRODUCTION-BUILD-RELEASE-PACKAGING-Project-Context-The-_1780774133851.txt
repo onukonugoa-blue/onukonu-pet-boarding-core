@@ -1,0 +1,201 @@
+PRODUCTION BUILD & RELEASE PACKAGING
+
+Project Context
+
+The repository has been imported into a fresh Replit instance from GitHub.
+
+The codebase should be treated as the source of truth.
+
+Do not redesign features.
+
+Do not implement new functionality.
+
+Do not modify business logic unless a build-blocking defect is discovered.
+
+The objective is to verify, build, package, and produce a clean production-ready WordPress plugin ZIP.
+
+---
+
+OBJECTIVE
+
+Generate a production release package from the current repository state.
+
+This is a release engineering task.
+
+Not a feature development task.
+
+---
+
+STEP 1 — REPOSITORY REVIEW
+
+Inspect the current repository.
+
+Report:
+
+- Current branch
+- Current HEAD commit
+- Latest commit message
+
+Verify:
+
+- No uncommitted changes
+- No partial builds
+- No missing assets
+
+---
+
+STEP 2 — BUILD VALIDATION
+
+Perform a clean production build.
+
+Requirements:
+
+- Install dependencies
+- Build frontend
+- Verify TypeScript compilation
+- Verify React production bundle
+- Verify WordPress plugin loads correctly
+
+Check for:
+
+- Build warnings
+- Build failures
+- Missing imports
+- Missing assets
+- Broken routes
+- Missing API registrations
+
+---
+
+STEP 3 — FEATURE PRESENCE AUDIT
+
+Confirm that the following modules are present:
+
+Core
+
+- Clients
+- Pets
+- Bookings
+- Kennels
+- Occupancy Board
+- Occupancy Timeline
+- Tasks
+- Invoices
+- Payments
+
+Inquiry & Onboarding
+
+- Inquiry Intake
+- Public Onboarding
+- Document Uploads
+- T&C Acceptance
+
+Customization
+
+- Settings → Customization
+- Template Management
+- Facility Information
+- Terms & Conditions
+- Invoice Branding
+
+Invoice System
+
+- Invoice PDF Engine
+- PDF Generation
+- Public Invoice Links
+- Email Delivery
+- WhatsApp Delivery
+- Branding Assets
+- QR Support
+
+Report any missing modules.
+
+---
+
+STEP 4 — DATABASE REVIEW
+
+Review activation and upgrade logic.
+
+Verify:
+
+- Schema migrations are registered
+- New tables are created
+- New columns are added safely
+- Upgrades are idempotent
+
+Confirm:
+
+Plugin can be installed over an existing OPB installation without data loss.
+
+---
+
+STEP 5 — PRODUCTION PACKAGING
+
+Generate a clean production plugin ZIP.
+
+Include:
+
+- PHP source
+- Compiled frontend assets
+- Database migration logic
+- API classes
+- Required vendor libraries
+- Required static assets
+
+Exclude:
+
+- node_modules
+- source maps
+- test files
+- temporary files
+- debug files
+- development artifacts
+
+---
+
+STEP 6 — RELEASE VERIFICATION
+
+Before packaging, verify:
+
+- Plugin activates
+- Plugin deactivates
+- No PHP fatal errors
+- No missing class includes
+- No missing route registrations
+
+Perform a final sanity review.
+
+---
+
+STEP 7 — OUTPUT
+
+Provide:
+
+1. Current commit hash
+2. Current branch
+3. Build status
+4. Feature audit summary
+5. Packaging summary
+6. Any warnings detected
+7. Generated ZIP location
+
+---
+
+IMPORTANT
+
+Do not create new features.
+
+Do not redesign workflows.
+
+Do not refactor architecture.
+
+Only fix issues that prevent:
+
+- Build
+- Activation
+- Packaging
+- Deployment
+
+Goal:
+
+Produce a clean, deployable, production-ready WordPress plugin ZIP from the current repository state.
