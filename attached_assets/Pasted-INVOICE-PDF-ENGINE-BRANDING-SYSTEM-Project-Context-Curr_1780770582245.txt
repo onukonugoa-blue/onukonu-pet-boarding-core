@@ -1,0 +1,270 @@
+INVOICE PDF ENGINE & BRANDING SYSTEM
+
+Project Context
+
+Current state:
+
+- Invoice generation exists
+- Public invoice links exist
+- Email delivery exists
+- WhatsApp sharing exists
+- Customization module exists
+
+Current implementation relies on HTML invoice rendering.
+
+This milestone upgrades the invoice system into a professional branded PDF document engine.
+
+---
+
+OBJECTIVE
+
+Generate a true PDF invoice.
+
+The PDF becomes the authoritative invoice document.
+
+Emails should send the PDF.
+
+WhatsApp should share a public download link to the PDF.
+
+The PDF should be professionally branded and facility-configurable.
+
+---
+
+CUSTOMIZATION PAGE ENHANCEMENTS
+
+Add a new section:
+
+Customization
+└── Invoice Branding
+
+Fields:
+
+Facility Banner Image
+
+Facility Logo
+
+Payment QR Image
+
+Invoice Footer Text
+
+Payment Instructions
+
+Bank Details
+
+UPI ID
+
+Thank You Message
+
+Terms Text
+
+These assets should be uploadable through WordPress media handling.
+
+No hardcoded branding.
+
+---
+
+PDF LAYOUT
+
+Page Header
+
+- Facility Banner
+- Facility Logo
+- Facility Name
+- Address
+- Phone
+- Email
+
+Invoice Metadata
+
+- Invoice Number
+- Invoice Date
+- Booking Reference
+- Payment Status
+
+Client Section
+
+- Client Name
+- Phone
+- Email
+
+Pet Section
+
+- Pet Names
+- Stay Dates
+- Boarding Details
+
+Invoice Items
+
+- Service
+- Quantity
+- Amount
+
+Financial Summary
+
+- Subtotal
+- Discounts
+- Total
+- Paid
+- Due
+
+Payment Section
+
+- Payment QR
+- UPI ID
+- Payment Instructions
+
+Footer
+
+- Facility Notes
+- Thank You Message
+- Terms
+
+---
+
+PDF STORAGE
+
+When generated:
+
+uploads/opb-invoices/
+
+Store:
+
+PDF path
+generated_at
+generated_by
+
+The PDF should be retained and reusable.
+
+Avoid regenerating unnecessarily.
+
+---
+
+EMAIL DELIVERY
+
+Send:
+
+Subject:
+(customization controlled)
+
+Body:
+(customization controlled)
+
+Attachment:
+Generated PDF
+
+Do not embed invoice tables into the email body.
+
+The PDF is the invoice.
+
+---
+
+WHATSAPP DELIVERY
+
+Generate wa.me links using customizable templates.
+
+Include:
+
+Invoice Number
+
+Amount Due
+
+Secure Download Link
+
+Facility Name
+
+Do not send invoice markup.
+
+---
+
+PUBLIC INVOICE PAGE
+
+Public token URL remains.
+
+Purpose:
+
+Invoice Summary
+PDF Download
+
+The PDF should be the primary document.
+
+Not an HTML invoice replica.
+
+---
+
+DOCUMENT INTEGRITY
+
+Once generated:
+
+PDF should represent the invoice snapshot at generation time.
+
+Future edits should require deliberate regeneration.
+
+Track:
+
+generated_at
+
+generated_by
+
+---
+
+AUDIT TRAIL
+
+Track:
+
+Generated
+
+Regenerated
+
+Email Sent
+
+WhatsApp Shared
+
+Timestamp
+
+User
+
+---
+
+IMPLEMENTATION REQUIREMENTS
+
+Before coding:
+
+1. Review current invoice document engine.
+2. Review current customization module.
+3. Review available branding assets.
+4. Propose PDF library.
+5. Present implementation plan.
+
+Then implement.
+
+---
+
+DELIVERABLES
+
+Provide:
+
+- PDF generation approach
+- Branding storage approach
+- Database changes
+- Customization changes
+- Email changes
+- WhatsApp changes
+- Files changed
+- Commit hash
+- Production ZIP
+
+SUCCESS CRITERIA
+
+Invoices are generated as true PDFs.
+
+Branding is configurable from Customization.
+
+Banner and QR uploads are supported.
+
+Emails deliver PDF attachments.
+
+WhatsApp shares PDF access links.
+
+Invoices appear professional and client-facing.
+
+The PDF becomes the authoritative invoice document.
