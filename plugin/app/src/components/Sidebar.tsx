@@ -86,7 +86,7 @@ export default function Sidebar({ open, onClose }: Props) {
               <span>Install Application</span>
             </button>
           )}
-          <p className="text-xs text-blue-400">v2.0.0</p>
+          <p className="text-xs text-blue-400">v2.0.1</p>
         </div>
       </aside>
     </>

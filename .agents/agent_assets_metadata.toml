@@ -168,3 +168,9 @@ id = "75AvH-ZCSjGuDF3Y76Diq"
 uri = "file://onukonu-pet-boarding-core-v2.0.0.zip"
 type = "unspecified"
 title = "onukonu-pet-boarding-core-v2.0.0.zip"
+
+[[outputs]]
+id = "QzMnt8xE02sT7QrH8iEqa"
+uri = "file://onukonu-pet-boarding-core-v2.0.1.zip"
+type = "unspecified"
+title = "OPB v2.0.1 — Production Plugin ZIP"
