@@ -695,7 +695,12 @@ if ( $has_payment_section ) :
         $inv      = $data['invoice'];
         $inv_num  = $inv['legacy_invoice_number'] ?? ( '#' . $inv['id'] );
         $doc_info = self::get_info( $invoice_id );
-        $doc_url  = $doc_info['url'] ?? '';
+
+        if ( ! $doc_info ) {
+            throw new \RuntimeException( 'No invoice document has been generated yet. Generate the document first, then share via WhatsApp.' );
+        }
+
+        $doc_url  = $doc_info['url'];
 
         $context = [
             'CLIENT_NAME'    => $inv['client_name']  ?? '',
