@@ -94,16 +94,25 @@ class OPB_Invoice_Document {
         $generated_at = current_time( 'mysql' );
         $user_id      = get_current_user_id() ?: null;
 
-        $wpdb->update(
+        $updated = $wpdb->update(
             "{$wpdb->prefix}opb_invoices",
             [
                 'doc_token'        => $token,
                 'doc_generated_at' => $generated_at,
-                'doc_generated_by' => $user_id,
+                'doc_generated_by' => $user_id ?? 0,
                 'doc_pdf_path'     => $pdf_rel_path,
             ],
-            [ 'id' => $invoice_id ]
+            [ 'id' => $invoice_id ],
+            [ '%s', '%s', '%d', '%s' ],
+            [ '%d' ]
         );
+
+        if ( $updated === false ) {
+            throw new \RuntimeException(
+                'Failed to persist invoice document metadata.'
+                . ( $wpdb->last_error ? ' DB: ' . $wpdb->last_error : '' )
+            );
+        }
 
         self::log_audit_event( $invoice_id, $is_regen ? 'regenerated' : 'generated', [
             'user_id' => $user_id,
