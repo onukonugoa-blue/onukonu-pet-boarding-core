@@ -70,10 +70,11 @@ class OPB_Client_Auth {
         }
 
         // Invalidate any live OTPs for this client
+        // Use UTC_TIMESTAMP() because expires_at is stored as UTC via gmdate().
         $wpdb->query( $wpdb->prepare(
             "UPDATE {$wpdb->prefix}opb_client_otps
-             SET used_at = NOW()
-             WHERE client_id = %d AND used_at IS NULL AND expires_at > NOW()",
+             SET used_at = UTC_TIMESTAMP()
+             WHERE client_id = %d AND used_at IS NULL AND expires_at > UTC_TIMESTAMP()",
             $client_id
         ) );
 
@@ -118,7 +119,7 @@ class OPB_Client_Auth {
 
         $row = $wpdb->get_row( $wpdb->prepare(
             "SELECT * FROM {$wpdb->prefix}opb_client_otps
-             WHERE client_id = %d AND used_at IS NULL AND expires_at > NOW()
+             WHERE client_id = %d AND used_at IS NULL AND expires_at > UTC_TIMESTAMP()
              ORDER BY id DESC LIMIT 1",
             $client['id']
         ), ARRAY_A );
@@ -231,7 +232,7 @@ class OPB_Client_Auth {
              FROM {$wpdb->prefix}opb_client_sessions
              WHERE token_hash    = %s
                AND invalidated_at IS NULL
-               AND expires_at    > NOW()
+               AND expires_at    > UTC_TIMESTAMP()
              LIMIT 1",
             $token_hash
         ), ARRAY_A );
