@@ -141,6 +141,7 @@ class OPB_Portal {
             'nonce'     => wp_create_nonce( 'wp_rest' ),
             'adminUrl'  => admin_url( 'admin.php' ),
             'logoutUrl' => wp_logout_url( self::portal_url() ),
+            'version'   => OPB_VERSION,
             'user'      => [
                 'id'       => $user->ID,
                 'name'     => $user->display_name,

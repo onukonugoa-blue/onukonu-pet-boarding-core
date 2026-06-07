@@ -5,6 +5,7 @@ declare global {
       nonce: string
       adminUrl: string
       logoutUrl: string
+      version: string
       user: { id: number; name: string; roles: string[]; branchId: number }
     }
   }
