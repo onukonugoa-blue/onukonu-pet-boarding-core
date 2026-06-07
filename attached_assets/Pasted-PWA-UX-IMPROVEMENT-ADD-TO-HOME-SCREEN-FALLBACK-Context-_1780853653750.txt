@@ -1,0 +1,243 @@
+PWA UX IMPROVEMENT – ADD TO HOME SCREEN FALLBACK
+
+Context
+
+OPB PWA installation is now functioning correctly on Chrome Android.
+
+Current behaviour:
+
+Chrome Android
+→ Install Application
+
+works correctly.
+
+However:
+
+iPhone Safari
+Firefox Android
+Other browsers without native PWA install support
+
+do not expose beforeinstallprompt and therefore never show the Install Application action.
+
+The objective is to provide a graceful fallback.
+
+---
+
+OBJECTIVE
+
+If native PWA installation is available:
+
+Show:
+
+Install Application
+
+If native PWA installation is NOT available:
+
+Show:
+
+Add to Home Screen
+
+with browser-specific guidance.
+
+---
+
+IMPORTANT
+
+Do NOT redesign the existing PWA implementation.
+
+Do NOT redesign authentication.
+
+Do NOT redesign portal routing.
+
+Do NOT redesign install logic.
+
+The existing Chrome Android install flow is working correctly and must remain unchanged.
+
+---
+
+CURRENT STATE
+
+Existing logic already uses:
+
+usePWAInstall()
+
+This is the single source of truth.
+
+Continue using it.
+
+Do NOT introduce competing listeners.
+
+Do NOT create duplicate install state.
+
+---
+
+DESIRED USER EXPERIENCE
+
+Case 1
+
+Browser supports installation.
+
+Example:
+
+Chrome Android
+Edge Android
+Chrome Desktop
+
+Show:
+
+Install Application
+
+Use existing native install flow.
+
+---
+
+Case 2
+
+Browser does not support native installation.
+
+Example:
+
+Safari iPhone
+Safari iPad
+Firefox Android
+
+Show:
+
+Add to Home Screen
+
+instead of hiding the action entirely.
+
+---
+
+IOS SAFARI EXPERIENCE
+
+Detect:
+
+iPhone Safari
+iPad Safari
+
+Display:
+
+Add to Home Screen
+
+When selected, show concise instructions:
+
+1. Tap Share
+2. Tap Add to Home Screen
+3. Tap Add
+
+Use platform-appropriate wording.
+
+---
+
+FIREFOX AND OTHER BROWSERS
+
+Display:
+
+Add to Home Screen
+
+When selected, show concise guidance:
+
+1. Open browser menu
+2. Choose Add to Home Screen
+
+Do not overcomplicate.
+
+---
+
+INSTALLED STATE
+
+If OPB is already installed:
+
+Hide:
+
+Install Application
+
+Hide:
+
+Add to Home Screen
+
+Do not show installation actions once installed.
+
+---
+
+UI LOCATIONS
+
+Maintain consistency.
+
+Support existing locations:
+
+- Sidebar
+- TopBar
+
+Both should continue using the same shared state from:
+
+usePWAInstall()
+
+---
+
+DO NOT IMPLEMENT
+
+Do NOT create:
+
+- Custom fake installers
+- Browser-specific hacks
+- User-agent spaghetti
+- Native wrappers
+- Capacitor integration
+
+This is only a UX fallback.
+
+---
+
+IMPLEMENTATION NOTES
+
+Extend usePWAInstall() to expose:
+
+installed
+installable
+manualInstallAvailable
+platform
+
+or equivalent clean state model.
+
+Allow the UI to determine:
+
+Install Application
+
+or
+
+Add to Home Screen
+
+from one source of truth.
+
+---
+
+DELIVERABLES
+
+Provide:
+
+1. State model changes
+2. Browser detection approach
+3. UI changes
+4. Files modified
+5. Commit hash
+6. Production plugin ZIP
+
+SUCCESS CRITERIA
+
+✓ Chrome Android continues showing Install Application
+
+✓ Safari iPhone shows Add to Home Screen guidance
+
+✓ Firefox Android shows Add to Home Screen guidance
+
+✓ Installed applications show no install actions
+
+✓ Sidebar and TopBar remain synchronized
+
+✓ Single install state source remains in use
+
+✓ Existing OPB functionality unchanged
+
+✓ Production ZIP generated

@@ -13,8 +13,15 @@ declare global {
 
 export type InstallState = 'unsupported' | 'installable' | 'installed'
 
+/**
+ * 'ios'   — iPhone / iPad Safari (no beforeinstallprompt; needs Share → Add to Home Screen)
+ * 'other' — Firefox Android, Samsung Internet, desktop, etc.
+ */
+export type Platform = 'ios' | 'other'
+
 export interface UsePWAInstallResult {
   installState: InstallState
+  platform: Platform
   triggerInstall: () => Promise<void>
 }
 
@@ -25,11 +32,17 @@ function isStandalone(): boolean {
   return false
 }
 
+function detectPlatform(): Platform {
+  if (typeof navigator === 'undefined') return 'other'
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) ? 'ios' : 'other'
+}
+
 export function usePWAInstall(): UsePWAInstallResult {
   const promptRef = useRef<BeforeInstallPromptEvent | null>(null)
   const [installState, setInstallState] = useState<InstallState>(() =>
     isStandalone() ? 'installed' : 'unsupported'
   )
+  const platform = detectPlatform()
 
   useEffect(() => {
     if (isStandalone()) {
@@ -81,5 +94,5 @@ export function usePWAInstall(): UsePWAInstallResult {
     }
   }
 
-  return { installState, triggerInstall }
+  return { installState, platform, triggerInstall }
 }

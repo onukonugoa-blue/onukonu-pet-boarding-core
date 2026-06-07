@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { usePWAInstall } from '../hooks/usePWAInstall'
 
@@ -33,11 +34,25 @@ function getVisibleLinks(): NavItem[] {
   })
 }
 
+const IOS_STEPS = [
+  'Tap the Share button in Safari',
+  'Tap Add to Home Screen',
+  'Tap Add to confirm',
+]
+
+const OTHER_STEPS = [
+  'Open the browser menu',
+  'Tap Add to Home Screen',
+]
+
 interface Props { open: boolean; onClose: () => void }
 
 export default function Sidebar({ open, onClose }: Props) {
   const links = getVisibleLinks()
-  const { installState, triggerInstall } = usePWAInstall()
+  const { installState, platform, triggerInstall } = usePWAInstall()
+  const [showGuide, setShowGuide] = useState(false)
+
+  const steps = platform === 'ios' ? IOS_STEPS : OTHER_STEPS
 
   return (
     <>
@@ -86,7 +101,35 @@ export default function Sidebar({ open, onClose }: Props) {
               <span>Install Application</span>
             </button>
           )}
-          <p className="text-xs text-blue-400">v2.0.3</p>
+
+          {installState === 'unsupported' && (
+            <div>
+              <button
+                onClick={() => setShowGuide((v) => !v)}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
+                           text-blue-100 bg-blue-700 hover:bg-blue-600 active:bg-blue-500
+                           transition-colors duration-150 focus:outline-none focus:ring-2
+                           focus:ring-blue-400 focus:ring-offset-1 focus:ring-offset-blue-800"
+                title="Add OPB to your home screen"
+              >
+                <span className="text-base w-5 text-center" aria-hidden="true">＋</span>
+                <span>Add to Home Screen</span>
+              </button>
+
+              {showGuide && (
+                <div className="mt-2 px-3 py-2 bg-blue-900 rounded-lg text-xs text-blue-200 space-y-1">
+                  {steps.map((step, i) => (
+                    <p key={i} className="flex gap-2">
+                      <span className="text-blue-400 font-semibold shrink-0">{i + 1}.</span>
+                      <span>{step}</span>
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <p className="text-xs text-blue-400">v2.0.8</p>
         </div>
       </aside>
     </>

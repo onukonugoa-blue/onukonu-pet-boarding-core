@@ -1,13 +1,40 @@
+import { useRef, useState, useEffect } from 'react'
 import BranchSelector from './BranchSelector'
 import { usePWAInstall } from '../hooks/usePWAInstall'
 
 interface Props { onMenuToggle: () => void }
 
+const IOS_STEPS = [
+  'Tap the Share button in Safari',
+  'Tap Add to Home Screen',
+  'Tap Add to confirm',
+]
+
+const OTHER_STEPS = [
+  'Open the browser menu',
+  'Tap Add to Home Screen',
+]
+
 export default function TopBar({ onMenuToggle }: Props) {
   const user      = window.OPB?.user
   const logoutUrl = window.OPB?.logoutUrl ?? '/wp-login.php?action=logout'
 
-  const { installState, triggerInstall } = usePWAInstall()
+  const { installState, platform, triggerInstall } = usePWAInstall()
+  const [showGuide, setShowGuide] = useState(false)
+  const guideRef = useRef<HTMLDivElement>(null)
+
+  const steps = platform === 'ios' ? IOS_STEPS : OTHER_STEPS
+
+  useEffect(() => {
+    if (!showGuide) return
+    function handleClick(e: MouseEvent) {
+      if (guideRef.current && !guideRef.current.contains(e.target as Node)) {
+        setShowGuide(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showGuide])
 
   return (
     <header
@@ -48,6 +75,32 @@ export default function TopBar({ onMenuToggle }: Props) {
           </svg>
           <span className="hidden sm:inline">Install</span>
         </button>
+      )}
+
+      {installState === 'unsupported' && (
+        <div className="relative shrink-0" ref={guideRef}>
+          <button
+            onClick={() => setShowGuide((v) => !v)}
+            title="Add OPB to your home screen"
+            className="flex items-center gap-1.5 text-xs text-blue-200 hover:text-white bg-blue-700 hover:bg-blue-600 rounded px-2 py-1 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            <span className="hidden sm:inline">Add to Home Screen</span>
+          </button>
+
+          {showGuide && (
+            <div className="absolute right-0 top-full mt-2 w-52 bg-blue-900 border border-blue-700 rounded-lg shadow-lg p-3 text-xs text-blue-200 space-y-1.5 z-50">
+              {steps.map((step, i) => (
+                <p key={i} className="flex gap-2">
+                  <span className="text-blue-400 font-semibold shrink-0">{i + 1}.</span>
+                  <span>{step}</span>
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       <div className="flex items-center gap-3 text-sm text-blue-200">
