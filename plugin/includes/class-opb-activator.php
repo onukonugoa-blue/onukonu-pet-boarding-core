@@ -523,6 +523,52 @@ class OPB_Activator {
             KEY idx_pet (onboarding_pet_id)
         ) ENGINE=InnoDB $charset;";
 
+        // ── Client Relationship / My Pets ─────────────────────────────────────
+
+        $tables[] = "CREATE TABLE {$wpdb->prefix}opb_client_otps (
+            id             INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+            client_id      INT UNSIGNED  NOT NULL,
+            email          VARCHAR(150)  NOT NULL,
+            otp_hash       VARCHAR(255)  NOT NULL,
+            created_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            expires_at     DATETIME      NOT NULL,
+            used_at        DATETIME,
+            attempt_count  TINYINT UNSIGNED NOT NULL DEFAULT 0,
+            ip_address     VARCHAR(45),
+            PRIMARY KEY (id),
+            KEY idx_client (client_id),
+            KEY idx_expires (expires_at)
+        ) ENGINE=InnoDB $charset;";
+
+        $tables[] = "CREATE TABLE {$wpdb->prefix}opb_client_sessions (
+            id                INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+            client_id         INT UNSIGNED  NOT NULL,
+            token_hash        CHAR(64)      NOT NULL,
+            created_at        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            expires_at        DATETIME      NOT NULL,
+            last_accessed_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            ip_address        VARCHAR(45),
+            user_agent        VARCHAR(255),
+            invalidated_at    DATETIME,
+            PRIMARY KEY (id),
+            UNIQUE KEY uq_token_hash (token_hash),
+            KEY idx_client (client_id),
+            KEY idx_expires (expires_at)
+        ) ENGINE=InnoDB $charset;";
+
+        $tables[] = "CREATE TABLE {$wpdb->prefix}opb_client_access_log (
+            id          INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+            client_id   INT UNSIGNED,
+            event       VARCHAR(60)   NOT NULL,
+            ip_address  VARCHAR(45),
+            meta        TEXT,
+            created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_client (client_id),
+            KEY idx_event  (event),
+            KEY idx_created (created_at)
+        ) ENGINE=InnoDB $charset;";
+
         // ── Customization subsystem ───────────────────────────────────────────
         $tables[] = "CREATE TABLE {$wpdb->prefix}opb_customizations (
             id            INT UNSIGNED  NOT NULL AUTO_INCREMENT,

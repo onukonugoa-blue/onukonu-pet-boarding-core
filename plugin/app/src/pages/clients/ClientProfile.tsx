@@ -41,13 +41,24 @@ export default function ClientProfile() {
           <h1 className="page-title">{client.name}</h1>
           <p className="text-sm text-gray-500">{client.phone} · {client.branch_code ?? 'Branch unknown'}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <WhatsAppButton
             phone={client.phone}
             message={onboardingMessage(client, pets)}
             label="WhatsApp"
             size="sm"
           />
+          {client.email && (
+            <a
+              href={`${(window as any).opbData?.siteUrl ?? ''}/my-pets/`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary btn-sm"
+              title="Open the client-facing My Pets page"
+            >
+              My Pets Page ↗
+            </a>
+          )}
           <Link to={`/clients/${id}/edit`} className="btn-secondary btn-sm">Edit</Link>
           <Link to={`/bookings/new?client_id=${id}`} className="btn-primary btn-sm">+ Booking</Link>
         </div>

@@ -85,6 +85,15 @@ export default function ClientList() {
                   <div className="mobile-card-actions">
                     <Link to={`/clients/${c.id}`} className="btn btn-primary btn-sm flex-1 justify-center">View</Link>
                     <Link to={`/clients/${c.id}/edit`} className="btn btn-secondary btn-sm flex-1 justify-center">Edit</Link>
+                    {c.email && (
+                      <a
+                        href={`${(window as any).opbData?.siteUrl ?? ''}/my-pets/`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-secondary btn-sm"
+                        title="My Pets Page"
+                      >🐾</a>
+                    )}
                   </div>
                 </div>
               ))}
