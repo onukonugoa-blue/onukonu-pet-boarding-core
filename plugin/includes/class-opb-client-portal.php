@@ -387,7 +387,7 @@ var otpSeconds = 600;
 var pageData = null;
 
 /* ── Helpers ───────────────────────────────────────────────────────────────── */
-function show(id){ var el=ge(id); if(el) el.style.display=''; }
+function show(id,d){ var el=ge(id); if(el) el.style.display=d||'block'; }
 function hide(id){ var el=ge(id); if(el) el.style.display='none'; }
 function ge(id){ return document.getElementById(id); }
 
@@ -444,7 +444,7 @@ async function api(method, path, body){
 }
 
 /* ── Screens ───────────────────────────────────────────────────────────────── */
-function showLoading(){ show('screen-loading'); hide('screen-auth'); hide('screen-page'); }
+function showLoading(){ show('screen-loading','flex'); hide('screen-auth'); hide('screen-page'); }
 function showAuth(step){
   hide('screen-loading'); hide('screen-page');
   show('screen-auth');
