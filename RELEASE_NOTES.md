@@ -2,6 +2,39 @@
 
 ---
 
+## v2.0.7 — PWA Apache Bypass · 7 June 2026
+
+**Commit:** `7c26ee4`
+
+### PWA Installability Fix — Hostinger Apache Intercept
+
+Hostinger's Apache configuration intercepts requests ending in `.json` and `.js` before they reach WordPress. This caused `/opb-manifest.json` and `/opb-sw.js` to return HTTP 404 on the live server, preventing Chrome from loading the manifest, registering the service worker, or reaching installable state. `beforeinstallprompt` never fired.
+
+The WordPress rewrite rules and PHP handlers were already correct — the requests simply never arrived at WordPress.
+
+**Fix:** Replaced all references to the static-path endpoints with the confirmed-working query-parameter endpoints, which bypass Apache and reach WordPress directly.
+
+| Endpoint | Old (404) | New (200) |
+|---|---|---|
+| Web App Manifest | `/opb-manifest.json` | `/?opb_manifest=1` |
+| Service Worker | `/opb-sw.js` | `/?opb_sw=1` |
+
+Both query-parameter endpoints were verified on production prior to this change:
+- `GET /?opb_manifest=1` → `200 application/manifest+json`
+- `GET /?opb_sw=1` → `200 application/javascript` + `Service-Worker-Allowed: /`
+
+The manifest `id`, `start_url`, and `scope` remain `/portal/`. Service worker scope argument remains `{ scope: '/portal/' }`. No React source, auth, install UI, or PWA architecture changed.
+
+**Files changed:**
+- `plugin/includes/class-opb-portal.php` — `$manifest_url`, `$sw_url`, and inline comment updated to `/?opb_manifest=1` / `/?opb_sw=1`
+- `RELEASE_NOTES.md` — stale `/opb-sw.js` reference updated
+
+### Build
+
+- Production ZIP: `onukonu-pet-boarding-core-v2.0.7.zip` — 45.9 MB, 732 files
+
+---
+
 ## v2.0.5 — Production Hardening · 7 June 2026
 
 **Commit:** `de8499b`
