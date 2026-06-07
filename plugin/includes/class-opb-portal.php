@@ -65,7 +65,7 @@ class OPB_Portal {
             header( 'Cache-Control: no-cache, must-revalidate' );
             header( 'X-Content-Type-Options: nosniff' );
             /*
-             * Allow the SW (served from root path /opb-sw.js) to claim the /portal/
+             * Allow the SW (served from /?opb_sw=1) to claim the /portal/
              * scope. Browsers permit narrowing the default scope without this header,
              * but some strict configurations require it to be explicit.
              */

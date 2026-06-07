@@ -23,7 +23,7 @@ iOS Safari ignores SVG for touch icons. Changed to `icon-192.png`.
 Chrome 112+ uses `id` to uniquely identify a PWA. Added `"id": "/portal/"` to both the static `manifest.json` and the dynamic PHP `build_manifest()` method.
 
 **Medium — Missing `Service-Worker-Allowed` header**
-Added `Service-Worker-Allowed: /` response header when serving `/opb-sw.js` via WordPress rewrite, confirming the SW may claim the `/portal/` scope.
+Added `Service-Worker-Allowed: /` response header when serving `/?opb_sw=1` via WordPress query parameter, confirming the SW may claim the `/portal/` scope.
 
 **Files changed:**
 - `plugin/includes/class-opb-portal.php` — early capture script, PNG touch icon, `Service-Worker-Allowed` header, manifest `id`
