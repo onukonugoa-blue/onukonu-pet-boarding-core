@@ -2,6 +2,7 @@ import { ReactNode, useState } from 'react'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 import BottomNav from './BottomNav'
+import PortalHealthBanner from './PortalHealthBanner'
 
 interface Props { children: ReactNode }
 
@@ -11,6 +12,7 @@ export default function Layout({ children }: Props) {
   return (
     <div className="flex flex-col h-dvh overflow-hidden">
       <TopBar onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
+      <PortalHealthBanner />
       <div className="flex flex-1 min-h-0">
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <main className="flex-1 min-h-0 overflow-y-auto bg-gray-50 p-4 lg:p-5">
