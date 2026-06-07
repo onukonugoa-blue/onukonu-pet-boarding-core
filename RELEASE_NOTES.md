@@ -2,6 +2,43 @@
 
 ---
 
+## v2.0.8 — PWA Add to Home Screen Fallback · 7 June 2026
+
+**Commit:** `2292b33`
+
+### PWA UX — Manual Install Fallback
+
+Chrome Android fires `beforeinstallprompt` and shows **Install Application** natively. Safari iPhone, Firefox Android, and other browsers that do not support `beforeinstallprompt` previously received no install action at all.
+
+This release adds a graceful fallback for those browsers without touching the working Chrome install flow.
+
+**Behaviour by browser:**
+
+| Browser | Action shown |
+|---|---|
+| Chrome Android / Edge / Chrome Desktop | **Install Application** — native prompt, unchanged |
+| Safari iPhone / Safari iPad | **Add to Home Screen** — tap to reveal iOS-specific steps |
+| Firefox Android / other | **Add to Home Screen** — tap to reveal generic steps |
+| Any browser (already installed) | Nothing — both actions hidden |
+
+**Platform detection** — `usePWAInstall` now exposes a `platform` field (`'ios' | 'other'`), derived from the UA at mount time. iOS copy reads: *Tap Share → Tap Add to Home Screen → Tap Add*. Other copy reads: *Open browser menu → Tap Add to Home Screen*. No user-agent spaghetti; two branches only.
+
+**UI** — Both Sidebar and TopBar use the same single `usePWAInstall()` source. No competing listeners, no duplicate state.
+- **Sidebar** — guide expands inline below the button on tap
+- **TopBar** — guide appears as a popover; closes on outside click
+
+**Files changed:**
+- `plugin/app/src/hooks/usePWAInstall.ts` — added `Platform` type, `detectPlatform()`, and `platform` in return value
+- `plugin/app/src/components/Sidebar.tsx` — `'unsupported'` branch with inline guide steps
+- `plugin/app/src/components/TopBar.tsx` — `'unsupported'` branch with popover guide steps
+
+### Build
+
+- React rebuilt: tsc + vite — 106 modules, 401 KB JS / 50 KB CSS
+- Production ZIP: `onukonu-pet-boarding-core-v2.0.8.zip` — 45.9 MB, 732 files
+
+---
+
 ## v2.0.7 — PWA Apache Bypass · 7 June 2026
 
 **Commit:** `7c26ee4`
