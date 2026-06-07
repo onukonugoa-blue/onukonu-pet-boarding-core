@@ -29,6 +29,25 @@ class OPB_Portal {
         add_rewrite_rule( '^portal/?$',             'index.php?opb_portal=1',   'top' );
         add_rewrite_rule( '^opb-sw\.js$',           'index.php?opb_sw=1',       'top' );
         add_rewrite_rule( '^opb-manifest\.json$',   'index.php?opb_manifest=1', 'top' );
+
+        /*
+         * Self-healing flush guard.
+         *
+         * register_activation_hook only fires when the plugin is toggled via the
+         * Plugins page. ZIP-based updates on cPanel / Hostinger replace files while
+         * the plugin stays active — neither activate nor deactivate fires, so the
+         * cached rewrite rules in wp_options are never refreshed and /portal/ falls
+         * through to normal WordPress routing.
+         *
+         * Solution: after registering the rules on every init, compare the version
+         * stored in options against OPB_VERSION. If they differ (first run after any
+         * update), flush once and record the new version. All subsequent requests
+         * skip the flush — no performance cost.
+         */
+        if ( get_option( 'opb_rewrite_version' ) !== OPB_VERSION ) {
+            flush_rewrite_rules( false );
+            update_option( 'opb_rewrite_version', OPB_VERSION, true );
+        }
     }
 
     public static function add_query_vars( array $vars ): array {

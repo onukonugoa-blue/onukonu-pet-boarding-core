@@ -174,3 +174,9 @@ id = "QzMnt8xE02sT7QrH8iEqa"
 uri = "file://onukonu-pet-boarding-core-v2.0.1.zip"
 type = "unspecified"
 title = "OPB v2.0.1 — Production Plugin ZIP"
+
+[[outputs]]
+id = "nLfvFri33TlBCuCkM_RU3"
+uri = "file://onukonu-pet-boarding-core-v2.0.2.zip"
+type = "unspecified"
+title = "OPB v2.0.2 — Portal Entrypoint Fix + PWA"

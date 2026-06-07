@@ -1,0 +1,228 @@
+PORTAL ENTRYPOINT & PWA RECOVERY
+
+Context
+
+This repository contains OPB, a production operational platform running as a WordPress plugin.
+
+Recent PWA work was completed successfully.
+
+However:
+
+https://delta.commandhospitallko.org/portal/
+
+now resolves to a normal WordPress page rather than the OPB application.
+
+The result is that the PWA has no meaningful application entrypoint.
+
+Before implementing any changes, analyse the existing codebase and determine how OPB was intended to be accessed outside wp-admin.
+
+--------------------------------------------------
+BACKGROUND
+--------------------------------------------------
+
+Historically the vision was:
+
+https://domain.com/portal/
+
+↓
+
+Staff Login
+
+↓
+
+OPB Application
+
+without requiring staff to work inside wp-admin.
+
+WordPress remains:
+
+- CMS
+- Authentication provider
+- Plugin host
+- Database layer
+
+OPB should behave like an application.
+
+--------------------------------------------------
+CURRENT STATE
+--------------------------------------------------
+
+Working:
+
+✓ OPB functions correctly inside wp-admin
+✓ PWA module exists
+✓ PWA install works
+✓ React application works
+✓ Authentication works
+
+Broken:
+
+✗ /portal/ does not launch OPB
+✗ /portal/ currently renders a normal WordPress page
+✗ PWA lacks a clean application entrypoint
+
+--------------------------------------------------
+OBJECTIVE
+--------------------------------------------------
+
+Analyse the existing code and restore the intended OPB application entrypoint.
+
+Do not guess.
+
+Determine how the architecture currently works.
+
+--------------------------------------------------
+CODE REVIEW REQUIRED
+--------------------------------------------------
+
+Review:
+
+- Plugin activation logic
+- Rewrite rules
+- Shortcodes
+- React bootstrap
+- React Router configuration
+- PWA start_url
+- Service worker scope
+- Manifest configuration
+- Admin routing
+- Existing page templates
+- Public portal code
+
+Determine:
+
+1. Was /portal/ previously intended as a shortcode page?
+2. Was /portal/ intended as a rewrite endpoint?
+3. Was /portal/ intended as a React mount point?
+4. Was a WordPress page supposed to host the application?
+5. Does any existing code already support this?
+
+--------------------------------------------------
+DESIRED ARCHITECTURE
+--------------------------------------------------
+
+Staff Experience
+
+https://domain.com/portal/
+
+↓
+
+Login if not authenticated
+
+↓
+
+OPB Application
+
+↓
+
+Clients
+Pets
+Bookings
+Kennels
+Occupancy
+Invoices
+Tasks
+Settings
+
+No wp-admin required for day-to-day operations.
+
+--------------------------------------------------
+AUTHENTICATION
+--------------------------------------------------
+
+Reuse existing WordPress authentication.
+
+Do not create:
+
+- New user systems
+- New password systems
+- Separate auth databases
+
+Use existing WordPress users.
+
+If unauthenticated:
+
+redirect to login
+
+After login:
+
+return to portal
+
+--------------------------------------------------
+PWA INTEGRATION
+--------------------------------------------------
+
+The PWA should launch into the portal.
+
+Manifest start_url should point to the actual OPB application entrypoint.
+
+Do not hardcode routes that do not exist.
+
+Review:
+
+- manifest.json
+- service worker
+- install flow
+
+Ensure the installed app launches into OPB.
+
+--------------------------------------------------
+UI REQUIREMENTS
+--------------------------------------------------
+
+Portal should present:
+
+- OPB branding
+- Full-screen application experience
+- Existing React application
+- Existing navigation
+
+Avoid showing:
+
+- WordPress dashboard
+- Posts
+- Pages
+- Plugins
+- CMS controls
+
+for operational users.
+
+--------------------------------------------------
+IMPORTANT
+--------------------------------------------------
+
+Do not redesign OPB.
+
+Do not redesign authentication.
+
+Do not redesign the PWA.
+
+First analyse the existing implementation.
+
+Then restore the intended portal architecture.
+
+--------------------------------------------------
+DELIVERABLES
+--------------------------------------------------
+
+Provide:
+
+1. Root-cause analysis
+2. How /portal/ was intended to work
+3. Current failure point
+4. Proposed architecture
+5. Files changed
+6. Routing changes
+7. Authentication changes (if any)
+8. PWA changes
+9. Commit hash
+10. Production ZIP
+
+SUCCESS CRITERIA
+
+✓ /portal/ launches OPB
+✓ Staff can work without wp-admin
+✓ Existing authentication reused
+✓ PWA launches into OPB
+✓ Existing OPB functionality remains unchanged
+✓ Production-ready plugin ZIP generated
