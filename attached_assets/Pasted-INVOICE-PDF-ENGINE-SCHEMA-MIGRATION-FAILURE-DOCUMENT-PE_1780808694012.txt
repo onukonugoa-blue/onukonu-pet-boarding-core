@@ -1,0 +1,316 @@
+INVOICE PDF ENGINE – SCHEMA MIGRATION FAILURE & DOCUMENT PERSISTENCE STABILISATION
+
+Context
+
+The Invoice PDF Engine has been implemented.
+
+mPDF generation works.
+
+PDF files are generated successfully.
+
+Invoice audit logging works.
+
+Email delivery works.
+
+The invoice system is currently blocked by a database migration failure.
+
+This is NOT a PDF rendering problem.
+
+This is NOT a frontend problem.
+
+This is a schema upgrade problem.
+
+---
+
+CONFIRMED DATABASE STATE
+
+Current live schema:
+
+Table exists:
+
+wpvv_opb_invoices
+
+Table exists:
+
+wpvv_opb_invoice_audit
+
+However:
+
+wpvv_opb_invoices does NOT contain:
+
+doc_token
+doc_generated_at
+
+Generation currently fails with:
+
+Unknown column 'doc_token' in 'field list'
+
+This confirms:
+
+Invoice document metadata columns were never added to the invoices table.
+
+---
+
+IMPORTANT OBSERVATION
+
+invoice_audit exists.
+
+Therefore:
+
+Part of the invoice-engine migration executed.
+
+But:
+
+The invoice table upgrade did not.
+
+This indicates:
+
+- incomplete migration
+- failed migration
+- dbDelta limitation
+- version upgrade issue
+- missing ALTER logic
+
+---
+
+OBJECTIVE
+
+Perform a complete schema audit of the Invoice PDF Engine.
+
+Determine every database field expected by the invoice engine.
+
+Do not assume only:
+
+doc_token
+doc_generated_at
+
+Audit the actual codebase.
+
+---
+
+STEP 1 – CODE AUDIT
+
+Review:
+
+class-opb-invoice-document.php
+
+invoice delivery API
+
+invoice generation endpoints
+
+public invoice handlers
+
+invoice retrieval endpoints
+
+invoice audit logic
+
+React invoice screens
+
+Determine every field referenced.
+
+Example:
+
+doc_token
+doc_generated_at
+pdf_path
+pdf_url
+pdf_generated_by
+document_version
+
+or any others.
+
+Provide a complete list.
+
+---
+
+STEP 2 – SCHEMA COMPARISON
+
+Compare:
+
+Expected schema
+
+vs
+
+Actual schema
+
+Identify:
+
+Missing columns
+
+Missing indexes
+
+Missing tables
+
+Missing constraints
+
+Provide a gap analysis.
+
+---
+
+STEP 3 – MIGRATION FAILURE ANALYSIS
+
+Determine exactly why:
+
+wpvv_opb_invoice_audit
+
+was created
+
+but
+
+wpvv_opb_invoices
+
+was not upgraded.
+
+Review:
+
+plugin activator
+
+upgrade routines
+
+dbDelta usage
+
+version checks
+
+migration execution order
+
+Determine the root cause.
+
+---
+
+STEP 4 – UPGRADE STRATEGY
+
+Implement a robust upgrade process.
+
+Requirements:
+
+Existing installations must upgrade automatically.
+
+Do not require manual SQL.
+
+Do not rely solely on dbDelta for column additions.
+
+Use explicit schema verification.
+
+For each required column:
+
+If missing:
+
+ALTER TABLE
+
+Add safely.
+
+Idempotent behaviour required.
+
+Multiple runs must be safe.
+
+---
+
+STEP 5 – DOCUMENT PERSISTENCE REVIEW
+
+After schema repair:
+
+Trace:
+
+Generate PDF
+↓
+Persist metadata
+↓
+Store token
+↓
+Store timestamps
+↓
+Retrieve metadata
+↓
+Public invoice URL
+↓
+WhatsApp link generation
+
+Verify the complete flow.
+
+---
+
+STEP 6 – RELATED BUGS
+
+These issues may share the same root cause.
+
+Investigate whether fixing the schema resolves:
+
+1. Public invoice URL
+
+Current behaviour:
+
+Invoice not found or token expired
+
+2. WhatsApp invoice sharing
+
+Current behaviour:
+
+Invoice URL placeholder renders blank
+
+3. Invoice document persistence
+
+Current behaviour:
+
+Refresh page
+↓
+No invoice document generated
+
+Determine whether all three failures are caused by missing metadata persistence.
+
+---
+
+STEP 7 – ERROR HANDLING
+
+Add defensive checks.
+
+If required columns are missing:
+
+Do not show generic failures.
+
+Provide clear diagnostics.
+
+Avoid silent persistence failures.
+
+---
+
+IMPLEMENTATION RULES
+
+Do not redesign:
+
+- Invoice PDF engine
+- mPDF rendering
+- Email delivery
+- WhatsApp delivery
+- Public invoice architecture
+
+Focus only on:
+
+Schema
+Persistence
+Retrieval
+
+---
+
+DELIVERABLES
+
+Provide:
+
+1. Root cause analysis
+2. Complete list of expected invoice metadata fields
+3. Schema differences detected
+4. Migration fixes implemented
+5. Files changed
+6. Upgrade strategy
+7. Commit hash
+8. Production ZIP
+
+SUCCESS CRITERIA
+
+✓ Existing installations upgrade automatically
+✓ Invoice metadata persists correctly
+✓ PDF generation succeeds
+✓ Invoice page survives refresh
+✓ Public invoice links resolve
+✓ WhatsApp invoice links populate correctly
+✓ No manual SQL required
+✓ Migration process becomes robust and repeatable

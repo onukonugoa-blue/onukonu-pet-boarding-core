@@ -260,6 +260,10 @@ class OPB_Activator {
             payment_status              ENUM('Unpaid','Partially paid','Paid','Overpaid','No bill') NOT NULL DEFAULT 'Unpaid',
             payment_mode                VARCHAR(50),
             notes                       TEXT,
+            doc_token                   VARCHAR(64)  NULL,
+            doc_generated_at            DATETIME     NULL,
+            doc_generated_by            BIGINT UNSIGNED NULL,
+            doc_pdf_path                VARCHAR(500) NULL,
             created_at                  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at                  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
@@ -536,53 +540,46 @@ class OPB_Activator {
             dbDelta( $sql );
         }
 
-        // Add kennel_id column to existing booking_stays tables (idempotent)
-        $wpdb->query(
-            "ALTER TABLE {$wpdb->prefix}opb_booking_stays
-             ADD COLUMN IF NOT EXISTS kennel_id INT UNSIGNED NULL AFTER kennel"
-        );
+        // ── Idempotent post-dbDelta column & index upgrades ───────────────────
+        //
+        // IMPORTANT: Do NOT use "ADD COLUMN IF NOT EXISTS" or
+        // "CREATE INDEX IF NOT EXISTS" here. Those are MariaDB / MySQL 8.0.3+
+        // syntax. MySQL 5.7 (used on Hostinger shared hosting) rejects them
+        // with a syntax error — $wpdb->query() returns false silently and
+        // execution continues, leaving columns permanently missing.
+        //
+        // Use self::add_col() and self::idx_exists() instead. Both are
+        // compatible with MySQL 5.6+ and are safe to call on every run.
 
-        // Invoice document columns — token for public URL + generation timestamp (idempotent)
-        $wpdb->query(
-            "ALTER TABLE {$wpdb->prefix}opb_invoices
-             ADD COLUMN IF NOT EXISTS doc_token VARCHAR(64) NULL"
-        );
-        $wpdb->query(
-            "ALTER TABLE {$wpdb->prefix}opb_invoices
-             ADD COLUMN IF NOT EXISTS doc_generated_at DATETIME NULL"
-        );
-        $wpdb->query(
-            "CREATE UNIQUE INDEX IF NOT EXISTS uq_invoice_doc_token
-             ON {$wpdb->prefix}opb_invoices (doc_token)"
-        );
+        $invoices_t = "{$wpdb->prefix}opb_invoices";
+        $stays_t    = "{$wpdb->prefix}opb_booking_stays";
+        $clients_t  = "{$wpdb->prefix}opb_clients";
 
-        // Promote phone index to UNIQUE to enforce client identity (idempotent).
-        // Phone is the primary operational identifier for a client.
-        // Skip if the unique key already exists.
-        $uq_exists = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM information_schema.STATISTICS
-             WHERE table_schema = DATABASE()
-               AND table_name   = %s
-               AND index_name   = 'uq_phone'
-               AND non_unique   = 0",
-            "{$wpdb->prefix}opb_clients"
-        ));
-        if ( ! $uq_exists ) {
-            $wpdb->query( "ALTER TABLE {$wpdb->prefix}opb_clients DROP INDEX IF EXISTS idx_phone" );
-            $wpdb->query( "ALTER TABLE {$wpdb->prefix}opb_clients ADD UNIQUE KEY uq_phone (phone)" );
+        // booking_stays: kennel_id (pre-v2.0.0)
+        self::add_col( $stays_t, 'kennel_id', 'INT UNSIGNED NULL AFTER kennel' );
+
+        // invoices: doc_* columns for PDF engine
+        self::add_col( $invoices_t, 'doc_token',        'VARCHAR(64)      NULL' );
+        self::add_col( $invoices_t, 'doc_generated_at', 'DATETIME         NULL' );
+        self::add_col( $invoices_t, 'doc_generated_by', 'BIGINT UNSIGNED  NULL' );
+        self::add_col( $invoices_t, 'doc_pdf_path',     'VARCHAR(500)     NULL' );
+
+        // Unique index on doc_token
+        if ( ! self::idx_exists( $invoices_t, 'uq_invoice_doc_token' ) ) {
+            $wpdb->query(
+                "ALTER TABLE `{$invoices_t}` ADD UNIQUE KEY `uq_invoice_doc_token` (`doc_token`)"
+            );
         }
 
-        // v2.0.0 — PDF engine: store PDF path and generating user on the invoice row
-        $wpdb->query(
-            "ALTER TABLE {$wpdb->prefix}opb_invoices
-             ADD COLUMN IF NOT EXISTS doc_pdf_path VARCHAR(500) NULL"
-        );
-        $wpdb->query(
-            "ALTER TABLE {$wpdb->prefix}opb_invoices
-             ADD COLUMN IF NOT EXISTS doc_generated_by BIGINT UNSIGNED NULL"
-        );
+        // Promote phone index to UNIQUE to enforce client identity.
+        if ( ! self::idx_exists( $clients_t, 'uq_phone' ) ) {
+            if ( self::idx_exists( $clients_t, 'idx_phone' ) ) {
+                $wpdb->query( "ALTER TABLE `{$clients_t}` DROP INDEX `idx_phone`" );
+            }
+            $wpdb->query( "ALTER TABLE `{$clients_t}` ADD UNIQUE KEY `uq_phone` (`phone`)" );
+        }
 
-        // v2.0.0 — Invoice audit trail table (idempotent)
+        // Invoice audit trail table (CREATE TABLE IF NOT EXISTS is standard SQL — safe on all versions)
         $wpdb->query(
             "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}opb_invoice_audit (
                 id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -598,5 +595,44 @@ class OPB_Activator {
         );
 
         update_option( 'opb_db_version', OPB_VERSION );
+    }
+
+    // ── Schema upgrade helpers ─────────────────────────────────────────────────
+
+    /**
+     * Check whether a column exists in a table.
+     * Uses INFORMATION_SCHEMA — compatible with MySQL 5.6+.
+     */
+    private static function col_exists( string $table, string $col ): bool {
+        global $wpdb;
+        return (bool) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND COLUMN_NAME = %s",
+            $table, $col
+        ) );
+    }
+
+    /**
+     * Check whether an index exists on a table.
+     * Uses INFORMATION_SCHEMA — compatible with MySQL 5.6+.
+     */
+    private static function idx_exists( string $table, string $idx ): bool {
+        global $wpdb;
+        return (bool) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM information_schema.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND INDEX_NAME = %s",
+            $table, $idx
+        ) );
+    }
+
+    /**
+     * Add a column to a table only if it does not already exist.
+     * Idempotent; safe to call on every activation or upgrade run.
+     */
+    private static function add_col( string $table, string $col, string $def ): void {
+        global $wpdb;
+        if ( ! self::col_exists( $table, $col ) ) {
+            $wpdb->query( "ALTER TABLE `{$table}` ADD COLUMN `{$col}` {$def}" );
+        }
     }
 }
