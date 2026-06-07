@@ -64,6 +64,12 @@ class OPB_Portal {
             header( 'Content-Type: application/javascript; charset=utf-8' );
             header( 'Cache-Control: no-cache, must-revalidate' );
             header( 'X-Content-Type-Options: nosniff' );
+            /*
+             * Allow the SW (served from root path /opb-sw.js) to claim the /portal/
+             * scope. Browsers permit narrowing the default scope without this header,
+             * but some strict configurations require it to be explicit.
+             */
+            header( 'Service-Worker-Allowed: /' );
             readfile( OPB_PLUGIN_DIR . 'assets/sw.js' );
             exit;
         }
@@ -163,8 +169,21 @@ class OPB_Portal {
 <meta name="apple-mobile-web-app-title" content="OPB">
 <title>Onukonu Pet Boarding</title>
 <link rel="manifest" href="<?php echo esc_url( $manifest_url ); ?>">
-<link rel="apple-touch-icon" href="<?php echo esc_url( $icon_base . 'icon-192.svg' ); ?>">
+<link rel="apple-touch-icon" href="<?php echo esc_url( $icon_base . 'icon-192.png' ); ?>">
 <link rel="icon" type="image/svg+xml" href="<?php echo esc_url( $icon_base . 'icon-192.svg' ); ?>">
+<link rel="icon" type="image/png" sizes="192x192" href="<?php echo esc_url( $icon_base . 'icon-192.png' ); ?>">
+<?php
+/*
+ * Capture beforeinstallprompt BEFORE any module scripts load.
+ *
+ * Chrome fires beforeinstallprompt very early — often before DOMContentLoaded
+ * and certainly before React mounts. useEffect listeners added after the first
+ * render always miss it. This inline synchronous script attaches the listener
+ * at parse time (top of <head>), stores the event on window.__opbDeferredInstall,
+ * and lets the usePWAInstall hook read it on mount.
+ */
+?>
+<script>window.__opbDeferredInstall=null;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__opbDeferredInstall=e;},{once:true,capture:true});</script>
 <?php wp_head(); ?>
 <style>
   *, *::before, *::after { box-sizing: border-box; }
@@ -258,6 +277,7 @@ if ('serviceWorker' in navigator) {
         $icon_base = '/wp-content/plugins/onukonu-pet-boarding-core/assets/icons/';
 
         return [
+            'id'               => '/portal/',
             'name'             => $facility_name,
             'short_name'       => 'OPB',
             'description'      => 'Staff portal for ' . $facility_name . ' operations',

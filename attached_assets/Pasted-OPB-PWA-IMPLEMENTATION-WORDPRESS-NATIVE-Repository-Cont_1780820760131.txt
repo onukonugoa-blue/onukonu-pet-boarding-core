@@ -1,0 +1,317 @@
+OPB PWA IMPLEMENTATION (WORDPRESS-NATIVE)
+
+Repository Context
+
+This repository contains OPB (Onukonu Pet Boarding), a mature production boarding operations platform implemented as a WordPress plugin.
+
+OPB already includes:
+
+- Clients
+- Pets
+- Bookings
+- Kennels
+- Occupancy Board
+- Occupancy Timeline
+- Tasks
+- Invoices
+- Payments
+- PDF Invoice Engine (mPDF)
+- Public Inquiry Intake
+- Public Onboarding
+- Document Uploads
+- Terms Acceptance
+- Customization Module
+- WhatsApp Delivery
+- Email Delivery
+- Portal Login
+
+The application is stable and production-used.
+
+--------------------------------------------------
+IMPORTANT ARCHITECTURAL DECISION
+--------------------------------------------------
+
+OPB intentionally remains inside WordPress.
+
+This is deliberate.
+
+We want to retain:
+
+- WordPress authentication
+- WordPress roles and capabilities
+- Loginizer integration
+- Password reset workflow
+- User management
+- Auditability
+- Security plugins
+- SMTP plugins
+- WooCommerce interoperability
+- Future notification framework interoperability
+
+DO NOT:
+
+- Move OPB outside WordPress
+- Create a separate frontend application
+- Create a separate authentication system
+- Replace WordPress users
+- Rewrite the portal architecture
+
+--------------------------------------------------
+CURRENT OPB ACCESS FLOW
+--------------------------------------------------
+
+Staff access:
+
+https://delta.commandhospitallko.org/portal/
+
+↓
+
+WordPress / Loginizer login
+
+↓
+
+Manager authentication
+
+↓
+
+OPB Dashboard
+
+↓
+
+React application inside WordPress
+
+This flow is working correctly.
+
+Do not redesign it.
+
+--------------------------------------------------
+OBJECTIVE
+--------------------------------------------------
+
+Implement a clean, production-grade PWA for the EXISTING OPB architecture.
+
+The goal is:
+
+WordPress-hosted OPB
++
+Installable PWA
+
+NOT:
+
+Separate SPA
++
+Separate authentication
+
+--------------------------------------------------
+KNOWN HISTORY
+--------------------------------------------------
+
+A previous PWA attempt was implemented.
+
+Manifest files exist.
+
+Service worker files may exist.
+
+However Chrome Android does not expose installation.
+
+The likely issue is implementation and installability compliance.
+
+Perform a full installability audit before making changes.
+
+--------------------------------------------------
+STEP 1 – INSTALLABILITY AUDIT
+--------------------------------------------------
+
+Determine exactly why Chrome Android does not offer installation.
+
+Audit:
+
+- Manifest injection
+- Manifest validity
+- Manifest location
+- Service worker registration
+- Service worker scope
+- Start URL
+- Scope
+- Icons
+- Theme color
+- Install prompt logic
+- beforeinstallprompt handling
+
+Provide a browser-level root cause analysis.
+
+--------------------------------------------------
+STEP 2 – REVIEW CURRENT IMPLEMENTATION
+--------------------------------------------------
+
+Inspect:
+
+- portal implementation
+- React bootstrap
+- WordPress hooks
+- admin page rendering
+- manifest generation
+- service worker generation
+- existing PWA code
+
+Determine:
+
+1. What currently exists?
+2. What is incomplete?
+3. What is invalid?
+4. What prevents installation?
+
+--------------------------------------------------
+STEP 3 – PWA IMPLEMENTATION
+--------------------------------------------------
+
+Implement a standards-compliant PWA.
+
+Requirements:
+
+Valid Web App Manifest
+
+Valid service worker
+
+Valid icon set
+
+Valid installability
+
+Chrome Android install support
+
+Desktop Chrome install support
+
+--------------------------------------------------
+MANIFEST
+--------------------------------------------------
+
+Generate a proper manifest.
+
+Values:
+
+Name:
+Use OPB Facility Name from Customization settings
+
+Fallback:
+Onukonu Pet Boarding
+
+Short Name:
+OPB
+
+Display:
+standalone
+
+Orientation:
+portrait
+
+Theme Color:
+Use OPB primary brand color
+
+Background Color:
+white
+
+Icons:
+
+192x192
+
+512x512
+
+Maskable versions preferred
+
+--------------------------------------------------
+BRANDING
+--------------------------------------------------
+
+Integrate with existing Customization settings.
+
+If branding logo exists:
+
+Use it for PWA icons where possible.
+
+If not:
+
+Use bundled defaults.
+
+Do not create a second branding system.
+
+--------------------------------------------------
+SERVICE WORKER
+--------------------------------------------------
+
+Implement lightweight service worker support.
+
+Cache:
+
+- OPB static assets
+- CSS
+- JS bundles
+- manifest
+- icons
+
+Do NOT cache:
+
+- REST API responses
+- bookings
+- invoices
+- kennel data
+- onboarding data
+- client records
+
+OPB remains online-first.
+
+--------------------------------------------------
+START URL
+--------------------------------------------------
+
+The installed application must launch directly into OPB.
+
+Do not launch:
+
+/
+wp-admin
+
+Launch:
+
+portal entrypoint
+
+or the correct authenticated OPB route.
+
+Reuse existing authentication.
+
+Unauthenticated users should:
+
+redirect to login
+
+↓
+
+return to OPB
+
+--------------------------------------------------
+INSTALL UI
+--------------------------------------------------
+
+Within OPB navigation:
+
+Install Application
+
+Only display when installation is available.
+
+Hide after successful installation.
+
+Use native browser install prompts.
+
+Do not create custom fake install dialogs.
+
+--------------------------------------------------
+PUSH NOTIFICATION FOUNDATION
+--------------------------------------------------
+
+Prepare architecture only.
+
+Do NOT implement push notifications yet.
+
+Do NOT implement:
+
+- subscriptions
+- VAPID
+-

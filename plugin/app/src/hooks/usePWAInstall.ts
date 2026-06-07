@@ -5,6 +5,12 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
+declare global {
+  interface Window {
+    __opbDeferredInstall: BeforeInstallPromptEvent | null
+  }
+}
+
 export type InstallState = 'unsupported' | 'installable' | 'installed'
 
 export interface UsePWAInstallResult {
@@ -14,9 +20,7 @@ export interface UsePWAInstallResult {
 
 function isStandalone(): boolean {
   if (typeof window === 'undefined') return false
-  // Standard display-mode check
   if (window.matchMedia('(display-mode: standalone)').matches) return true
-  // Safari on iOS
   if ((navigator as Navigator & { standalone?: boolean }).standalone === true) return true
   return false
 }
@@ -28,10 +32,22 @@ export function usePWAInstall(): UsePWAInstallResult {
   )
 
   useEffect(() => {
-    // Already running as installed PWA
     if (isStandalone()) {
       setInstallState('installed')
       return
+    }
+
+    /*
+     * Chrome fires beforeinstallprompt very early — before React mounts and
+     * before useEffect runs. The inline script in the portal <head> captures
+     * the event synchronously and stores it on window.__opbDeferredInstall.
+     * We read that stored event first, then also listen for any future events.
+     */
+    const deferred = window.__opbDeferredInstall
+    if (deferred) {
+      promptRef.current = deferred
+      window.__opbDeferredInstall = null
+      setInstallState('installable')
     }
 
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -42,6 +58,7 @@ export function usePWAInstall(): UsePWAInstallResult {
 
     const handleAppInstalled = () => {
       promptRef.current = null
+      window.__opbDeferredInstall = null
       setInstallState('installed')
     }
 

@@ -1,10 +1,5 @@
-import { useState, useEffect } from 'react'
 import BranchSelector from './BranchSelector'
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt(): Promise<void>
-  readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
+import { usePWAInstall } from '../hooks/usePWAInstall'
 
 interface Props { onMenuToggle: () => void }
 
@@ -12,26 +7,7 @@ export default function TopBar({ onMenuToggle }: Props) {
   const user      = window.OPB?.user
   const logoutUrl = window.OPB?.logoutUrl ?? '/wp-login.php?action=logout'
 
-  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-  const [installed, setInstalled]         = useState(false)
-
-  useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault()
-      setInstallPrompt(e as BeforeInstallPromptEvent)
-    }
-    window.addEventListener('beforeinstallprompt', handler)
-    window.addEventListener('appinstalled', () => setInstalled(true))
-    return () => window.removeEventListener('beforeinstallprompt', handler)
-  }, [])
-
-  async function handleInstall() {
-    if (!installPrompt) return
-    await installPrompt.prompt()
-    const { outcome } = await installPrompt.userChoice
-    if (outcome === 'accepted') setInstalled(true)
-    setInstallPrompt(null)
-  }
+  const { installState, triggerInstall } = usePWAInstall()
 
   return (
     <header
@@ -61,10 +37,10 @@ export default function TopBar({ onMenuToggle }: Props) {
 
       <BranchSelector />
 
-      {installPrompt && !installed && (
+      {installState === 'installable' && (
         <button
-          onClick={handleInstall}
-          title="Install app"
+          onClick={triggerInstall}
+          title="Install OPB as an app on this device"
           className="flex items-center gap-1.5 text-xs text-blue-200 hover:text-white bg-blue-700 hover:bg-blue-600 rounded px-2 py-1 transition-colors shrink-0"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
