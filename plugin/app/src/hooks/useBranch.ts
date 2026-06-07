@@ -8,7 +8,7 @@ export function useBranches() {
 
   useEffect(() => {
     if (branches.length === 0) {
-      api.get<Branch[]>('/branches').then(setBranches).catch(console.error)
+      api.get<Branch[]>('/branches').then(setBranches).catch(() => {})
     }
   }, [])
 

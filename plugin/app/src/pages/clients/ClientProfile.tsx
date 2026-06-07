@@ -27,7 +27,7 @@ export default function ClientProfile() {
       setClient(c)
       setPets(p)
       setBookings(b as any[])
-    }).catch(console.error)
+    }).catch(() => {})
       .finally(() => setLoading(false))
   }, [id])
 

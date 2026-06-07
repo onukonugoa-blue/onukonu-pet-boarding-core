@@ -16,7 +16,7 @@ export default function BookingDetail() {
   const load = () => {
     bookingsApi.get(Number(id))
       .then(setBooking)
-      .catch(console.error)
+      .catch(() => {})
       .finally(() => setLoading(false))
   }
   useEffect(load, [id])

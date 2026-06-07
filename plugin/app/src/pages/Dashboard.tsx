@@ -15,7 +15,7 @@ export default function Dashboard() {
     setLoading(true)
     dashboardApi.get(activeBranchId || undefined)
       .then(setData)
-      .catch(console.error)
+      .catch(() => {})
       .finally(() => setLoading(false))
   }
 

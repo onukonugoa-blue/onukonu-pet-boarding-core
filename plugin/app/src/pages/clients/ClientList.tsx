@@ -24,7 +24,7 @@ export default function ClientList() {
     if (activeBranchId) params.branch_id = activeBranchId
     clientsApi.list(params)
       .then((r) => { setClients(r.data); setTotal(r.total); setTotalPages(r.total_pages) })
-      .catch(console.error)
+      .catch(() => {})
       .finally(() => setLoading(false))
   }
 

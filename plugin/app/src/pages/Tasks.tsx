@@ -26,7 +26,7 @@ export default function Tasks() {
     const p: Record<string, unknown> = { per_page: 100 }
     if (filter) p.status = filter
     if (activeBranchId) p.branch_id = activeBranchId
-    tasksApi.list(p).then((r) => setTasks(r.data)).catch(console.error).finally(() => setLoading(false))
+    tasksApi.list(p).then((r) => setTasks(r.data)).catch(() => {}).finally(() => setLoading(false))
   }
   useEffect(load, [activeBranchId, filter])
 

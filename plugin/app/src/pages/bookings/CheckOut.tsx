@@ -33,7 +33,7 @@ export default function CheckOut() {
         setInvoice(inv)
         setPayment((p) => ({ ...p, amount: String(inv.due > 0 ? inv.due : '') }))
       }
-    }).catch(console.error).finally(() => setLoading(false))
+    }).catch(() => {}).finally(() => setLoading(false))
   }, [id])
 
   const activeStays = booking?.stays?.filter((s) => s.status === 'Active') ?? []

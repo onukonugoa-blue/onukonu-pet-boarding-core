@@ -29,7 +29,7 @@ export default function BoardingCatalogue() {
   const load = () => {
     setLoading(true)
     settingsApi.getBoardingServices(activeBranchId || undefined)
-      .then(setServices).catch(console.error).finally(() => setLoading(false))
+      .then(setServices).catch(() => {}).finally(() => setLoading(false))
   }
   useEffect(load, [activeBranchId])
 

@@ -29,7 +29,7 @@ export default function InvoiceList() {
     if (activeBranchId) params.branch_id = activeBranchId
     invoicesApi.list(params)
       .then((r) => { setInvoices(r.data); setTotal(r.total); setTotalPages(r.total_pages) })
-      .catch(console.error)
+      .catch(() => {})
       .finally(() => setLoading(false))
   }
 

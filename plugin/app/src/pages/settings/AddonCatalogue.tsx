@@ -24,7 +24,7 @@ export default function AddonCatalogue() {
   const load = () => {
     setLoading(true)
     settingsApi.getAddonServices(activeBranchId || undefined)
-      .then(setAddons).catch(console.error).finally(() => setLoading(false))
+      .then(setAddons).catch(() => {}).finally(() => setLoading(false))
   }
   useEffect(load, [activeBranchId])
 

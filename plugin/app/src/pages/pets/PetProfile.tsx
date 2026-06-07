@@ -14,7 +14,7 @@ export default function PetProfile() {
   useEffect(() => {
     petsApi.get(Number(id))
       .then(setPet)
-      .catch(console.error)
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [id])
 

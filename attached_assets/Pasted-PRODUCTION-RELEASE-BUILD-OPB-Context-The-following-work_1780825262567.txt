@@ -1,0 +1,202 @@
+PRODUCTION RELEASE BUILD – OPB
+
+Context
+
+The following work has already been completed and committed:
+
+PWA fixes:
+
+* Single shared beforeinstallprompt handler via usePWAInstall
+* Removed competing install listeners
+* Apple touch icon changed to PNG
+* Added standard PNG favicon fallback
+* Added manifest id field
+* Added Service-Worker-Allowed header
+* Portal login restored and functioning
+* Existing OPB functionality remains operational
+
+Invoice engine fixes:
+
+* MySQL 5.7 migration compatibility fixes
+* INFORMATION_SCHEMA-based schema upgrades
+* Invoice document metadata persistence repairs
+* PDF document generation functioning
+* Public invoice infrastructure functioning
+
+This task is NOT feature development.
+
+This task is a production hardening and release build.
+
+---
+
+## OBJECTIVE
+
+Generate a clean production plugin ZIP.
+
+Before packaging, perform a full release review.
+
+---
+
+## PRE-RELEASE REVIEW
+
+Review for:
+
+* Debug code
+* Temporary logging
+* Console logging
+* Error_log statements
+* Test endpoints
+* Development routes
+* Debug banners
+* Diagnostic output
+* Temporary comments
+* Experimental code
+
+Remove anything not required for production.
+
+---
+
+## PWA VALIDATION
+
+Verify:
+
+* Manifest linked correctly
+* Manifest valid
+* Manifest id present
+* Start URL correct
+* Scope correct
+* Icons accessible
+* Service worker registers
+* Service worker scope valid
+* Install Application UI functioning
+
+Confirm architecture aligns with:
+
+https://delta.commandhospitallko.org/portal/
+
+↓
+
+WordPress authentication
+
+↓
+
+OPB application
+
+Do not redesign this flow.
+
+---
+
+## INVOICE ENGINE VALIDATION
+
+Verify:
+
+* PDF generation
+* PDF persistence
+* Public invoice links
+* Invoice metadata storage
+* WhatsApp invoice links
+* Email delivery
+* Invoice history retrieval
+
+Verify migrations function correctly on:
+
+MySQL 5.7
+
+and
+
+MariaDB
+
+---
+
+## DATABASE UPGRADE VALIDATION
+
+Review all migrations.
+
+Confirm:
+
+Fresh install works.
+
+Upgrade install works.
+
+Existing installations receive:
+
+* invoice metadata fields
+* customization fields
+* onboarding fields
+* document fields
+* audit tables
+
+without manual SQL.
+
+---
+
+## CUSTOMIZATION SYSTEM VALIDATION
+
+Verify:
+
+* Settings → Customization loads
+* Templates save
+* Facility branding loads
+* Terms & Conditions render
+* Invoice branding renders
+* Email templates render
+* WhatsApp templates render
+
+---
+
+## PORTAL VALIDATION
+
+Verify:
+
+/portal/
+
+continues functioning.
+
+Unauthenticated:
+
+redirect to login
+
+Authenticated:
+
+return to OPB
+
+No wp-admin navigation regressions.
+
+---
+
+## BUILD PROCESS
+
+1. Build React application
+2. Verify production assets generated
+3. Verify manifest assets present
+4. Verify icons present
+5. Verify service worker present
+6. Verify plugin version updated appropriately
+7. Generate clean production ZIP
+
+---
+
+## DELIVERABLES
+
+Provide:
+
+1. Release summary
+2. Production version number
+3. PWA validation summary
+4. Invoice validation summary
+5. Migration validation summary
+6. Files modified during hardening
+7. Git commit hash
+8. Production plugin ZIP
+
+SUCCESS CRITERIA
+
+✓ No debug code remains
+✓ No temporary logging remains
+✓ Portal login works
+✓ Invoice engine works
+✓ PDF generation works
+✓ Invoice persistence works
+✓ PWA installability validated
+✓ Existing OPB functionality unchanged
+✓ Clean production ZIP generated

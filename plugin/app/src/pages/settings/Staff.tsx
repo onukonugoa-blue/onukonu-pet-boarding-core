@@ -17,7 +17,7 @@ export default function Staff() {
 
   const load = () => {
     setLoading(true)
-    settingsApi.getStaff().then(setStaff).catch(console.error).finally(() => setLoading(false))
+    settingsApi.getStaff().then(setStaff).catch(() => {}).finally(() => setLoading(false))
   }
   useEffect(load, [])
 

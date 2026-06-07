@@ -11,7 +11,7 @@ export default function PetDocuments({ petId }: Props) {
   const [error, setError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const load = () => petsApi.documents(petId).then(setDocs).catch(console.error)
+  const load = () => petsApi.documents(petId).then(setDocs).catch(() => {})
   useEffect(() => { load() }, [petId])
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -15,7 +15,7 @@ export default function Branches() {
   useEffect(() => {
     if (branches.length === 0) {
       setLoading(true)
-      branchesApi.list().then(setBranches).catch(console.error).finally(() => setLoading(false))
+      branchesApi.list().then(setBranches).catch(() => {}).finally(() => setLoading(false))
     }
   }, [])
 

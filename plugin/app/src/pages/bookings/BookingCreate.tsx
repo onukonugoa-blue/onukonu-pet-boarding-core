@@ -63,7 +63,7 @@ export default function BookingCreate() {
         setSelectedClient(c)
         setBranchId(c.home_branch_id)
         return clientsApi.pets(initClientId)
-      }).then(setPets).catch(console.error)
+      }).then(setPets).catch(() => {})
     }
   }, [initClientId])
 
@@ -71,7 +71,7 @@ export default function BookingCreate() {
     if (branchId) {
       settingsApi.getBoardingServices(branchId)
         .then((rows) => setBoardingServices(rows.filter((r) => r.is_active)))
-        .catch(console.error)
+        .catch(() => {})
     } else {
       setBoardingServices([])
     }

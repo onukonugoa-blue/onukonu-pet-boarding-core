@@ -230,8 +230,8 @@ export default function Import() {
 
   const ent = ENTITIES.find((e) => e.key === entity)!
 
-  const loadStatus  = () => importApi.status().then(setStatus).catch(console.error)
-  const loadHistory = () => importApi.history().then(setHistory).catch(console.error)
+  const loadStatus  = () => importApi.status().then(setStatus).catch(() => {})
+  const loadHistory = () => importApi.history().then(setHistory).catch(() => {})
 
   useEffect(() => { loadStatus(); loadHistory() }, [])
 

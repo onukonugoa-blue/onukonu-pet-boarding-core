@@ -37,7 +37,7 @@ export default function Expenses() {
     if (activeBranchId) params.branch_id = activeBranchId
     expensesApi.list(params)
       .then((r) => { setExpenses(r.data); setTotal(r.total); setTotalPages(r.total_pages); setTotalAmount(r.total_amount) })
-      .catch(console.error)
+      .catch(() => {})
       .finally(() => setLoading(false))
   }
 

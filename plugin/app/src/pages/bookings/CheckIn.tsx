@@ -26,7 +26,7 @@ export default function CheckIn() {
     bookingsApi.get(Number(id)).then((b) => {
       setBooking(b)
       // Load kennels for this branch (active, available or maintenance)
-      kennelsApi.list(b.branch_id, true).then(setKennels).catch(console.error)
+      kennelsApi.list(b.branch_id, true).then(setKennels).catch(() => {})
       const init: typeof stayData = {}
       b.stays?.filter((s) => s.status === 'Upcoming').forEach((s) => {
         init[s.id] = {
@@ -38,7 +38,7 @@ export default function CheckIn() {
         }
       })
       setStayData(init)
-    }).catch(console.error).finally(() => setLoading(false))
+    }).catch(() => {}).finally(() => setLoading(false))
   }, [id])
 
   const upcomingStays = booking?.stays?.filter((s) => s.status === 'Upcoming') ?? []

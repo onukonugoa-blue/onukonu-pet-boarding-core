@@ -55,7 +55,7 @@ export default function InvoiceDetail() {
         const email = (inv as any).client_email ?? ''
         if (email) setEmailTo(email)
       })
-      .catch(console.error)
+      .catch(() => {})
       .finally(() => setLoading(false))
   }
 
