@@ -3,42 +3,65 @@ name: PWA implementation
 description: How OPB's Progressive Web App layer is structured and key gotchas
 ---
 
-## Key architectural decisions
+## CRITICAL — beforeinstallprompt race condition (root cause of missing install prompt)
 
-**PNG icons are mandatory for Chrome's beforeinstallprompt**
-SVG-only icons prevent Chrome from firing `beforeinstallprompt`. Always include 192×192 and 512×512 PNG icons in the manifest.
+Chrome fires `beforeinstallprompt` before `DOMContentLoaded`, and before React mounts and `useEffect` runs. Listeners registered inside `useEffect` always miss the event.
 
-**Why:** Chrome's installability criteria requires PNG (or WebP) icons. The existing SVG icons were kept alongside PNGs for other browsers.
+**Fix:** An inline synchronous `<script>` in `render_portal()` captures the event at parse time and stores it on `window.__opbDeferredInstall`. The `usePWAInstall` hook reads that stored event on mount, then also listens for future events.
 
-**How to apply:** Any time icons are regenerated, produce `icon-192.png`, `icon-512.png`, `icon-maskable.png` (via the Python Pillow script drawing the paw shape). Do not remove the SVG fallbacks.
+**Why:** Without this, `installState` stays `'unsupported'` forever on every page load and the install button never appears regardless of manifest/SW validity.
+
+**How to apply:** The inline script must remain the first `<script>` in `<head>`, before `<?php wp_head(); ?>`. Do not move it below the module script enqueue.
+
+---
+
+## CRITICAL — Single install handler (no duplicate listeners)
+
+`usePWAInstall` is the single source of truth for install state. Do not add any other `beforeinstallprompt` listener anywhere. Both `TopBar` and `Sidebar` use this hook — they share state automatically.
+
+**Why:** Duplicate listeners racing on a one-time event caused inconsistent state; the button sometimes appeared in one component but not the other.
+
+---
+
+## PNG icons are mandatory for Chrome installability
+
+Always include `icon-192.png`, `icon-512.png`, `icon-maskable.png` (PNG) in the manifest. SVG icons kept alongside as fallbacks for other browsers. `apple-touch-icon` must be PNG — iOS Safari ignores SVG for that link.
+
+---
+
+## Manifest id field is required (Chrome 112+)
+
+Manifest must include `"id": "/portal/"`. Both the static `plugin/assets/manifest.json` and the dynamic PHP `build_manifest()` method must include this field. Without it Chrome may not recognise an already-installed app across reinstalls.
+
+---
+
+## Service-Worker-Allowed header
+
+When serving `/opb-sw.js` via PHP, include `header('Service-Worker-Allowed: /')`. The SW at root path claiming the narrower `/portal/` scope is technically valid without this header, but some hosting configurations require it explicitly.
 
 ---
 
 ## Manifest is served dynamically by PHP
 
-The route `GET /opb-manifest.json` is handled by `OPB_Portal::maybe_serve_portal()` which calls `OPB_Portal::build_manifest()`. That method reads `facility_name` from `OPB_Customizations::get()` so the manifest `name` field updates automatically when the admin changes the facility name in Settings → Customization.
+`GET /opb-manifest.json` → `OPB_Portal::build_manifest()` reads `facility_name` from `OPB_Customizations::get()`. The static `plugin/assets/manifest.json` is a reference copy only — the PHP builder is always used at runtime.
 
-The static `plugin/assets/manifest.json` file is the fallback only — it is no longer read-file'd; the PHP builder is always used.
+---
+
+## SW cache key must match release version
+
+`CACHE_VERSION` in `plugin/assets/sw.js` must be bumped on every release (format: `opb-{VERSION}`). Old caches are purged in the `activate` handler by filtering keys that start with `opb-` but don't match the current version. Forgetting to bump means users keep stale assets after an update.
 
 ---
 
 ## Service worker scope
 
-SW is registered with `{ scope: '/portal/' }` — it only controls the staff portal. REST API calls (`/wp-json/`) are in the NEVER_CACHE list and pass through to the network without interception.
+SW registered with `{ scope: '/portal/' }`. REST API calls (`/wp-json/`) are in the NEVER_CACHE list — always network-only. No REST responses are ever cached.
 
 ---
 
 ## Push notification foundation
 
-`plugin/assets/sw.js` contains `push`, `notificationclick`, and `pushsubscriptionchange` event listeners as stubs. They are structurally complete (parse payload, show notification, handle click URL routing) but no VAPID key or subscription flow exists yet.
-
-When push is activated in future: add VAPID public key to OPB global, call `PushManager.subscribe()` in a new `usePushNotifications` hook, and add a server-side endpoint to store endpoints.
-
----
-
-## Sidebar install button
-
-`usePWAInstall` hook (`plugin/app/src/hooks/usePWAInstall.ts`) manages three states: `unsupported`, `installable`, `installed`. The install button in `Sidebar.tsx` renders only when state is `installable`. After the user accepts the prompt the button disappears automatically.
+`plugin/assets/sw.js` contains `push`, `notificationclick`, and `pushsubscriptionchange` event listeners as stubs. Structurally complete but no VAPID key or subscription flow exists yet. When push is activated: add VAPID public key to OPB global, call `PushManager.subscribe()` in a new `usePushNotifications` hook, add server-side endpoint to store subscriptions.
 
 ---
 
