@@ -1,0 +1,237 @@
+PWA INSTALLABILITY FIX – HOSTINGER COMPATIBILITY RELEASE
+
+Repository Context
+
+This repository contains OPB (Onukonu Pet Boarding), a production WordPress-based operational platform.
+
+Portal login is functioning.
+
+Invoice engine is functioning.
+
+PDF generation is functioning.
+
+Customization system is functioning.
+
+The remaining issue is PWA installability.
+
+A browser-level audit has already been completed.
+
+Do not re-investigate from scratch.
+
+Use the findings below.
+
+---
+
+ROOT CAUSE (CONFIRMED)
+
+Current PWA URLs:
+
+/opb-manifest.json
+/opb-sw.js
+
+Both return HTTP 404 on the live Hostinger server.
+
+Chrome therefore cannot:
+
+- load the manifest
+- register the service worker
+- reach installable state
+- fire beforeinstallprompt
+
+The React install logic is NOT the problem.
+
+The browser never reaches installability.
+
+---
+
+WHY THIS HAPPENS
+
+Hostinger's Apache configuration intercepts requests ending in:
+
+.json
+.js
+
+before they reach WordPress.
+
+Therefore:
+
+/opb-manifest.json
+/opb-sw.js
+
+never execute the WordPress handlers.
+
+The rewrite rules are present.
+
+WordPress code is present.
+
+The requests simply never reach WordPress.
+
+---
+
+CONFIRMED WORKING ENDPOINTS
+
+These URLs successfully reach WordPress:
+
+/?opb_manifest=1
+/?opb_sw=1
+
+Verified on production:
+
+Manifest:
+
+HTTP 200
+Content-Type: application/manifest+json
+
+Service Worker:
+
+HTTP 200
+Content-Type: application/javascript
+Service-Worker-Allowed header present
+
+The generated manifest is valid.
+
+The generated service worker is valid.
+
+---
+
+OBJECTIVE
+
+Do not fight Apache.
+
+Do not require server configuration.
+
+Do not require hosting changes.
+
+Use the already-working query-parameter endpoints.
+
+---
+
+REQUIRED CHANGES
+
+Replace all references to:
+
+/opb-manifest.json
+
+with:
+
+/?opb_manifest=1
+
+Replace all references to:
+
+/opb-sw.js
+
+with:
+
+/?opb_sw=1
+
+Review all PWA-related code paths:
+
+- portal rendering
+- manifest injection
+- service worker registration
+- install bootstrap
+- usePWAInstall hook
+- inline registration scripts
+- dynamic manifest generation
+
+Ensure no stale references remain.
+
+---
+
+DO NOT CHANGE
+
+Do NOT redesign:
+
+- Portal login
+- Authentication
+- React application
+- PWA architecture
+- Install UI
+- Sidebar install action
+- TopBar install action
+
+These are already working correctly.
+
+Only replace unreachable URLs.
+
+---
+
+POST-FIX VALIDATION
+
+Verify:
+
+Manifest:
+
+GET /?opb_manifest=1
+→ 200
+
+Service Worker:
+
+GET /?opb_sw=1
+→ 200
+
+Service Worker registration succeeds.
+
+Manifest detected by Chrome.
+
+beforeinstallprompt fires.
+
+Install Application appears.
+
+Chrome Android recognises installability.
+
+---
+
+ADDITIONAL CHECKS
+
+Verify that:
+
+Manifest ID:
+"/portal/"
+
+Start URL:
+"/portal/"
+
+Scope:
+"/portal/"
+
+remain unchanged.
+
+Verify service worker scope remains compatible with:
+
+https://delta.commandhospitallko.org/portal/
+
+---
+
+BUILD
+
+1. Build React production assets
+2. Remove any temporary diagnostics
+3. Verify manifest generation
+4. Verify service worker generation
+5. Generate production ZIP
+
+---
+
+DELIVERABLES
+
+Provide:
+
+1. Files changed
+2. URLs updated
+3. Validation results
+4. Final manifest URL
+5. Final service worker URL
+6. Commit hash
+7. Production plugin ZIP
+
+SUCCESS CRITERIA
+
+✓ Manifest loads via query parameter endpoint
+✓ Service Worker loads via query parameter endpoint
+✓ Service Worker registers successfully
+✓ Chrome reaches installable state
+✓ beforeinstallprompt fires
+✓ Install Application becomes visible
+✓ Existing OPB functionality unchanged
+✓ Production ZIP generated

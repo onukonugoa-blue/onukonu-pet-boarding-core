@@ -4,7 +4,7 @@
  *
  * Responsibilities:
  *  - Registers a clean /portal/ URL (rewrite rule + query var)
- *  - Serves /opb-sw.js and /opb-manifest.json from the plugin assets dir
+ *  - Serves /?opb_sw=1 and /?opb_manifest=1 (query-parameter endpoints, bypass Apache)
  *  - Redirects OPB-role users to /portal/ after WordPress login
  *  - Hides the WP admin bar for OPB-only users on the frontend
  *  - Redirects OPB-only users away from wp-admin back to /portal/
@@ -154,8 +154,8 @@ class OPB_Portal {
 
     private static function render_portal(): void {
         $icon_base    = OPB_PLUGIN_URL . 'assets/icons/';
-        $manifest_url = home_url( '/opb-manifest.json' );
-        $sw_url       = home_url( '/opb-sw.js' );
+        $manifest_url = home_url( '/?opb_manifest=1' );
+        $sw_url       = home_url( '/?opb_sw=1' );
         ?>
 <!doctype html>
 <html <?php language_attributes(); ?>>
