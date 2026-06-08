@@ -186,6 +186,17 @@ function renderPage(activeTab) {
         <p>The <code>plugin/</code> directory contains the complete WordPress plugin. Install by uploading
         <strong>onukonu-pet-boarding-core-v${escapeHtml(pluginVersion)}.zip</strong> via WP Admin → Plugins → Add New → Upload.</p>
 
+        <h3>v2.3.0 — Login Page Branding</h3>
+        <ul>
+          <li><strong>New file</strong> — <code>assets/branding/login-logo.png</code> — 120×120 paw-print logo, transparent PNG, dedicated to the login page (separate from PWA icons)</li>
+          <li><strong>New file</strong> — <code>assets/login.css</code> — premium CSS skin: deep navy radial gradient background, white card, rounded corners, styled inputs/buttons/alerts</li>
+          <li><strong>New class</strong> — <code>OPB_Login</code> (<code>includes/class-opb-login.php</code>) — registers four WordPress hooks: <code>login_enqueue_scripts</code>, <code>login_footer</code>, <code>login_headerurl</code>, <code>login_headertext</code></li>
+          <li><strong>Branding text</strong> — "Onukonu Pet Boarding / Operations Portal" injected below logo via <code>login_footer</code></li>
+          <li><strong>Loginizer compatible</strong> — lockout messages, 2FA challenge, forgot-password, and reset-password forms all covered</li>
+          <li><strong>Mobile responsive</strong> — card reflows to full-width below 460 px</li>
+          <li><strong>No auth changes</strong> — static CSS + hooks only; authentication, redirects, sessions, and Loginizer untouched</li>
+        </ul>
+
         <h3>v1.8.0 — Customization Module</h3>
         <ul>
           <li><strong>New DB table</strong> — opb_customizations (key/value store for all configurable content)</li>
