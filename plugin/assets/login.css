@@ -1,0 +1,280 @@
+/*
+ * OPB Login Page Skin — v2.3.0
+ * Static CSS skin only. No authentication changes.
+ * Compatible with Loginizer (lockout, 2FA, forgot password, reset).
+ */
+
+/* ── Body / Background ──────────────────────────────────────────────────────── */
+body.login {
+    background: #0d1e3d;
+    background: radial-gradient(ellipse at 50% 38%, #1a365d 0%, #091527 68%);
+    background-attachment: fixed;
+    min-height: 100vh;
+}
+
+/* ── Login card ─────────────────────────────────────────────────────────────── */
+body.login #login {
+    width: 400px;
+    padding: 40px 44px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow:
+        0 24px 64px rgba(0, 0, 0, 0.45),
+        0 4px 20px rgba(0, 0, 0, 0.2);
+    margin-top: 64px !important;
+}
+
+/* ── Logo anchor ────────────────────────────────────────────────────────────── */
+body.login #login h1 a {
+    background-image: url(branding/login-logo.png);
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    width: 90px;
+    height: 90px;
+    display: block;
+    margin: 0 auto 4px;
+    text-indent: -9999px;
+    overflow: hidden;
+}
+
+/* ── Injected branding block ────────────────────────────────────────────────── */
+.opb-login-brand {
+    text-align: center;
+    margin-bottom: 28px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #edf2f7;
+}
+.opb-login-brand__title {
+    display: block;
+    font-size: 17px;
+    font-weight: 700;
+    color: #1a365d;
+    letter-spacing: -0.2px;
+    line-height: 1.2;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.opb-login-brand__sub {
+    display: block;
+    font-size: 11px;
+    color: #a0aec0;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 5px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ── Form labels ────────────────────────────────────────────────────────────── */
+body.login label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #4a5568;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    display: block;
+}
+
+/* ── Inputs ─────────────────────────────────────────────────────────────────── */
+body.login input[type="text"],
+body.login input[type="password"],
+body.login input[type="email"],
+body.login input[type="number"] {
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 11px 14px !important;
+    font-size: 15px !important;
+    color: #2d3748 !important;
+    background: #f8fafc !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    box-shadow: none !important;
+    line-height: 1.4 !important;
+    height: auto !important;
+}
+body.login input[type="text"]:focus,
+body.login input[type="password"]:focus,
+body.login input[type="email"]:focus,
+body.login input[type="number"]:focus {
+    border-color: #3182ce !important;
+    background: #ffffff !important;
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15) !important;
+    outline: none !important;
+}
+
+/* ── Submit button ──────────────────────────────────────────────────────────── */
+body.login input[type="submit"],
+body.login .button-primary {
+    background: #1a365d !important;
+    border: none !important;
+    border-radius: 8px !important;
+    color: #ffffff !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.3px !important;
+    padding: 12px 20px !important;
+    width: 100% !important;
+    height: auto !important;
+    cursor: pointer !important;
+    transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+    box-shadow: 0 2px 8px rgba(26, 54, 93, 0.3) !important;
+    text-shadow: none !important;
+    line-height: 1.4 !important;
+}
+body.login input[type="submit"]:hover,
+body.login .button-primary:hover {
+    background: #2a4a7f !important;
+    box-shadow: 0 4px 14px rgba(26, 54, 93, 0.4) !important;
+    transform: translateY(-1px);
+}
+body.login input[type="submit"]:active,
+body.login .button-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(26, 54, 93, 0.3) !important;
+}
+body.login input[type="submit"]:focus,
+body.login .button-primary:focus {
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.4) !important;
+    outline: none !important;
+}
+
+/* ── Remember me ────────────────────────────────────────────────────────────── */
+body.login .forgetmenot {
+    margin-bottom: 16px;
+}
+body.login .forgetmenot label {
+    font-size: 13px !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    color: #718096 !important;
+    font-weight: 400 !important;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+}
+body.login input[type="checkbox"] {
+    margin: 0;
+    accent-color: #1a365d;
+    width: 15px;
+    height: 15px;
+}
+
+/* ── Error / notice / success boxes ────────────────────────────────────────── */
+body.login #login_error,
+body.login .message,
+body.login .notice,
+body.login .success {
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0 0 16px;
+    border-left-width: 4px;
+    border-left-style: solid;
+    border-top: none;
+    border-right: none;
+    border-bottom: none;
+    box-shadow: none;
+}
+body.login #login_error {
+    background: #fff5f5;
+    border-left-color: #fc8181;
+    color: #c53030;
+}
+body.login .message,
+body.login .notice {
+    background: #ebf8ff;
+    border-left-color: #4299e1;
+    color: #2b6cb0;
+}
+body.login .success {
+    background: #f0fff4;
+    border-left-color: #68d391;
+    color: #276749;
+}
+/* Loginizer lockout / security notices */
+body.login #loginizer_message,
+body.login div[id^="loginizer"],
+body.login .lz-message {
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 16px;
+    background: #fff5f5;
+    border-left: 4px solid #fc8181;
+    color: #c53030;
+    border-top: none;
+    border-right: none;
+    border-bottom: none;
+}
+
+/* ── Nav links (Forgot password / Back to site) ─────────────────────────────── */
+body.login #nav,
+body.login #backtoblog {
+    text-align: center;
+    margin-top: 14px;
+}
+body.login #nav a,
+body.login #backtoblog a {
+    font-size: 13px;
+    color: #a0aec0;
+    text-decoration: none;
+    transition: color 0.15s;
+}
+body.login #nav a:hover,
+body.login #backtoblog a:hover {
+    color: #1a365d;
+    text-decoration: underline;
+}
+
+/* ── Privacy policy link ────────────────────────────────────────────────────── */
+body.login .privacy-policy-page-link {
+    font-size: 12px;
+    color: #a0aec0;
+    text-align: center;
+    margin-top: 8px;
+}
+
+/* ── Password strength meter ────────────────────────────────────────────────── */
+body.login #pass-strength-result {
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border: none;
+    margin-top: 6px;
+}
+
+/* ── Loginizer 2FA challenge ────────────────────────────────────────────────── */
+body.login form p {
+    font-size: 14px;
+    color: #4a5568;
+    margin-bottom: 14px;
+    line-height: 1.55;
+}
+body.login .loginizer-2fa-description {
+    background: #ebf8ff;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: #2b6cb0;
+    border-left: 4px solid #4299e1;
+    margin-bottom: 16px;
+}
+
+/* ── Mobile ─────────────────────────────────────────────────────────────────── */
+@media (max-width: 460px) {
+    body.login #login {
+        width: calc(100vw - 32px) !important;
+        padding: 28px 22px !important;
+        margin: 32px 16px 16px !important;
+        border-radius: 10px;
+    }
+    body.login #login h1 a {
+        width: 72px;
+        height: 72px;
+    }
+}
