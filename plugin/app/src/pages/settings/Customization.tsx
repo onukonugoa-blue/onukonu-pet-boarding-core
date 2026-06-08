@@ -70,6 +70,14 @@ function metaLine(item: CustomizationItem): string {
   return parts.join(' · ') || 'Saved'
 }
 
+// ── Per-asset dimension hints ───────────────────────────────────────────────────
+
+const MEDIA_HINTS: Record<string, string> = {
+  invoice_banner_image:    'PNG, JPG, or WebP. Recommended: 1200 × 240 px (5:1 ratio). Max height in PDF: 120 px.',
+  invoice_logo_image:      'PNG, JPG, or WebP. Recommended: 400 × 120 px (horizontal) or 200 × 200 px (square).',
+  invoice_payment_qr_image:'PNG, JPG, or WebP. Must be square. Recommended: 512 × 512 px.',
+}
+
 // ── Media upload widget ─────────────────────────────────────────────────────────
 
 interface MediaWidgetProps {
@@ -79,10 +87,11 @@ interface MediaWidgetProps {
   isUploading: boolean
   readOnly: boolean
   isDefault: boolean
+  hint?: string
   onUpload: (key: string, file: File) => void
 }
 
-function MediaWidget({ settingKey, label, currentUrl, isUploading, readOnly, isDefault, onUpload }: MediaWidgetProps) {
+function MediaWidget({ settingKey, label, currentUrl, isUploading, readOnly, isDefault, hint, onUpload }: MediaWidgetProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   return (
@@ -136,7 +145,7 @@ function MediaWidget({ settingKey, label, currentUrl, isUploading, readOnly, isD
             )}
 
             <p className="text-xs text-gray-400 leading-snug">
-              PNG, JPG, or WebP.<br />Recommended: max 1200 × 300 px.
+              {hint ?? 'PNG, JPG, or WebP.'}
             </p>
 
             <input
@@ -183,6 +192,7 @@ function SettingField({ item, value, mediaUrl, uploadingKey, onChange, onMediaUp
         isUploading={uploadingKey === item.key}
         readOnly={readOnly}
         isDefault={item.is_default}
+        hint={MEDIA_HINTS[item.key]}
         onUpload={onMediaUpload}
       />
     )
