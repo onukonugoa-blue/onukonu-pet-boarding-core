@@ -22,6 +22,8 @@ const VALID_PLACEHOLDERS = [
   '{{PHONE}}', '{{EMAIL}}',
   '{{INVOICE_NUMBER}}', '{{INVOICE_LINK}}', '{{INVOICE_TOTAL}}',
   '{{INVOICE_PAID}}', '{{INVOICE_DUE}}',
+  '{{MY_PETS_URL}}', '{{CLIENT_EMAIL}}', '{{CLIENT_PHONE}}',
+  '{{SUPPORT_EMAIL}}', '{{SUPPORT_PHONE}}',
 ]
 
 const PLACEHOLDER_HINT: Record<string, string> = {

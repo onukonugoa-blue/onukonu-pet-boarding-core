@@ -142,6 +142,7 @@ class OPB_Portal {
             'adminUrl'  => admin_url( 'admin.php' ),
             'logoutUrl' => wp_logout_url( self::portal_url() ),
             'version'   => OPB_VERSION,
+            'siteUrl'   => home_url(),
             'user'      => [
                 'id'       => $user->ID,
                 'name'     => $user->display_name,

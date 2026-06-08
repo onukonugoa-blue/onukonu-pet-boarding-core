@@ -90,7 +90,7 @@ export default function ClientList() {
                     {c.email && (
                       <>
                         <a
-                          href={`${(window as any).opbData?.siteUrl ?? ''}/my-pets/?preview_client=${c.id}`}
+                          href={`${(window as any).OPB?.siteUrl ?? ''}/my-pets/?preview_client=${c.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn btn-secondary btn-sm"
@@ -101,7 +101,7 @@ export default function ClientList() {
                           title="Send My Pets access via WhatsApp"
                           onClick={(e) => {
                             e.stopPropagation()
-                            const myPetsUrl = `${(window as any).opbData?.siteUrl ?? ''}/my-pets/`
+                            const myPetsUrl = `${(window as any).OPB?.siteUrl ?? ''}/my-pets/`
                             open(c.phone, clientPortalMessage(c, myPetsUrl))
                           }}
                         >💬</button>

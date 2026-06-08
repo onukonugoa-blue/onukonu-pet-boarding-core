@@ -51,7 +51,7 @@ export default function ClientProfile() {
           {client.email && (
             <>
               <a
-                href={`${(window as any).opbData?.siteUrl ?? ''}/my-pets/?preview_client=${id}`}
+                href={`${(window as any).OPB?.siteUrl ?? ''}/my-pets/?preview_client=${id}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-secondary btn-sm"
@@ -63,7 +63,7 @@ export default function ClientProfile() {
                 className="btn-secondary btn-sm"
                 title="Send My Pets page access via WhatsApp"
                 onClick={() => {
-                  const myPetsUrl = `${(window as any).opbData?.siteUrl ?? ''}/my-pets/`
+                  const myPetsUrl = `${(window as any).OPB?.siteUrl ?? ''}/my-pets/`
                   open(client.phone, clientPortalMessage(client, myPetsUrl))
                 }}
               >
