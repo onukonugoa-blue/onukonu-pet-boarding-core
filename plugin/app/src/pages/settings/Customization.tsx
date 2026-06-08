@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { customizationsApi } from '../../api/customizations'
 import type { CustomizationItem, PreviewResult } from '../../api/customizations'
 
-type Tab = 'facility' | 'legal' | 'onboarding' | 'inquiry' | 'invoice' | 'invoice_branding' | 'preview' | 'export'
+type Tab = 'facility' | 'legal' | 'onboarding' | 'inquiry' | 'invoice' | 'invoice_branding' | 'client_portal' | 'preview' | 'export'
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'facility',         label: 'Facility Info',       icon: '🏢' },
@@ -12,6 +12,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'inquiry',          label: 'Inquiry Messages',    icon: '📩' },
   { id: 'invoice',          label: 'Invoice & Delivery',  icon: '🧾' },
   { id: 'invoice_branding', label: 'Invoice Branding',    icon: '🖼' },
+  { id: 'client_portal',    label: 'Client Portal',       icon: '🐾' },
   { id: 'preview',          label: 'Preview',             icon: '👁' },
   { id: 'export',           label: 'Export',              icon: '⬇' },
 ]
@@ -30,6 +31,7 @@ const PLACEHOLDER_HINT: Record<string, string> = {
   inquiry:          '{{CLIENT_NAME}} · {{FACILITY_NAME}} · {{PHONE}} · {{EMAIL}}',
   invoice:          '{{CLIENT_NAME}} · {{FACILITY_NAME}} · {{INVOICE_NUMBER}} · {{INVOICE_LINK}} · {{INVOICE_TOTAL}} · {{INVOICE_PAID}} · {{INVOICE_DUE}}',
   invoice_branding: '',
+  client_portal:    '{{CLIENT_NAME}} · {{FACILITY_NAME}} · {{MY_PETS_URL}} · {{CLIENT_EMAIL}} · {{CLIENT_PHONE}} · {{SUPPORT_EMAIL}} · {{SUPPORT_PHONE}}',
 }
 
 // Section headers shown inside the Invoice Branding tab, keyed by the first item in each group

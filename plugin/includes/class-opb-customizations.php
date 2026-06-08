@@ -22,6 +22,11 @@ class OPB_Customizations {
         'INVOICE_TOTAL',
         'INVOICE_PAID',
         'INVOICE_DUE',
+        'MY_PETS_URL',
+        'SUPPORT_PHONE',
+        'SUPPORT_EMAIL',
+        'CLIENT_EMAIL',
+        'CLIENT_PHONE',
     ];
 
     const REGISTRY = [
@@ -283,6 +288,48 @@ View your invoice here:
 Thank you! 🐾
 {{FACILITY_NAME}}',
         ],
+
+        // ── CLIENT PORTAL ─────────────────────────────────────────────────────
+        'client_portal_whatsapp_message' => [
+            'category' => 'client_portal',
+            'label'    => 'My Pets Access WhatsApp Message',
+            'type'     => 'textarea',
+            'default'  => 'Hi {{CLIENT_NAME}}, here is your secure My Pets portal for {{FACILITY_NAME}}:
+
+{{MY_PETS_URL}}
+
+Use this link to view your pet profiles, upcoming bookings, and invoices at any time.
+
+{{FACILITY_NAME}}',
+        ],
+        'client_support_email_subject' => [
+            'category' => 'client_portal',
+            'label'    => 'Support Email Subject',
+            'type'     => 'text',
+            'default'  => 'Support Request — {{FACILITY_NAME}}',
+        ],
+        'client_support_email_body' => [
+            'category' => 'client_portal',
+            'label'    => 'Support Email Body',
+            'type'     => 'textarea',
+            'default'  => 'Hi {{FACILITY_NAME}} team,
+
+I have a query regarding my pets / booking.
+
+Name: {{CLIENT_NAME}}
+Email: {{CLIENT_EMAIL}}
+Phone: {{CLIENT_PHONE}}
+
+Please let me know how you can help.
+
+Thank you',
+        ],
+        'client_support_whatsapp_message' => [
+            'category' => 'client_portal',
+            'label'    => 'Support WhatsApp Message',
+            'type'     => 'textarea',
+            'default'  => 'Hi {{FACILITY_NAME}} team, I\'d like some help regarding my pets / booking. My name is {{CLIENT_NAME}} ({{CLIENT_EMAIL}}).',
+        ],
     ];
 
     // ── Core accessors ────────────────────────────────────────────────────────
@@ -491,6 +538,11 @@ Thank you! 🐾
             'INVOICE_TOTAL'   => '₹4,500.00',
             'INVOICE_PAID'    => '₹2,000.00',
             'INVOICE_DUE'     => '₹2,500.00',
+            'MY_PETS_URL'     => 'https://example.com/my-pets/',
+            'SUPPORT_PHONE'   => '+91 98765 43210',
+            'SUPPORT_EMAIL'   => 'support@example.com',
+            'CLIENT_EMAIL'    => 'demo@example.com',
+            'CLIENT_PHONE'    => '+91 98765 43210',
         ];
     }
 }

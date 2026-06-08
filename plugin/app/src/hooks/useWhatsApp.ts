@@ -3,10 +3,11 @@ import { buildWhatsAppUrl } from '../api/client'
 import { useBranchStore } from '../store/branch'
 import { useCustomizationsStore } from '../store/customizations'
 
-interface Client { name: string; phone: string }
+interface Client { name: string; phone: string; email?: string }
 interface Pet { name: string; breed?: string }
 interface InvoiceCtx { id: number; revenue: number; paid: number; due: number; legacy_invoice_number?: string }
 interface StayCtx { check_in_date: string; check_out_date: string }
+interface ClientPortalCtx { name: string; phone?: string; email?: string }
 
 function applyTemplate(template: string, context: Record<string, string>): string {
   let out = template
@@ -58,10 +59,24 @@ export function useWhatsApp() {
     return `Hi ${client.name}, welcome to ${facilityName}! 🐾\n\nWe have registered ${petStr} at our ${branchName} branch.\n\nTo complete your pet's profile, please share the following with us:\n• Recent vaccination certificates\n• A clear photo of ${petStr}\n• Any dietary or medical notes we should know\n\nYou can WhatsApp these directly to this number or bring them on your first visit.\n\nIf you have any questions, feel free to reach out.\n\nSee you soon!\n${facilityName}`
   }
 
+  function clientPortalMessage(client: ClientPortalCtx, myPetsUrl: string): string {
+    const template = customizations.get('client_portal_whatsapp_message')
+    if (template) {
+      return applyTemplate(template, {
+        CLIENT_NAME:   client.name,
+        FACILITY_NAME: facilityName,
+        MY_PETS_URL:   myPetsUrl,
+        CLIENT_PHONE:  client.phone ?? '',
+        CLIENT_EMAIL:  client.email ?? '',
+      })
+    }
+    return `Hi ${client.name}, here is your My Pets portal link for ${facilityName}: ${myPetsUrl}`
+  }
+
   function open(phone: string, message: string) {
     const url = buildWhatsAppUrl(phone, message)
     window.open(url, '_blank', 'noopener')
   }
 
-  return { invoiceMessage, onboardingMessage, open }
+  return { invoiceMessage, onboardingMessage, clientPortalMessage, open }
 }

@@ -41,6 +41,15 @@ class OPB_Client_Relationship_API extends OPB_REST_Base {
             'callback'            => [ $this, 'get_me' ],
             'permission_callback' => '__return_true',
         ] );
+
+        register_rest_route( $ns, '/clients/(?P<id>\d+)/portal-preview', [
+            'methods'             => 'GET',
+            'callback'            => [ $this, 'portal_preview' ],
+            'permission_callback' => [ $this, 'permission_check' ],
+            'args'                => [
+                'id' => [ 'required' => true, 'type' => 'integer', 'minimum' => 1 ],
+            ],
+        ] );
     }
 
     // ── POST /client/auth/request-otp ────────────────────────────────────────
@@ -256,13 +265,180 @@ class OPB_Client_Relationship_API extends OPB_REST_Base {
         unset( $inv );
 
         // ── Support (from Customizations) ─────────────────────────────────────
+        $my_pets_url = home_url( '/my-pets/' );
+        $support_ctx = [
+            'CLIENT_NAME'   => $client['name'] ?? '',
+            'CLIENT_EMAIL'  => $client['email'] ?? '',
+            'CLIENT_PHONE'  => $client['phone'] ?? '',
+            'FACILITY_NAME' => OPB_Customizations::facility_name(),
+            'SUPPORT_PHONE' => OPB_Customizations::get( 'facility_phone' ),
+            'SUPPORT_EMAIL' => OPB_Customizations::get( 'facility_email' ),
+            'MY_PETS_URL'   => $my_pets_url,
+        ];
         $support = [
-            'facility_name' => OPB_Customizations::facility_name(),
-            'phone'         => OPB_Customizations::get( 'facility_phone' ),
-            'email'         => OPB_Customizations::get( 'facility_email' ),
+            'facility_name'    => OPB_Customizations::facility_name(),
+            'phone'            => OPB_Customizations::get( 'facility_phone' ),
+            'email'            => OPB_Customizations::get( 'facility_email' ),
+            'email_subject'    => OPB_Customizations::render( 'client_support_email_subject', $support_ctx ),
+            'email_body'       => OPB_Customizations::render( 'client_support_email_body', $support_ctx ),
+            'whatsapp_message' => OPB_Customizations::render( 'client_support_whatsapp_message', $support_ctx ),
         ];
 
         OPB_Client_Auth::log( $client_id, 'page_accessed', $this->client_ip(), 'me' );
+
+        return $this->success( [
+            'client'   => $client,
+            'pets'     => $pets,
+            'bookings' => [
+                'upcoming' => array_values( $upcoming ),
+                'past'     => array_values( $past ),
+            ],
+            'invoices' => $invoices,
+            'support'  => $support,
+        ] );
+    }
+
+    // ── GET /clients/{id}/portal-preview ─────────────────────────────────────
+
+    public function portal_preview( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+        $client_id = (int) $r->get_param( 'id' );
+
+        global $wpdb;
+
+        // ── Client ────────────────────────────────────────────────────────────
+        $client = $wpdb->get_row( $wpdb->prepare(
+            "SELECT c.id, c.name, c.email, c.phone, c.address,
+                    c.local_guardian_name, c.local_guardian_contact,
+                    c.onboarding_date,
+                    b.name AS branch_name
+             FROM {$wpdb->prefix}opb_clients c
+             LEFT JOIN {$wpdb->prefix}opb_branches b ON b.id = c.home_branch_id
+             WHERE c.id = %d
+             LIMIT 1",
+            $client_id
+        ), ARRAY_A );
+
+        if ( ! $client ) {
+            return $this->error( 'not_found', 'Client not found.', 404 );
+        }
+
+        // ── Pets with documents ───────────────────────────────────────────────
+        $pets_raw = $wpdb->get_results( $wpdb->prepare(
+            "SELECT id, name, pet_type, breed, gender, breed_size,
+                    birthday, vaccination_status,
+                    anti_rabies_date, dhppil_date, kennel_cough_date,
+                    ongoing_medication, medication_detail,
+                    dietary_preference, vet_name, vet_contact
+             FROM {$wpdb->prefix}opb_pets
+             WHERE client_id = %d AND is_active = 1
+             ORDER BY name ASC",
+            $client_id
+        ), ARRAY_A );
+
+        $pets = [];
+        foreach ( $pets_raw as $pet ) {
+            $pet['age'] = '';
+            if ( ! empty( $pet['birthday'] ) ) {
+                try {
+                    $diff = ( new DateTime() )->diff( new DateTime( $pet['birthday'] ) );
+                    if ( $diff->y > 0 ) {
+                        $pet['age'] = $diff->y . ' yr' . ( $diff->y !== 1 ? 's' : '' );
+                        if ( $diff->m > 0 ) { $pet['age'] .= ', ' . $diff->m . ' mo'; }
+                    } elseif ( $diff->m > 0 ) {
+                        $pet['age'] = $diff->m . ' month' . ( $diff->m !== 1 ? 's' : '' );
+                    } else {
+                        $pet['age'] = $diff->d . ' day' . ( $diff->d !== 1 ? 's' : '' );
+                    }
+                } catch ( \Exception $e ) {}
+            }
+
+            $docs = $wpdb->get_results( $wpdb->prepare(
+                "SELECT id, doc_type, label, file_url, file_mime
+                 FROM {$wpdb->prefix}opb_pet_documents
+                 WHERE pet_id = %d
+                 ORDER BY doc_type ASC, seq_number ASC",
+                (int) $pet['id']
+            ), ARRAY_A );
+
+            $pet['photo_url'] = '';
+            $pet['documents'] = [];
+            foreach ( $docs as $doc ) {
+                if ( $doc['doc_type'] === 'photo' && ! $pet['photo_url'] ) {
+                    $pet['photo_url'] = $doc['file_url'];
+                } else {
+                    $pet['documents'][] = $doc;
+                }
+            }
+
+            $pets[] = $pet;
+        }
+
+        // ── Bookings ──────────────────────────────────────────────────────────
+        $bookings_raw = $wpdb->get_results( $wpdb->prepare(
+            "SELECT bk.id, bk.booking_date, bk.payment_status, bk.service_types,
+                    b.name AS branch_name,
+                    GROUP_CONCAT(DISTINCT p.name ORDER BY p.name SEPARATOR ', ') AS pet_names,
+                    MIN(bs.check_in_date)  AS check_in_date,
+                    MAX(bs.check_out_date) AS check_out_date,
+                    GROUP_CONCAT(DISTINCT bs.status ORDER BY bs.id SEPARATOR ', ') AS stay_statuses
+             FROM {$wpdb->prefix}opb_bookings bk
+             LEFT JOIN {$wpdb->prefix}opb_branches b      ON b.id  = bk.branch_id
+             LEFT JOIN {$wpdb->prefix}opb_booking_stays bs ON bs.booking_id = bk.id
+             LEFT JOIN {$wpdb->prefix}opb_pets p           ON p.id  = bs.pet_id
+             WHERE bk.client_id = %d
+             GROUP BY bk.id
+             ORDER BY bk.booking_date DESC
+             LIMIT 60",
+            $client_id
+        ), ARRAY_A );
+
+        $today    = gmdate( 'Y-m-d' );
+        $upcoming = [];
+        $past     = [];
+        foreach ( $bookings_raw as $bk ) {
+            $out = $bk['check_out_date'] ?? $bk['booking_date'];
+            if ( $out >= $today ) { $upcoming[] = $bk; } else { $past[] = $bk; }
+        }
+
+        // ── Invoices ──────────────────────────────────────────────────────────
+        $invoices = $wpdb->get_results( $wpdb->prepare(
+            "SELECT inv.id, inv.invoice_date, inv.payment_status,
+                    inv.revenue, inv.paid, inv.due, inv.doc_token,
+                    bk.booking_date
+             FROM {$wpdb->prefix}opb_invoices inv
+             JOIN  {$wpdb->prefix}opb_bookings bk ON bk.id = inv.booking_id
+             WHERE bk.client_id = %d
+             ORDER BY inv.invoice_date DESC
+             LIMIT 30",
+            $client_id
+        ), ARRAY_A );
+
+        foreach ( $invoices as &$inv ) {
+            $inv['pdf_url'] = $inv['doc_token']
+                ? home_url( '/opb-invoice/' . $inv['doc_token'] . '/' )
+                : null;
+        }
+        unset( $inv );
+
+        // ── Support ───────────────────────────────────────────────────────────
+        $my_pets_url = home_url( '/my-pets/' );
+        $support_ctx = [
+            'CLIENT_NAME'   => $client['name'] ?? '',
+            'CLIENT_EMAIL'  => $client['email'] ?? '',
+            'CLIENT_PHONE'  => $client['phone'] ?? '',
+            'FACILITY_NAME' => OPB_Customizations::facility_name(),
+            'SUPPORT_PHONE' => OPB_Customizations::get( 'facility_phone' ),
+            'SUPPORT_EMAIL' => OPB_Customizations::get( 'facility_email' ),
+            'MY_PETS_URL'   => $my_pets_url,
+        ];
+        $support = [
+            'facility_name'    => OPB_Customizations::facility_name(),
+            'phone'            => OPB_Customizations::get( 'facility_phone' ),
+            'email'            => OPB_Customizations::get( 'facility_email' ),
+            'email_subject'    => OPB_Customizations::render( 'client_support_email_subject', $support_ctx ),
+            'email_body'       => OPB_Customizations::render( 'client_support_email_body', $support_ctx ),
+            'whatsapp_message' => OPB_Customizations::render( 'client_support_whatsapp_message', $support_ctx ),
+        ];
 
         return $this->success( [
             'client'   => $client,

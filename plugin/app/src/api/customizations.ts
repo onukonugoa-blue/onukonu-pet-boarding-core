@@ -2,7 +2,7 @@ import { api } from './client'
 
 export interface CustomizationItem {
   key: string
-  category: 'facility' | 'legal' | 'onboarding' | 'inquiry' | 'invoice' | 'invoice_branding'
+  category: 'facility' | 'legal' | 'onboarding' | 'inquiry' | 'invoice' | 'invoice_branding' | 'client_portal'
   label: string
   type: 'text' | 'textarea' | 'richtext' | 'media'
   value: string

@@ -14,7 +14,7 @@ export default function ClientProfile() {
   const [tab, setTab] = useState<'info' | 'pets' | 'bookings'>('info')
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
-  const { onboardingMessage, open } = useWhatsApp()
+  const { onboardingMessage, clientPortalMessage, open } = useWhatsApp()
 
   useEffect(() => {
     const cid = Number(id)
@@ -49,15 +49,27 @@ export default function ClientProfile() {
             size="sm"
           />
           {client.email && (
-            <a
-              href={`${(window as any).opbData?.siteUrl ?? ''}/my-pets/`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-secondary btn-sm"
-              title="Open the client-facing My Pets page"
-            >
-              My Pets Page ↗
-            </a>
+            <>
+              <a
+                href={`${(window as any).opbData?.siteUrl ?? ''}/my-pets/?preview_client=${id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-secondary btn-sm"
+                title="Staff preview of client portal (no OTP required)"
+              >
+                👁 Preview
+              </a>
+              <button
+                className="btn-secondary btn-sm"
+                title="Send My Pets page access via WhatsApp"
+                onClick={() => {
+                  const myPetsUrl = `${(window as any).opbData?.siteUrl ?? ''}/my-pets/`
+                  open(client.phone, clientPortalMessage(client, myPetsUrl))
+                }}
+              >
+                💬 My Pets Access
+              </button>
+            </>
           )}
           <Link to={`/clients/${id}/edit`} className="btn-secondary btn-sm">Edit</Link>
           <Link to={`/bookings/new?client_id=${id}`} className="btn-primary btn-sm">+ Booking</Link>

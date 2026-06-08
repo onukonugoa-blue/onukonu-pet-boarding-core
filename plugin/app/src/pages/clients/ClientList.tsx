@@ -5,6 +5,7 @@ import type { Client } from '../../api/clients'
 import { useBranchStore } from '../../store/branch'
 import { fmt } from '../../api/client'
 import Pagination from '../../components/Pagination'
+import { useWhatsApp } from '../../hooks/useWhatsApp'
 
 export default function ClientList() {
   const [clients, setClients] = useState<Client[]>([])
@@ -15,6 +16,7 @@ export default function ClientList() {
   const [loading, setLoading] = useState(true)
   const activeBranchId = useBranchStore((s) => s.activeBranchId)
   const navigate = useNavigate()
+  const { clientPortalMessage, open } = useWhatsApp()
   const perPage = 25
 
   const load = (p = 1, q = search) => {
@@ -86,13 +88,24 @@ export default function ClientList() {
                     <Link to={`/clients/${c.id}`} className="btn btn-primary btn-sm flex-1 justify-center">View</Link>
                     <Link to={`/clients/${c.id}/edit`} className="btn btn-secondary btn-sm flex-1 justify-center">Edit</Link>
                     {c.email && (
-                      <a
-                        href={`${(window as any).opbData?.siteUrl ?? ''}/my-pets/`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn btn-secondary btn-sm"
-                        title="My Pets Page"
-                      >🐾</a>
+                      <>
+                        <a
+                          href={`${(window as any).opbData?.siteUrl ?? ''}/my-pets/?preview_client=${c.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-secondary btn-sm"
+                          title="Staff preview of client portal"
+                        >👁</a>
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          title="Send My Pets access via WhatsApp"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            const myPetsUrl = `${(window as any).opbData?.siteUrl ?? ''}/my-pets/`
+                            open(c.phone, clientPortalMessage(c, myPetsUrl))
+                          }}
+                        >💬</button>
+                      </>
                     )}
                   </div>
                 </div>

@@ -44,6 +44,24 @@ class OPB_Client_Portal {
         $facility = esc_html( OPB_Customizations::facility_name() );
         $api_base = esc_js( rest_url( 'opb/v1' ) );
 
+        // ── Preview mode detection ─────────────────────────────────────────────
+        $preview_mode      = false;
+        $preview_client_id = 0;
+        $preview_nonce     = '';
+
+        if ( isset( $_GET['preview_client'] ) ) {
+            $candidate_id = (int) $_GET['preview_client'];
+            if ( $candidate_id > 0 && is_user_logged_in() && OPB_Roles::has_opb_role() ) {
+                $preview_mode      = true;
+                $preview_client_id = $candidate_id;
+                $preview_nonce     = wp_create_nonce( 'wp_rest' );
+            }
+        }
+
+        $preview_mode_js      = $preview_mode ? 'true' : 'false';
+        $preview_client_id_js = esc_js( (string) $preview_client_id );
+        $preview_nonce_js     = esc_js( $preview_nonce );
+
         echo <<<HTML
 <!doctype html>
 <html lang="en">
@@ -198,6 +216,12 @@ input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,2
 .empty-state{text-align:center;padding:32px 16px;color:#94a3b8;font-size:.88rem}
 .empty-icon{font-size:2rem;display:block;margin-bottom:8px}
 
+/* ── Preview banner ───────────────────────────────────────────────────────── */
+#preview-banner{display:none;background:#f59e0b;color:#1c1917;
+               padding:10px 20px;text-align:center;font-size:.84rem;
+               font-weight:700;border-bottom:2px solid #d97706;
+               position:sticky;top:57px;z-index:49}
+
 /* ── Auth screen specific ─────────────────────────────────────────────────── */
 .auth-intro{text-align:center;margin-bottom:24px}
 .auth-intro .hero-icon{font-size:3rem;display:block;margin-bottom:12px}
@@ -247,6 +271,9 @@ input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,2
   </div>
 </header>
 
+<!-- ── Staff preview banner ───────────────────────────────────────────────── -->
+<div id="preview-banner">👁 Staff Preview Mode — Viewing as client. OTP authentication bypassed.</div>
+
 <!-- ── Page nav (visible when logged in) ──────────────────────────────────── -->
 <nav id="page-nav">
   <a href="#section-pets">My Pets</a>
@@ -291,7 +318,7 @@ input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,2
       </div>
       <div class="card">
         <div class="otp-context">
-          We sent a 6-digit code to <strong id="otp-email-display"></strong>
+          If a matching account exists for <strong id="otp-email-display"></strong>, a verification code has been sent. Please check your inbox and spam folder.
         </div>
         <div id="otp-alert" class="alert alert-error"></div>
         <div class="field">
@@ -381,6 +408,9 @@ input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,2
 'use strict';
 
 var API = '{$api_base}';
+var PREVIEW_MODE = {$preview_mode_js};
+var PREVIEW_CLIENT_ID = {$preview_client_id_js};
+var PREVIEW_NONCE = '{$preview_nonce_js}';
 var currentEmail = '';
 var otpTimer = null;
 var otpSeconds = 600;
@@ -437,6 +467,7 @@ async function api(method, path, body){
     credentials: 'include',
     headers: { 'Content-Type':'application/json', 'Accept':'application/json' }
   };
+  if(PREVIEW_MODE && PREVIEW_NONCE) opts.headers['X-WP-Nonce'] = PREVIEW_NONCE;
   if(body) opts.body = JSON.stringify(body);
   var res = await fetch(API+path, opts);
   var data = await res.json().catch(function(){ return {}; });
@@ -591,6 +622,26 @@ async function loadPage(){
   pageData = r.data;
   renderPage(pageData);
   showPage();
+}
+
+/* ── Load preview page (staff mode) ────────────────────────────────────────── */
+async function loadPreview(){
+  showLoading();
+  var r = await api('GET','/clients/'+PREVIEW_CLIENT_ID+'/portal-preview');
+  if(!r.ok){
+    hide('screen-loading');
+    var el = ge('screen-loading');
+    if(el){
+      el.style.display='flex';
+      el.innerHTML='<p style="color:#dc2626;text-align:center;padding:32px;font-size:.9rem">⚠ Preview failed. Make sure you are logged in as staff.</p>';
+    }
+    return;
+  }
+  pageData = r.data;
+  renderPage(pageData);
+  showPage();
+  hide('btn-signout');
+  show('preview-banner');
 }
 
 /* ── Render ────────────────────────────────────────────────────────────────── */
@@ -749,10 +800,16 @@ function renderSupport(s){
   if(s.phone){
     var wa = s.phone.replace(/\D/g,'');
     if(wa && !wa.startsWith('91') && wa.length===10) wa='91'+wa;
-    html += '<a href="https://wa.me/'+wa+'" target="_blank" rel="noopener" class="btn btn-whatsapp btn-icon">📱 WhatsApp</a>';
+    var waHref = 'https://wa.me/'+wa;
+    if(s.whatsapp_message) waHref += '?text='+encodeURIComponent(s.whatsapp_message);
+    html += '<a href="'+waHref+'" target="_blank" rel="noopener" class="btn btn-whatsapp btn-icon">📱 WhatsApp</a>';
   }
   if(s.email){
-    html += '<a href="mailto:'+esc(s.email)+'" class="btn btn-email btn-icon">✉️ Email Us</a>';
+    var mailHref = 'mailto:'+esc(s.email);
+    var mailSep = '?';
+    if(s.email_subject){ mailHref += mailSep+'subject='+encodeURIComponent(s.email_subject); mailSep='&'; }
+    if(s.email_body){ mailHref += mailSep+'body='+encodeURIComponent(s.email_body); }
+    html += '<a href="'+mailHref+'" class="btn btn-email btn-icon">✉️ Email Us</a>';
   }
   if(!html){
     html = '<p class="text-sm text-gray">Please contact your branch directly.</p>';
@@ -777,7 +834,17 @@ document.querySelectorAll('#page-nav a').forEach(function(a){
 
 /* ── Boot ──────────────────────────────────────────────────────────────────── */
 showLoading();
-loadPage().catch(function(){ showAuth('email'); });
+if(PREVIEW_MODE){
+  loadPreview().catch(function(){
+    var el = ge('screen-loading');
+    if(el){
+      el.style.display='flex';
+      el.innerHTML='<p style="color:#dc2626;text-align:center;padding:32px;font-size:.9rem">⚠ Preview failed. Make sure you are logged in as staff.</p>';
+    }
+  });
+} else {
+  loadPage().catch(function(){ showAuth('email'); });
+}
 
 })();
 </script>
