@@ -3,7 +3,7 @@
  * Plugin Name: Onukonu Pet Boarding Core
  * Plugin URI:  https://onukonu.com
  * Description: Replacement platform for the discontinued boarding SaaS. Manages clients, pets, bookings, invoices, payments, and operations across three branches.
- * Version:     2.3.2
+ * Version:     2.2.0
  * Author:      Onukonu Pet Homestyle Boarding
  * License:     GPL-2.0-or-later
  * Text Domain: opb
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'OPB_VERSION',     '2.3.2' );
+define( 'OPB_VERSION',     '2.2.0' );
 define( 'OPB_PLUGIN_FILE', __FILE__ );
 define( 'OPB_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
 define( 'OPB_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
@@ -77,7 +77,6 @@ require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-invoice-delivery-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-health-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-client-relationship-api.php';
 require_once OPB_PLUGIN_DIR . 'admin/class-opb-admin-page.php';
-require_once OPB_PLUGIN_DIR . 'includes/class-opb-login.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-portal.php';
 
 register_activation_hook( __FILE__,   [ OPB_Activator::class,   'activate'   ] );
@@ -85,9 +84,6 @@ register_deactivation_hook( __FILE__, [ OPB_Deactivator::class, 'deactivate' ] )
 
 add_action( 'init', 'opb_maybe_create_tables' );
 add_action( 'init', [ OPB_Roles::class, 'register' ] );
-
-// Login page skin — static CSS + hooks, no auth changes
-OPB_Login::register();
 
 // Portal — registers its own init/filter/action hooks
 OPB_Portal::register();
