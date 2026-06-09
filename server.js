@@ -328,6 +328,27 @@ function renderPage(activeTab) {
       </div>
 
       <div class="card">
+        <h2>Release Notes</h2>
+
+        <div class="release-entry">
+          <div class="release-header">
+            <span class="release-version">v2.2.0</span>
+            <span class="release-date">9 June 2026</span>
+            <span class="release-tag">Production Baseline</span>
+          </div>
+          <div class="release-hash">Commit: <code>c9bfcc18ca467b8b1f96dd1ddb87757d7fea4e47</code></div>
+          <ul class="release-notes-list">
+            <li>Restored clean v2.2.0 production baseline — all login-page branding experiments reverted</li>
+            <li>Full pre-build validation passed: PHP syntax, TypeScript, Vite build (106 modules), PWA assets, MySQL 5.7 compatibility</li>
+            <li>ZIP generated: <code>onukonu-pet-boarding-core-v2.2.0.zip</code> — 44.88 MB, 735 files</li>
+            <li>All 50 PHP includes verified; no duplicate classes; no missing dependencies</li>
+            <li>Client portal (OTP, Staff Preview, Support), invoice engine (PDF, WhatsApp, email), customization module — all confirmed present</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="card">
         <h2>Commit Timeline</h2>
         ${commits.length === 0
           ? '<p style="color:#718096">No git history available.</p>'
@@ -392,6 +413,16 @@ function renderPage(activeTab) {
     .badge { background: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600; }
     .badge.green { background: #f0fff4; color: #276749; border-color: #9ae6b4; }
     .badge.orange { background: #fffaf0; color: #c05621; border-color: #fbd38d; }
+
+    /* Release notes */
+    .release-entry { border-left: 3px solid #4299e1; padding-left: 16px; margin-bottom: 8px; }
+    .release-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+    .release-version { font-size: 17px; font-weight: 800; color: #1a365d; }
+    .release-date { font-size: 13px; color: #718096; }
+    .release-tag { background: #f0fff4; color: #276749; border: 1px solid #9ae6b4; border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 700; }
+    .release-hash { font-size: 12px; color: #a0aec0; margin-bottom: 8px; }
+    .release-notes-list { margin: 0 0 0 18px; }
+    .release-notes-list li { font-size: 13px; color: #4a5568; margin-bottom: 4px; }
 
     /* Changelog */
     .version-row { display: flex; align-items: flex-start; gap: 24px; flex-wrap: wrap; }
