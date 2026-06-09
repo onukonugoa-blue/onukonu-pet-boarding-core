@@ -332,6 +332,23 @@ function renderPage(activeTab) {
 
         <div class="release-entry">
           <div class="release-header">
+            <span class="release-version">v2.3.0</span>
+            <span class="release-date">9 June 2026</span>
+            <span class="release-tag">Login Branding</span>
+          </div>
+          <ul class="release-notes-list">
+            <li><strong>Dedicated SVG logo</strong> — <code>assets/branding/login-logo.svg</code> — transparent, vector-crisp at all resolutions; PWA icon assets untouched</li>
+            <li><strong>Title</strong> — "Onukonu Operations Login" injected via <code>login_message</code> filter, between logo and form</li>
+            <li><strong>Footer</strong> — "Onukonu Pet Boarding • Operations Platform" injected via <code>login_footer</code> action, beneath nav links</li>
+            <li><strong>Form refinement</strong> — cleaner input borders, navy focus rings, brand-navy submit button, muted links with hover state</li>
+            <li><strong>Design language</strong> — quiet luxury: soft navy-tinted background, subtle card shadow, restrained typography; no glassmorphism, no animations, no geometry changes</li>
+            <li><strong>Zero layout ownership</strong> — WordPress retains all layout, positioning, dimensions and responsiveness; Loginizer untouched</li>
+            <li>ZIP generated: <code>onukonu-pet-boarding-core-v2.3.0.zip</code> — 45.96 MB, 738 files</li>
+          </ul>
+        </div>
+
+        <div class="release-entry">
+          <div class="release-header">
             <span class="release-version">v2.2.0</span>
             <span class="release-date">9 June 2026</span>
             <span class="release-tag">Production Baseline</span>
