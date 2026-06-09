@@ -3,25 +3,24 @@
  * OPB Login — Branded WordPress login page skin.
  *
  * Responsibilities:
- *  - Enqueues assets/login.css on the wp-login.php page
- *  - Sets the logo link URL and accessible title
- *  - Injects a branding subtitle block (title + subheading) via login_footer
+ *  - Enqueues assets/login.css on wp-login.php
+ *  - Points the logo link to site home
+ *  - Sets accessible logo title text
  *
  * Constraints (enforced by design):
- *  - No authentication changes
- *  - No Loginizer changes
- *  - No redirect changes
+ *  - CSS-only branding — no JavaScript, no DOM manipulation
+ *  - No injected containers or wrappers
+ *  - No authentication, Loginizer, redirect, or session changes
  *  - No database reads or writes
  *  - No settings or configuration UI
- *  - Static CSS + WordPress hooks only
+ *  - WordPress controls all layout, width, and responsiveness
  */
 class OPB_Login {
 
     public static function register(): void {
-        add_action( 'login_enqueue_scripts', [ self::class, 'enqueue_login_styles'  ] );
-        add_action( 'login_footer',          [ self::class, 'render_brand_block'    ] );
-        add_filter( 'login_headerurl',       [ self::class, 'login_header_url'      ] );
-        add_filter( 'login_headertext',      [ self::class, 'login_header_text'     ] );
+        add_action( 'login_enqueue_scripts', [ self::class, 'enqueue_login_styles' ] );
+        add_filter( 'login_headerurl',       [ self::class, 'login_header_url'     ] );
+        add_filter( 'login_headertext',      [ self::class, 'login_header_text'    ] );
     }
 
     // ── Asset enqueue ─────────────────────────────────────────────────────────
@@ -33,30 +32,6 @@ class OPB_Login {
             [],
             OPB_VERSION
         );
-    }
-
-    // ── Branding subtitle block ───────────────────────────────────────────────
-
-    /**
-     * Inject "Onukonu Pet Boarding / Operations Portal" beneath the logo.
-     * Uses a small inline script so it never conflicts with form markup.
-     */
-    public static function render_brand_block(): void {
-        ?>
-        <script>
-        (function () {
-            'use strict';
-            var h1 = document.querySelector('#login h1');
-            if ( ! h1 ) { return; }
-            var div = document.createElement('div');
-            div.className = 'opb-login-brand';
-            div.innerHTML =
-                '<span class="opb-login-brand__title">Onukonu Pet Boarding</span>' +
-                '<span class="opb-login-brand__sub">Operations Portal</span>';
-            h1.insertAdjacentElement('afterend', div);
-        }());
-        </script>
-        <?php
     }
 
     // ── Header link / text ────────────────────────────────────────────────────

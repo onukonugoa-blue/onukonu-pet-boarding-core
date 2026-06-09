@@ -186,6 +186,14 @@ function renderPage(activeTab) {
         <p>The <code>plugin/</code> directory contains the complete WordPress plugin. Install by uploading
         <strong>onukonu-pet-boarding-core-v${escapeHtml(pluginVersion)}.zip</strong> via WP Admin → Plugins → Add New → Upload.</p>
 
+        <h3>v2.3.2 — Login Skin: Zero JavaScript</h3>
+        <ul>
+          <li><strong>Removed</strong> — <code>render_brand_block()</code> method and <code>login_footer</code> hook; eliminated all JavaScript and DOM manipulation from the login skin</li>
+          <li><strong>Removed</strong> — injected <code>.opb-login-brand</code> container and subtitle text (WordPress owns all markup)</li>
+          <li><strong>Updated</strong> — focus colour aligned to brand navy <code>#1a365d</code> on inputs and buttons (was blue <code>#3182ce</code>)</li>
+          <li><strong>Result</strong> — pure CSS-only branding; three hooks remain: <code>login_enqueue_scripts</code>, <code>login_headerurl</code>, <code>login_headertext</code></li>
+        </ul>
+
         <h3>v2.3.1 — Login Skin Refinement</h3>
         <ul>
           <li><strong>Philosophy change</strong> — WordPress owns layout; OPB owns branding only</li>
