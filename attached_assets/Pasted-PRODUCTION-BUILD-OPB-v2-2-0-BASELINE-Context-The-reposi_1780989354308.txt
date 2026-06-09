@@ -1,0 +1,240 @@
+PRODUCTION BUILD – OPB v2.2.0 BASELINE
+
+Context
+
+The repository has been intentionally restored to the v2.2.0 baseline.
+
+All login-page branding experiments have been removed.
+
+This build is intended to become the new clean deployment baseline before any future branding, landing-page, gallery, or WooCommerce work begins.
+
+No feature development is requested.
+
+No refactoring is requested.
+
+No UI work is requested.
+
+Build and validate only.
+
+---
+
+OBJECTIVE
+
+Generate a clean production-ready plugin ZIP from the current repository state.
+
+Treat the current working tree as the authoritative release candidate.
+
+---
+
+DO NOT MODIFY
+
+Do not:
+
+- Add features
+- Remove features
+- Refactor code
+- Change UI
+- Change styling
+- Change branding
+- Change authentication
+- Change login behaviour
+- Change PWA behaviour
+- Change client portal behaviour
+
+This task is validation and packaging only.
+
+---
+
+PRE-BUILD VALIDATION
+
+Verify:
+
+✓ Working tree clean
+
+✓ No uncommitted changes
+
+✓ Version consistency
+
+✓ No missing assets
+
+✓ No duplicate classes
+
+✓ No missing dependencies
+
+✓ No build artifacts from removed login-page experiments
+
+---
+
+PLUGIN VALIDATION
+
+Verify:
+
+✓ Plugin activates cleanly
+
+✓ PHP syntax clean
+
+✓ No fatal errors
+
+✓ No missing includes
+
+✓ No missing classes
+
+---
+
+REACT VALIDATION
+
+Verify:
+
+✓ npm dependencies resolve
+
+✓ TypeScript passes
+
+✓ Vite build succeeds
+
+✓ Dist assets generated correctly
+
+---
+
+PWA VALIDATION
+
+Verify:
+
+✓ manifest.json present
+
+✓ sw.js present
+
+✓ icon-192.png present
+
+✓ icon-512.png present
+
+✓ icon-maskable.png present
+
+✓ PWA functionality unaffected
+
+---
+
+CLIENT PORTAL VALIDATION
+
+Verify:
+
+✓ /my-pets/ route present
+
+✓ OTP architecture present
+
+✓ Staff Preview Mode present
+
+✓ Placeholder resolution fixes present
+
+✓ Support section functionality present
+
+---
+
+INVOICE VALIDATION
+
+Verify:
+
+✓ PDF generation present
+
+✓ PDF persistence present
+
+✓ Public invoice links present
+
+✓ WhatsApp delivery present
+
+✓ Email delivery present
+
+✓ Branding asset support present
+
+---
+
+DATABASE VALIDATION
+
+Verify:
+
+✓ MySQL 5.7 compatible
+
+✓ MariaDB compatible
+
+✓ INFORMATION_SCHEMA migration guards present
+
+✓ No unsupported ALTER syntax
+
+---
+
+ZIP GENERATION
+
+Generate:
+
+onukonu-pet-boarding-core-v2.2.0.zip
+
+Verify ZIP contains:
+
+✓ PHP source
+
+✓ React build assets
+
+✓ Vendor dependencies
+
+✓ mPDF
+
+✓ PWA assets
+
+✓ Client portal
+
+✓ Staff preview
+
+✓ Invoice engine
+
+✓ Customization module
+
+Exclude:
+
+✓ node_modules
+
+✓ app/src
+
+✓ development artifacts
+
+---
+
+OUTPUT REQUIRED
+
+Provide:
+
+1. Plugin version
+
+2. Commit hash
+
+3. Git status summary
+
+4. Build status
+
+5. ZIP filename
+
+6. ZIP size
+
+7. File count
+
+8. Validation summary
+
+9. Any warnings
+
+---
+
+SUCCESS CRITERIA
+
+✓ Clean build
+
+✓ Clean validation
+
+✓ Clean ZIP
+
+✓ No warnings
+
+✓ No login-page branding remnants
+
+✓ Ready for deployment
+
+✓ Ready to become branding baseline
+
+Generate the production ZIP only after all validation checks pass.
