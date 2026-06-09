@@ -186,6 +186,15 @@ function renderPage(activeTab) {
         <p>The <code>plugin/</code> directory contains the complete WordPress plugin. Install by uploading
         <strong>onukonu-pet-boarding-core-v${escapeHtml(pluginVersion)}.zip</strong> via WP Admin → Plugins → Add New → Upload.</p>
 
+        <h3>v2.3.1 — Login Skin Refinement</h3>
+        <ul>
+          <li><strong>Philosophy change</strong> — WordPress owns layout; OPB owns branding only</li>
+          <li><strong>Removed layout rules</strong> — <code>#login</code> width, padding, and margin; logo anchor width/height/margin; all input/button width and sizing overrides; <code>display: flex</code> on the remember-me label; the entire <code>@media (max-width: 460px)</code> block</li>
+          <li><strong>Removed motion</strong> — <code>transform: translateY()</code> on button hover/active states</li>
+          <li><strong>Kept all branding</strong> — navy gradient background, card shadow + rounded corners, logo, brand colours, input/button/notice appearance, focus rings, hover colours, typography</li>
+          <li><strong>Result</strong> — WordPress and Loginizer control width, positioning, and responsiveness; no pinch-zoom on mobile</li>
+        </ul>
+
         <h3>v2.3.0 — Login Page Branding</h3>
         <ul>
           <li><strong>New file</strong> — <code>assets/branding/login-logo.png</code> — 120×120 paw-print logo, transparent PNG, dedicated to the login page (separate from PWA icons)</li>
