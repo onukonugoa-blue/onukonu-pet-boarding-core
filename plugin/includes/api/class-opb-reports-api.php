@@ -75,7 +75,7 @@ class OPB_Reports_API extends OPB_REST_Base {
                     COALESCE(SUM(i.due),0) as outstanding
              FROM {$wpdb->prefix}opb_invoices i
              LEFT JOIN {$wpdb->prefix}opb_branches b ON b.id=i.branch_id
-             WHERE i.invoice_date >= %s AND i.invoice_date <= %s
+             WHERE i.invoice_date >= %s AND i.invoice_date <= %s $inv_w
              GROUP BY i.branch_id, COALESCE(b.name,'Unknown Branch')
              ORDER BY revenue DESC",
             $from, $to
@@ -132,21 +132,22 @@ class OPB_Reports_API extends OPB_REST_Base {
         }
 
         // ── Summary totals ────────────────────────────────────────────────────
+        // Note: aliases (i, e, bk) must match those in $inv_w / $exp_w / $bk_w.
         $total_revenue = (float)$wpdb->get_var($wpdb->prepare(
-            "SELECT COALESCE(SUM(revenue),0) FROM {$wpdb->prefix}opb_invoices
-             WHERE invoice_date >= %s AND invoice_date <= %s $inv_w", $from, $to
+            "SELECT COALESCE(SUM(i.revenue),0) FROM {$wpdb->prefix}opb_invoices i
+             WHERE i.invoice_date >= %s AND i.invoice_date <= %s $inv_w", $from, $to
         ));
         $total_expenses = (float)$wpdb->get_var($wpdb->prepare(
-            "SELECT COALESCE(SUM(amount),0) FROM {$wpdb->prefix}opb_expenses
-             WHERE DATE(expense_at) >= %s AND DATE(expense_at) <= %s $exp_w", $from, $to
+            "SELECT COALESCE(SUM(e.amount),0) FROM {$wpdb->prefix}opb_expenses e
+             WHERE DATE(e.expense_at) >= %s AND DATE(e.expense_at) <= %s $exp_w", $from, $to
         ));
         $total_bookings = (int)$wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->prefix}opb_bookings bk
              WHERE DATE(bk.created_at) >= %s AND DATE(bk.created_at) <= %s $bk_w", $from, $to
         ));
         $total_outstanding = (float)$wpdb->get_var($wpdb->prepare(
-            "SELECT COALESCE(SUM(due),0) FROM {$wpdb->prefix}opb_invoices
-             WHERE invoice_date >= %s AND invoice_date <= %s $inv_w", $from, $to
+            "SELECT COALESCE(SUM(i.due),0) FROM {$wpdb->prefix}opb_invoices i
+             WHERE i.invoice_date >= %s AND i.invoice_date <= %s $inv_w", $from, $to
         ));
 
         return $this->success([

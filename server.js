@@ -332,6 +332,20 @@ function renderPage(activeTab) {
 
         <div class="release-entry">
           <div class="release-header">
+            <span class="release-version">v2.3.1</span>
+            <span class="release-date">9 June 2026</span>
+            <span class="release-tag">Bug Fix</span>
+          </div>
+          <ul class="release-notes-list">
+            <li><strong>Fix: Reports KPI cards returning 0 on branch filter</strong> — summary <code>get_var()</code> queries for Revenue, Expenses and Outstanding lacked table aliases (<code>i</code>, <code>e</code>) in their <code>FROM</code> clause; MySQL rejected <code>i.branch_id</code> as unknown, <code>$wpdb</code> returned <code>null</code>, cast to <code>0.0</code></li>
+            <li><strong>Fix: Revenue by Branch ignoring branch filter</strong> — <code>$inv_w</code> fragment was absent from the <code>revenue_by_branch</code> query's <code>WHERE</code> clause; all branches were always returned regardless of selection</li>
+            <li>Bookings count was unaffected (its query already had the correct <code>bk</code> alias)</li>
+            <li>File changed: <code>includes/api/class-opb-reports-api.php</code> — 2 targeted edits</li>
+          </ul>
+        </div>
+
+        <div class="release-entry">
+          <div class="release-header">
             <span class="release-version">v2.3.0</span>
             <span class="release-date">9 June 2026</span>
             <span class="release-tag">Login Branding</span>
