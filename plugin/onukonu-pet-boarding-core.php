@@ -78,6 +78,7 @@ require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-health-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-client-relationship-api.php';
 require_once OPB_PLUGIN_DIR . 'admin/class-opb-admin-page.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-portal.php';
+require_once OPB_PLUGIN_DIR . 'includes/class-opb-login-branding.php';
 
 register_activation_hook( __FILE__,   [ OPB_Activator::class,   'activate'   ] );
 register_deactivation_hook( __FILE__, [ OPB_Deactivator::class, 'deactivate' ] );
@@ -96,6 +97,9 @@ OPB_Invoice_Document::register();
 
 // Client relationship page /my-pets/ (no WP login — OTP + session)
 OPB_Client_Portal::register();
+
+// Login page branding — colour, shadow, typography only; no geometry
+OPB_Login_Branding::register();
 
 add_action( 'rest_api_init',         'opb_register_rest_routes'  );
 add_action( 'admin_menu',            'opb_register_admin_menu'   );
