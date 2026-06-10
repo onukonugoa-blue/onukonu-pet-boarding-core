@@ -41,6 +41,12 @@ class OPB_Dashboard_API extends OPB_REST_Base {
             "SELECT COUNT(*) FROM {$wpdb->prefix}opb_tasks t WHERE t.status!='Done' AND t.due_date<=%s$task_where",$today
         ));
 
+        // New inquiries — pipeline items awaiting staff action (not branch-scoped)
+        $new_inquiries = (int)$wpdb->get_var(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}opb_inquiries
+             WHERE status IN ('NEW','READY_FOR_REVIEW')"
+        );
+
         // Today's check-ins
         $todays_checkins = $wpdb->get_results($wpdb->prepare(
             "SELECT bs.id as stay_id, bs.check_in_date, bs.check_in_slot, bs.kennel, bs.status,
@@ -78,6 +84,28 @@ class OPB_Dashboard_API extends OPB_REST_Base {
              LIMIT 5";
         $open_tasks = $wpdb->get_results( $open_tasks_sql, ARRAY_A );
 
+        // Today's pet birthdays — single join, no N+1
+        $pet_birthdays_raw = $wpdb->get_results($wpdb->prepare(
+            "SELECT p.name as pet_name,
+                    c.name as client_name,
+                    YEAR(%s) - YEAR(p.birthday) as age
+             FROM {$wpdb->prefix}opb_pets p
+             JOIN {$wpdb->prefix}opb_clients c ON c.id = p.client_id
+             WHERE p.birthday IS NOT NULL
+               AND MONTH(p.birthday) = MONTH(%s)
+               AND DAY(p.birthday)   = DAY(%s)
+             ORDER BY p.name ASC",
+            $today, $today, $today
+        ), ARRAY_A);
+
+        $pet_birthdays = array_map(function($row) {
+            return [
+                'pet_name'    => $row['pet_name'],
+                'client_name' => $row['client_name'],
+                'age'         => (int)$row['age'],
+            ];
+        }, $pet_birthdays_raw);
+
         return $this->success([
             'kpis' => [
                 'active_stays'    => $active_stays,
@@ -86,10 +114,12 @@ class OPB_Dashboard_API extends OPB_REST_Base {
                 'revenue_month'   => $revenue_month,
                 'outstanding'     => $outstanding,
                 'tasks_due'       => $tasks_due,
+                'new_inquiries'   => $new_inquiries,
             ],
             'todays_checkins'  => $todays_checkins,
             'todays_checkouts' => $todays_checkouts,
             'open_tasks'       => $open_tasks,
+            'pet_birthdays'    => $pet_birthdays,
             'date'             => $today,
         ]);
     }

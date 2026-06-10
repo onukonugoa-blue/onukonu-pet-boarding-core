@@ -8,10 +8,12 @@ export interface DashboardData {
     revenue_month: number
     outstanding: number
     tasks_due: number
+    new_inquiries: number
   }
   todays_checkins: CheckinItem[]
   todays_checkouts: CheckoutItem[]
   open_tasks: TaskItem[]
+  pet_birthdays: BirthdayItem[]
   date: string
 }
 
@@ -47,6 +49,12 @@ export interface TaskItem {
   due_date?: string
   assignee?: string
   status: string
+}
+
+export interface BirthdayItem {
+  pet_name: string
+  client_name: string
+  age: number
 }
 
 export const dashboardApi = {

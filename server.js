@@ -332,6 +332,21 @@ function renderPage(activeTab) {
 
         <div class="release-entry">
           <div class="release-header">
+            <span class="release-version">v2.4.0</span>
+            <span class="release-date">9 June 2026</span>
+            <span class="release-tag">Dashboard Enhancement</span>
+          </div>
+          <ul class="release-notes-list">
+            <li><strong>New Inquiries KPI</strong> — counts inquiries in <code>NEW</code> or <code>READY_FOR_REVIEW</code> status; shown in the dashboard KPI row; amber when &gt; 0; not branch-scoped (pipeline is pre-branch)</li>
+            <li><strong>Today's Pet Birthdays</strong> — section below check-ins/check-outs; single JOIN query (<code>opb_pets</code> → <code>opb_clients</code>); shows pet name, owner name, age turning today; "No pet birthdays today" when empty</li>
+            <li>KPI grid updated from <code>lg:grid-cols-6</code> to <code>lg:grid-cols-7</code>; mobile layout unchanged (<code>grid-cols-2</code>)</li>
+            <li>No new tables, no new statuses, no schema changes</li>
+            <li>Files: <code>class-opb-dashboard-api.php</code>, <code>api/dashboard.ts</code>, <code>pages/Dashboard.tsx</code></li>
+          </ul>
+        </div>
+
+        <div class="release-entry">
+          <div class="release-header">
             <span class="release-version">v2.3.1</span>
             <span class="release-date">9 June 2026</span>
             <span class="release-tag">Bug Fix</span>

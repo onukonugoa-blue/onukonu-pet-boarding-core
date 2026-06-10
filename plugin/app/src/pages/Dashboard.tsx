@@ -24,7 +24,7 @@ export default function Dashboard() {
   if (loading) return <div className="flex items-center justify-center py-20 text-gray-400">Loading dashboard…</div>
   if (!data) return null
 
-  const { kpis, todays_checkins, todays_checkouts, open_tasks, date } = data
+  const { kpis, todays_checkins, todays_checkouts, open_tasks, pet_birthdays, date } = data
 
   return (
     <div className="space-y-5">
@@ -34,14 +34,15 @@ export default function Dashboard() {
       </div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         {[
-          { label: 'Active Stays',    value: kpis.active_stays,    color: 'text-green-600' },
-          { label: "Today's Check-ins",  value: kpis.checkins_today,  color: 'text-blue-600' },
-          { label: "Today's Check-outs", value: kpis.checkouts_today, color: 'text-orange-500' },
-          { label: 'Revenue (Month)', value: fmt.inr(kpis.revenue_month), color: 'text-gray-900' },
-          { label: 'Outstanding',     value: fmt.inr(kpis.outstanding),   color: kpis.outstanding > 0 ? 'text-red-600' : 'text-gray-900' },
-          { label: 'Tasks Due',       value: kpis.tasks_due,       color: kpis.tasks_due > 0 ? 'text-red-600' : 'text-gray-900' },
+          { label: 'Active Stays',      value: kpis.active_stays,              color: 'text-green-600' },
+          { label: "Today's Check-ins",  value: kpis.checkins_today,            color: 'text-blue-600' },
+          { label: "Today's Check-outs", value: kpis.checkouts_today,           color: 'text-orange-500' },
+          { label: 'Revenue (Month)',    value: fmt.inr(kpis.revenue_month),    color: 'text-gray-900' },
+          { label: 'Outstanding',        value: fmt.inr(kpis.outstanding),      color: kpis.outstanding > 0 ? 'text-red-600' : 'text-gray-900' },
+          { label: 'Tasks Due',          value: kpis.tasks_due,                 color: kpis.tasks_due > 0 ? 'text-red-600' : 'text-gray-900' },
+          { label: 'New Inquiries',      value: kpis.new_inquiries,             color: kpis.new_inquiries > 0 ? 'text-amber-600' : 'text-gray-900' },
         ].map((k) => (
           <div key={k.label} className="kpi-card">
             <div className={`kpi-value ${k.color}`}>{k.value}</div>
@@ -105,6 +106,28 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Today's pet birthdays */}
+      <div className="card">
+        <div className="card-header">
+          <h2 className="font-semibold text-gray-900">Today's Pet Birthdays</h2>
+        </div>
+        {pet_birthdays.length === 0 ? (
+          <p className="text-sm text-gray-400 py-4 text-center">No pet birthdays today</p>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {pet_birthdays.map((b, i) => (
+              <div key={i} className="flex items-center justify-between py-2">
+                <div>
+                  <span className="text-sm font-medium text-gray-900">{b.pet_name}</span>
+                  <span className="text-xs text-gray-500 ml-2">Owner: {b.client_name}</span>
+                </div>
+                <span className="text-xs text-gray-500">Turning {b.age} today</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Open tasks */}
