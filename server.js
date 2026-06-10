@@ -332,6 +332,20 @@ function renderPage(activeTab) {
 
         <div class="release-entry">
           <div class="release-header">
+            <span class="release-version">v2.5.0</span>
+            <span class="release-date">10 June 2026</span>
+            <span class="release-tag">Task Assignees &amp; Kennel Tasks</span>
+          </div>
+          <ul class="release-notes-list">
+            <li><strong>Feature 1 — User assignee dropdown</strong>: Tasks form replaces the free-text assignee field with a dropdown sourced from OPB users (<code>staffOptions</code> endpoint). Assignee is stored as <code>display_name</code> in the existing <code>VARCHAR(150)</code> column — no schema change. Existing tasks are unaffected.</li>
+            <li><strong>Feature 2 — Auto-task on kennel assignment</strong>: When a staff member is assigned to a kennel via Kennel Settings, a task (<em>Manage Kennel {code}</em>, status <em>Open</em>, priority <em>Medium</em>) is automatically created for the assigned user in the kennel's branch. Duplicate protection: if a task with the same title already exists in that branch, no new task is created. No synchronisation — the task is created once at assignment time and is independent thereafter.</li>
+            <li>Files: <code>class-opb-kennels-api.php</code>, <code>pages/Tasks.tsx</code></li>
+            <li>No new tables, no new REST endpoints, no schema migrations</li>
+          </ul>
+        </div>
+
+        <div class="release-entry">
+          <div class="release-header">
             <span class="release-version">v2.4.0</span>
             <span class="release-date">9 June 2026</span>
             <span class="release-tag">Dashboard Enhancement</span>

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { tasksApi } from '../api/tasks'
 import type { Task } from '../api/tasks'
+import { kennelsApi } from '../api/kennels'
+import type { KennelStaffOption } from '../api/kennels'
 import { useBranchStore } from '../store/branch'
 import { fmt } from '../api/client'
 import StatusBadge from '../components/StatusBadge'
@@ -18,6 +20,7 @@ export default function Tasks() {
   const [editing, setEditing] = useState<Task | null>(null)
   const [form, setForm] = useState<Partial<Task>>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
+  const [staffOptions, setStaffOptions] = useState<KennelStaffOption[]>([])
   const activeBranchId = useBranchStore((s) => s.activeBranchId)
   const branches = useBranchStore((s) => s.branches)
 
@@ -29,6 +32,7 @@ export default function Tasks() {
     tasksApi.list(p).then((r) => setTasks(r.data)).catch(() => {}).finally(() => setLoading(false))
   }
   useEffect(load, [activeBranchId, filter])
+  useEffect(() => { kennelsApi.staffOptions().then(setStaffOptions).catch(() => {}) }, [])
 
   const openNew = () => {
     setEditing(null)
@@ -108,7 +112,7 @@ export default function Tasks() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="form-group"><label className="form-label">Due Date</label><input className="form-input" type="date" value={form.due_date??''} onChange={(e) => set('due_date',e.target.value)} /></div>
-            <div className="form-group"><label className="form-label">Assignee</label><input className="form-input" value={form.assignee??''} onChange={(e) => set('assignee',e.target.value)} /></div>
+            <div className="form-group"><label className="form-label">Assignee</label><select className="form-select" value={form.assignee??''} onChange={(e) => set('assignee',e.target.value)}><option value="">— Unassigned —</option>{staffOptions.map((u) => <option key={u.id} value={u.name}>{u.name}</option>)}</select></div>
           </div>
           <div className="form-group"><label className="form-label">Branch</label><select className="form-select" value={form.branch_id??0} onChange={(e) => set('branch_id',Number(e.target.value))}><option value={0}>Select…</option>{branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
           <div className="form-group"><label className="form-label">Description</label><textarea className="form-input" rows={3} value={form.description??''} onChange={(e) => set('description',e.target.value)} /></div>

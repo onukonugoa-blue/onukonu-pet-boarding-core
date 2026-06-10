@@ -186,6 +186,29 @@ class OPB_Kennels_API extends OPB_REST_Base {
             $kennel_id, $wp_user_id, $wp_user_id
         ));
 
+        // Auto-create a task for this kennel assignment (once only — no duplicates).
+        $kennel_row = $wpdb->get_row( $wpdb->prepare(
+            "SELECT k.code, k.branch_id FROM {$wpdb->prefix}opb_kennels k WHERE k.id=%d", $kennel_id
+        ), ARRAY_A );
+        if ( $kennel_row ) {
+            $task_title = 'Manage Kennel ' . $kennel_row['code'];
+            $exists = $wpdb->get_var( $wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}opb_tasks WHERE title=%s AND branch_id=%d LIMIT 1",
+                $task_title, (int)$kennel_row['branch_id']
+            ) );
+            if ( ! $exists ) {
+                $wpdb->insert( "{$wpdb->prefix}opb_tasks", [
+                    'branch_id'   => (int)$kennel_row['branch_id'],
+                    'title'       => $task_title,
+                    'description' => 'Kennel assignment responsibility.',
+                    'status'      => 'Open',
+                    'priority'    => 'Medium',
+                    'assignee'    => $user->display_name,
+                    'assigned_by' => wp_get_current_user()->display_name,
+                ], [ '%d', '%s', '%s', '%s', '%s', '%s', '%s' ] );
+            }
+        }
+
         return $this->success([
             'kennel_id'  => $kennel_id,
             'wp_user_id' => $wp_user_id,
