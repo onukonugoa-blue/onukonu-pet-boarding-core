@@ -36,19 +36,28 @@ export default function Dashboard() {
       {/* KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         {[
-          { label: 'Active Stays',      value: kpis.active_stays,              color: 'text-green-600' },
-          { label: "Today's Check-ins",  value: kpis.checkins_today,            color: 'text-blue-600' },
-          { label: "Today's Check-outs", value: kpis.checkouts_today,           color: 'text-orange-500' },
-          { label: 'Revenue (Month)',    value: fmt.inr(kpis.revenue_month),    color: 'text-gray-900' },
-          { label: 'Outstanding',        value: fmt.inr(kpis.outstanding),      color: kpis.outstanding > 0 ? 'text-red-600' : 'text-gray-900' },
-          { label: 'Tasks Due',          value: kpis.tasks_due,                 color: kpis.tasks_due > 0 ? 'text-red-600' : 'text-gray-900' },
-          { label: 'New Inquiries',      value: kpis.new_inquiries,             color: kpis.new_inquiries > 0 ? 'text-amber-600' : 'text-gray-900' },
-        ].map((k) => (
-          <div key={k.label} className="kpi-card">
-            <div className={`kpi-value ${k.color}`}>{k.value}</div>
-            <div className="kpi-label">{k.label}</div>
-          </div>
-        ))}
+          { label: 'Active Stays',       value: kpis.active_stays,           color: 'text-green-600',  to: undefined },
+          { label: "Today's Check-ins",  value: kpis.checkins_today,         color: 'text-blue-600',   to: undefined },
+          { label: "Today's Check-outs", value: kpis.checkouts_today,        color: 'text-orange-500', to: undefined },
+          { label: 'Revenue (Month)',    value: fmt.inr(kpis.revenue_month), color: 'text-gray-900',   to: undefined },
+          { label: 'Outstanding',        value: fmt.inr(kpis.outstanding),   color: kpis.outstanding > 0 ? 'text-red-600' : 'text-gray-900', to: undefined },
+          { label: 'Tasks Due',          value: kpis.tasks_due,              color: kpis.tasks_due > 0 ? 'text-red-600' : 'text-gray-900',  to: undefined },
+          { label: 'New Inquiries',      value: kpis.new_inquiries,          color: kpis.new_inquiries > 0 ? 'text-amber-600' : 'text-gray-900', to: '/inquiries' },
+        ].map((k) => {
+          const inner = (
+            <>
+              <div className={`kpi-value ${k.color}`}>{k.value}</div>
+              <div className="kpi-label">{k.label}</div>
+            </>
+          )
+          return k.to ? (
+            <Link key={k.label} to={k.to} className="kpi-card hover:ring-1 hover:ring-amber-300 transition-shadow">
+              {inner}
+            </Link>
+          ) : (
+            <div key={k.label} className="kpi-card">{inner}</div>
+          )
+        })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
