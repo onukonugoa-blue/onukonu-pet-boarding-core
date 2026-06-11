@@ -28,40 +28,68 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-5">
+
+      {/* Page header */}
       <div className="page-header">
         <h1 className="page-title">Dashboard</h1>
         <span className="text-sm text-gray-500">{fmt.date(date)}</span>
       </div>
 
-      {/* KPI row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      {/* New Inquiries Banner — only shown when actionable */}
+      {kpis.new_inquiries > 0 && (
+        <Link
+          to="/inquiries"
+          className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors group"
+        >
+          <svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          <span className="text-sm font-semibold text-amber-800">
+            {kpis.new_inquiries}
+          </span>
+          <span className="text-sm text-amber-700">
+            {kpis.new_inquiries === 1 ? 'New Inquiry' : 'New Inquiries'} awaiting review
+          </span>
+          <span className="ml-auto text-xs font-medium text-amber-500 group-hover:text-amber-700 transition-colors">
+            Review →
+          </span>
+        </Link>
+      )}
+
+      {/* KPI row — 6 operational metrics */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+
+        {/* Standard KPI cards */}
         {[
-          { label: 'Active Stays',       value: kpis.active_stays,           color: 'text-green-600',  to: undefined },
-          { label: "Today's Check-ins",  value: kpis.checkins_today,         color: 'text-blue-600',   to: undefined },
-          { label: "Today's Check-outs", value: kpis.checkouts_today,        color: 'text-orange-500', to: undefined },
-          { label: 'Revenue (Month)',    value: fmt.inr(kpis.revenue_month), color: 'text-gray-900',   to: undefined },
-          { label: 'Outstanding',        value: fmt.inr(kpis.outstanding),   color: kpis.outstanding > 0 ? 'text-red-600' : 'text-gray-900', to: undefined },
-          { label: 'Tasks Due',          value: kpis.tasks_due,              color: kpis.tasks_due > 0 ? 'text-red-600' : 'text-gray-900',  to: undefined },
-          { label: 'New Inquiries',      value: kpis.new_inquiries,          color: kpis.new_inquiries > 0 ? 'text-amber-600' : 'text-gray-900', to: '/inquiries' },
-        ].map((k) => {
-          const inner = (
-            <>
-              <div className={`kpi-value ${k.color}`}>{k.value}</div>
-              <div className="kpi-label">{k.label}</div>
-            </>
-          )
-          return k.to ? (
-            <Link key={k.label} to={k.to} className="kpi-card hover:ring-1 hover:ring-amber-300 transition-shadow">
-              {inner}
-            </Link>
-          ) : (
-            <div key={k.label} className="kpi-card">{inner}</div>
-          )
-        })}
+          { label: 'Active Stays',       value: kpis.active_stays,           color: 'text-green-600'  },
+          { label: "Today's Check-ins",  value: kpis.checkins_today,         color: 'text-blue-600'   },
+          { label: "Today's Check-outs", value: kpis.checkouts_today,        color: 'text-orange-500' },
+          { label: 'Revenue (Month)',    value: fmt.inr(kpis.revenue_month), color: 'text-gray-900'   },
+          { label: 'Outstanding',        value: fmt.inr(kpis.outstanding),   color: kpis.outstanding > 0 ? 'text-red-600' : 'text-gray-900' },
+        ].map((k) => (
+          <div key={k.label} className="kpi-card">
+            <div className={`kpi-value ${k.color}`}>{k.value}</div>
+            <div className="kpi-label">{k.label}</div>
+          </div>
+        ))}
+
+        {/* Tasks Due — accented, actionable */}
+        <Link
+          to="/tasks"
+          className="rounded-lg shadow-sm p-4 flex flex-col bg-blue-50 border border-blue-100 border-l-4 border-l-blue-400 hover:bg-blue-100 transition-colors"
+        >
+          <div className={`kpi-value ${kpis.tasks_due > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+            {kpis.tasks_due}
+          </div>
+          <div className="kpi-label">Tasks Due</div>
+          <span className="mt-2 text-xs font-medium text-blue-500">View tasks →</span>
+        </Link>
+
       </div>
 
+      {/* Check-ins / Check-outs */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Today's check-ins */}
+
         <div className="card">
           <div className="card-header flex items-center justify-between">
             <h2 className="font-semibold text-gray-900">Today's Check-ins ({todays_checkins.length})</h2>
@@ -88,7 +116,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Today's check-outs */}
         <div className="card">
           <div className="card-header flex items-center justify-between">
             <h2 className="font-semibold text-gray-900">Today's Check-outs ({todays_checkouts.length})</h2>
@@ -115,28 +142,7 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-      </div>
 
-      {/* Today's pet birthdays */}
-      <div className="card">
-        <div className="card-header">
-          <h2 className="font-semibold text-gray-900">Today's Pet Birthdays</h2>
-        </div>
-        {pet_birthdays.length === 0 ? (
-          <p className="text-sm text-gray-400 py-4 text-center">No pet birthdays today</p>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {pet_birthdays.map((b, i) => (
-              <div key={i} className="flex items-center justify-between py-2">
-                <div>
-                  <span className="text-sm font-medium text-gray-900">{b.pet_name}</span>
-                  <span className="text-xs text-gray-500 ml-2">Owner: {b.client_name}</span>
-                </div>
-                <span className="text-xs text-gray-500">Turning {b.age} today</span>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Open tasks */}
@@ -158,6 +164,32 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Pet Birthdays — delight section, bottom, low visual weight */}
+      <div className="border-t border-gray-100 pt-4">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+          Pet Birthdays Today
+        </p>
+        {pet_birthdays.length === 0 ? (
+          <p className="text-xs text-gray-400">No pet birthdays today</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {pet_birthdays.map((b, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-50 border border-pink-100 text-pink-700 text-xs"
+              >
+                <span className="font-medium">{b.pet_name}</span>
+                <span className="text-pink-400">·</span>
+                <span>{b.age} yrs</span>
+                <span className="text-pink-400">·</span>
+                <span className="text-pink-600">{b.client_name}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
     </div>
   )
 }

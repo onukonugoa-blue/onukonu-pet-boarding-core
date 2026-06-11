@@ -332,6 +332,21 @@ function renderPage(activeTab) {
 
         <div class="release-entry">
           <div class="release-header">
+            <span class="release-version">v2.5.1</span>
+            <span class="release-date">10 June 2026</span>
+            <span class="release-tag">Dashboard Visual Polish</span>
+          </div>
+          <ul class="release-notes-list">
+            <li><strong>New Inquiries Banner</strong> — replaced KPI card with a slim amber-tinted full-width banner below the page heading; only visible when inquiries &gt; 0; entire banner navigates to /inquiries; icon + count + label + "Review →" affordance; understated amber-50 palette</li>
+            <li><strong>Tasks Due KPI card</strong> — visually distinct from standard cards; blue-50 background, 4px blue-400 left accent border, "View tasks →" link, hover state; data and position unchanged</li>
+            <li><strong>KPI grid</strong> — reduced from 7 to 6 cards (<code>lg:grid-cols-6</code>); tablet breakpoint improved to <code>md:grid-cols-3</code></li>
+            <li><strong>Pet Birthdays</strong> — moved to bottom of dashboard, below Open Tasks; replaced full card with lightweight compact section; pink-50 pill chips per pet; low visual weight</li>
+            <li>No API, query, schema, or logic changes; visual-only patch</li>
+          </ul>
+        </div>
+
+        <div class="release-entry">
+          <div class="release-header">
             <span class="release-version">v2.5.0</span>
             <span class="release-date">10 June 2026</span>
             <span class="release-tag">Task Assignees &amp; Kennel Tasks</span>
