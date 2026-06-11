@@ -332,6 +332,26 @@ function renderPage(activeTab) {
 
         <div class="release-entry">
           <div class="release-header">
+            <span class="release-version">v2.6.0</span>
+            <span class="release-date">11 June 2026</span>
+            <span class="release-tag">Admin Data Management Module</span>
+          </div>
+          <ul class="release-notes-list">
+            <li><strong>New module: Admin Data Management</strong> — super-admin-only panel for controlled archive, restore, and cancellation operations across all four entity types: Clients, Pets, Bookings, and Inquiries</li>
+            <li><strong>Access control</strong> — gated exclusively to <code>opb_super_admin</code> role (<code>opb_manage_settings</code> capability) and WordPress <code>administrator</code>; Branch Managers and Reception have no access; enforced at the REST API layer on every endpoint</li>
+            <li><strong>Clients — archive / restore</strong> — soft-archive sets <code>is_archived = 1</code>; archived clients excluded from all operational selectors (booking creation, inquiries, etc.); historical references (invoices, bookings, stays) preserved intact</li>
+            <li><strong>Pets — archive / restore</strong> — soft-archive sets <code>is_archived = 1</code>; archived pets hidden from booking workflows and the Client Portal My Pets view; all historical booking and stay records retained</li>
+            <li><strong>Bookings — cancel / restore</strong> — new <code>status</code> column (<code>VARCHAR(20) DEFAULT 'Active'</code>) added to <code>opb_bookings</code> via <code>INFORMATION_SCHEMA</code> migration (MySQL 5.7 safe); cancel sets <code>status = 'Cancelled'</code>; restore sets <code>status = 'Active'</code>; idempotent guards on both directions; existing invoices and reports are unaffected</li>
+            <li><strong>Inquiries — archive / restore</strong> — soft-archive sets <code>is_archived = 1</code>; archived inquiries excluded from the dashboard inquiry count and New Inquiries banner; pipeline and conversion records preserved</li>
+            <li><strong>12 new REST endpoints</strong> — all under <code>/wp-json/opb/v1/admin/*</code>; GET list (with search + pagination), PUT archive/cancel, PUT restore for each entity type</li>
+            <li><strong>React UI</strong> — <code>DataManagement.tsx</code> (789 lines): tabbed interface (Clients / Pets / Bookings / Inquiries), search, paginated tables, archive/cancel/restore action buttons, confirmation modals; <code>dataManagement.ts</code> API client</li>
+            <li><strong>Historical reporting integrity</strong> — all archive and cancel operations are non-destructive; revenue, expenses, and booking counts in Reports remain accurate against historical data</li>
+            <li>ZIP: <code>onukonu-pet-boarding-core-v2.6.0.zip</code> — 45 MB, 739 files</li>
+          </ul>
+        </div>
+
+        <div class="release-entry">
+          <div class="release-header">
             <span class="release-version">v2.5.1</span>
             <span class="release-date">10 June 2026</span>
             <span class="release-tag">Dashboard Visual Polish</span>
