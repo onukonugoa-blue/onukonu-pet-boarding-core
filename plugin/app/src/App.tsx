@@ -29,6 +29,7 @@ import Customization from './pages/settings/Customization'
 import Reports from './pages/Reports'
 import InquiryList from './pages/inquiries/InquiryList'
 import InquiryDetail from './pages/inquiries/InquiryDetail'
+import DataManagement from './pages/admin/DataManagement'
 
 export default function App() {
   return (
@@ -64,6 +65,7 @@ export default function App() {
         <Route path="/inquiries"               element={<InquiryList />} />
         <Route path="/inquiries/:id"           element={<InquiryDetail />} />
         <Route path="/reports"                 element={<ErrorBoundary><Reports /></ErrorBoundary>} />
+        <Route path="/admin/data-management"  element={<DataManagement />} />
         <Route path="*"                        element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

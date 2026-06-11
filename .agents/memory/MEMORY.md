@@ -5,3 +5,4 @@
 - [mPDF integration](mpdf-integration.md) — mPDF installed via Composer into plugin/vendor/; require vendor/autoload.php before all other requires; use table-based layout in PDF HTML (no flex/grid); images via base64 data URI for reliability on shared hosting
 - [wpdb::update null/format bug](wpdb-update-format.md) — always supply explicit format arrays to $wpdb->update(); null PHP values without explicit %d/%s cause silent update failure on MySQL strict-mode hosts
 - [MySQL 5.7 ADD COLUMN IF NOT EXISTS incompatibility](mysql57-add-column-ifnotexists.md) — Hostinger shared hosting runs MySQL 5.7; ADD COLUMN IF NOT EXISTS / CREATE INDEX IF NOT EXISTS are MariaDB/MySQL 8.0.3+ only and fail silently; use INFORMATION_SCHEMA checks instead
+- [Data Management module](data-management-module.md) — v2.6.0: super-admin-only archive/restore; gate is opb_manage_settings; bookings needed new status column; all other entities had archive flags already

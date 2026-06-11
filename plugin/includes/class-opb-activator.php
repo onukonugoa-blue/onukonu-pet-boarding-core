@@ -597,12 +597,16 @@ class OPB_Activator {
         // Use self::add_col() and self::idx_exists() instead. Both are
         // compatible with MySQL 5.6+ and are safe to call on every run.
 
-        $invoices_t = "{$wpdb->prefix}opb_invoices";
-        $stays_t    = "{$wpdb->prefix}opb_booking_stays";
-        $clients_t  = "{$wpdb->prefix}opb_clients";
+        $invoices_t  = "{$wpdb->prefix}opb_invoices";
+        $stays_t     = "{$wpdb->prefix}opb_booking_stays";
+        $clients_t   = "{$wpdb->prefix}opb_clients";
+        $bookings_t  = "{$wpdb->prefix}opb_bookings";
 
         // booking_stays: kennel_id (pre-v2.0.0)
         self::add_col( $stays_t, 'kennel_id', 'INT UNSIGNED NULL AFTER kennel' );
+
+        // bookings: status column for Data Management cancel/restore (v2.6.0)
+        self::add_col( $bookings_t, 'status', "VARCHAR(20) NOT NULL DEFAULT 'Active' AFTER payment_status" );
 
         // invoices: doc_* columns for PDF engine
         self::add_col( $invoices_t, 'doc_token',        'VARCHAR(64)      NULL' );

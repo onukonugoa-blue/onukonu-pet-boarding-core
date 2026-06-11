@@ -12,7 +12,7 @@ const AdmZip = require('adm-zip');
 const fs     = require('fs');
 const path   = require('path');
 
-const VERSION     = '2.5.1';
+const VERSION     = '2.6.0';
 const OUTPUT_NAME = `onukonu-pet-boarding-core-v${VERSION}.zip`;
 const OUTPUT_PATH = path.resolve(__dirname, OUTPUT_NAME);
 const PLUGIN_DIR  = path.resolve(__dirname, 'plugin');

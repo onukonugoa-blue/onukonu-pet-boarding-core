@@ -19,6 +19,7 @@ const ALL_LINKS: NavItem[] = [
   { to: '/tasks',    label: 'Tasks',        icon: '✓'  },
   { to: '/expenses', label: 'Expenses',     icon: '💰', roles: ['opb_branch_manager', 'opb_super_admin'] },
   { to: '/reports',  label: 'Reports',      icon: '📊', roles: ['opb_branch_manager', 'opb_super_admin'] },
+  { to: '/admin/data-management', label: 'Data Management', icon: '🛡', roles: ['opb_super_admin'] },
   { to: '/settings', label: 'Settings',     icon: '⚙',  roles: ['opb_super_admin'] },
   { to: '/import',   label: 'Import',       icon: '📥', roles: ['opb_super_admin'] },
 ]
