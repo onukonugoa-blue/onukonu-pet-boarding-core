@@ -39,6 +39,7 @@ export default function Dashboard() {
       {kpis.new_inquiries > 0 && (
         <Link
           to="/inquiries"
+          state={{ statusFilter: 'NEW,READY_FOR_REVIEW' }}
           className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors group"
         >
           <svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">

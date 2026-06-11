@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { inquiriesApi, STATUS_LABELS, STATUS_COLORS } from '../../api/inquiries'
 import type { Inquiry, InquiryStatus } from '../../api/inquiries'
 import { fmt } from '../../api/client'
@@ -10,15 +10,20 @@ const STATUSES: InquiryStatus[] = [
   'READY_FOR_REVIEW', 'CONVERTED', 'REJECTED', 'ARCHIVED',
 ]
 
+const ACTIONABLE_FILTER = 'NEW,READY_FOR_REVIEW'
+
 export default function InquiryList() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [inquiries, setInquiries] = useState<Inquiry[]>([])
   const [total, setTotal]         = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [page, setPage]           = useState(1)
   const [loading, setLoading]     = useState(true)
   const [search, setSearch]       = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('')
+  const [statusFilter, setStatusFilter] = useState<string>(() => {
+    return (location.state as { statusFilter?: string } | null)?.statusFilter ?? ''
+  })
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -83,6 +88,7 @@ export default function InquiryList() {
           className="form-input text-sm w-48"
         >
           <option value="">All Statuses</option>
+          <option value={ACTIONABLE_FILTER}>Actionable (New + Ready)</option>
           {STATUSES.map(s => (
             <option key={s} value={s}>{STATUS_LABELS[s]}</option>
           ))}

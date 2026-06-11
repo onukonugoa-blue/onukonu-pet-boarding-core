@@ -78,8 +78,15 @@ class OPB_Inquiries_API extends OPB_REST_Base {
             $args[]  = $branch_id;
         }
         if ( $status ) {
-            $where[] = 'i.status = %s';
-            $args[]  = $status;
+            $status_list = array_values( array_filter( array_map( 'sanitize_text_field', explode( ',', $status ) ) ) );
+            if ( count( $status_list ) > 1 ) {
+                $placeholders = implode( ',', array_fill( 0, count( $status_list ), '%s' ) );
+                $where[]      = "i.status IN ($placeholders)";
+                $args         = array_merge( $args, $status_list );
+            } else {
+                $where[] = 'i.status = %s';
+                $args[]  = $status_list[0];
+            }
         }
         if ( $search ) {
             $like    = '%'.esc_sql($search).'%';

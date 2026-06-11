@@ -37,8 +37,12 @@ class OPB_Dashboard_API extends OPB_REST_Base {
         $outstanding = (float)$wpdb->get_var(
             "SELECT COALESCE(SUM(i.due),0) FROM {$wpdb->prefix}opb_invoices i WHERE i.due>0$inv_where"
         );
+        $current_user_display_name = wp_get_current_user()->display_name;
         $tasks_due = (int)$wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}opb_tasks t WHERE t.status!='Done' AND t.due_date<=%s$task_where",$today
+            "SELECT COUNT(*) FROM {$wpdb->prefix}opb_tasks t
+             WHERE t.status IN ('Open','Pending','In Progress')
+               AND t.assignee=%s$task_where",
+            $current_user_display_name
         ));
 
         // New inquiries — pipeline items awaiting staff action (not branch-scoped)
