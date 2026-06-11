@@ -77,6 +77,7 @@ export default function Dashboard() {
         {/* Tasks Due — accented, actionable */}
         <Link
           to="/tasks"
+          state={{ myTasks: true }}
           className="rounded-lg shadow-sm p-4 flex flex-col bg-blue-50 border border-blue-100 border-l-4 border-l-blue-400 hover:bg-blue-100 transition-colors"
         >
           <div className={`kpi-value ${kpis.tasks_due > 0 ? 'text-red-600' : 'text-gray-900'}`}>

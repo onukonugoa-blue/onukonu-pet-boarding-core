@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { tasksApi } from '../api/tasks'
 import type { Task } from '../api/tasks'
 import { kennelsApi } from '../api/kennels'
@@ -13,9 +14,13 @@ const PRIORITIES: Task['priority'][] = ['High', 'Medium', 'Low']
 const EMPTY_FORM: Partial<Task> = { title: '', priority: 'Medium', status: 'Open', description: '', due_date: '', assignee: '' }
 
 export default function Tasks() {
+  const location = useLocation()
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('')
+  const [myTasksOnly, setMyTasksOnly] = useState<boolean>(() => {
+    return (location.state as { myTasks?: boolean } | null)?.myTasks ?? false
+  })
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Task | null>(null)
   const [form, setForm] = useState<Partial<Task>>(EMPTY_FORM)
@@ -24,14 +29,17 @@ export default function Tasks() {
   const activeBranchId = useBranchStore((s) => s.activeBranchId)
   const branches = useBranchStore((s) => s.branches)
 
+  const currentUserName = window.OPB?.user?.name ?? ''
+
   const load = () => {
     setLoading(true)
     const p: Record<string, unknown> = { per_page: 100 }
     if (filter) p.status = filter
     if (activeBranchId) p.branch_id = activeBranchId
+    if (myTasksOnly && currentUserName) p.assignee = currentUserName
     tasksApi.list(p).then((r) => setTasks(r.data)).catch(() => {}).finally(() => setLoading(false))
   }
-  useEffect(load, [activeBranchId, filter])
+  useEffect(load, [activeBranchId, filter, myTasksOnly])
   useEffect(() => { kennelsApi.staffOptions().then(setStaffOptions).catch(() => {}) }, [])
 
   const openNew = () => {
@@ -68,10 +76,18 @@ export default function Tasks() {
         <button onClick={openNew} className="btn-primary">+ New Task</button>
       </div>
 
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4 flex-wrap">
         {['', ...STATUSES].map((s) => (
           <button key={s} onClick={() => setFilter(s)} className={`btn btn-sm ${filter===s?'btn-primary':'btn-secondary'}`}>{s||'All'}</button>
         ))}
+        <div className="w-px bg-gray-200 mx-1 self-stretch" />
+        <button
+          onClick={() => setMyTasksOnly((v) => !v)}
+          className={`btn btn-sm ${myTasksOnly ? 'btn-primary' : 'btn-secondary'}`}
+          title={currentUserName ? `Assigned to ${currentUserName}` : 'My Tasks'}
+        >
+          My Tasks{myTasksOnly && currentUserName ? ` (${currentUserName})` : ''}
+        </button>
       </div>
 
       <div className="card">
