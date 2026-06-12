@@ -70,7 +70,7 @@ class OPB_Inquiries_API extends OPB_REST_Base {
         $per_page  = min(100,(int)($r->get_param('per_page')??50));
         $offset    = ($page-1)*$per_page;
 
-        $where = ['1=1'];
+        $where = ["i.status != 'ARCHIVED'"];
         $args  = [];
 
         if ( $branch_id ) {

@@ -30,7 +30,7 @@ class OPB_Clients_API extends OPB_REST_Base {
         $per_page  = min(100,(int)($r->get_param('per_page')??50));
         $offset    = ($page-1)*$per_page;
 
-        $where = ['1=1'];
+        $where = ["c.status != 'archived'"];
         $args  = [];
 
         if($branch_id){

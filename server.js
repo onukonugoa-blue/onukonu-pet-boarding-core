@@ -332,6 +332,24 @@ function renderPage(activeTab) {
 
         <div class="release-entry">
           <div class="release-header">
+            <span class="release-version">v2.6.1</span>
+            <span class="release-date">11 June 2026</span>
+            <span class="release-tag">Lifecycle Integrity Patch</span>
+          </div>
+          <ul class="release-notes-list">
+            <li><strong>Fix: Archived clients appearing in operational workflows</strong> — <code>GET /opb/v1/clients</code> list and search now exclude records where <code>status = 'archived'</code> by default; archived clients no longer appear in client selectors, booking creation, or staff search. Data Management retains full access via its own endpoints.</li>
+            <li><strong>Fix: Archived inquiries appearing in operational queue</strong> — <code>GET /opb/v1/inquiries</code> now excludes <code>status = 'ARCHIVED'</code> by default; archived inquiries no longer surface in the active queue, review queue, or any unfiltered operational view. Dashboard inquiry count and New Inquiries banner were already correct and are unchanged.</li>
+            <li><strong>No change — Pets</strong> — <code>GET /clients/{id}/pets</code> already filtered <code>is_active = 1</code>, correctly excluding archived pets from booking workflows. Confirmed correct; no modification needed.</li>
+            <li><strong>No change — Bookings</strong> — Cancelled bookings remain visible in the operational list per existing lifecycle design; historical records are not hidden.</li>
+            <li><strong>Fix: Currency symbol in Data Management Bookings tab</strong> — replaced <code>₱</code> (Philippine Peso) with <code>₹</code> (Indian Rupee) in <code>DataManagement.tsx</code>; format updated to <code>toLocaleString('en-IN')</code> for consistent Indian numeral grouping. All other pages (Reports, Dashboard, Invoices) were already using <code>₹</code> correctly.</li>
+            <li>Files modified: <code>class-opb-clients-api.php</code>, <code>class-opb-inquiries-api.php</code>, <code>DataManagement.tsx</code></li>
+            <li>PHP syntax validated ✓ &nbsp;|&nbsp; TypeScript validated ✓ &nbsp;|&nbsp; Vite build: 108 modules, 0 warnings ✓</li>
+            <li>ZIP: <code>onukonu-pet-boarding-core-v2.6.1.zip</code> — 45 MB, 739 files</li>
+          </ul>
+        </div>
+
+        <div class="release-entry">
+          <div class="release-header">
             <span class="release-version">v2.6.0</span>
             <span class="release-date">11 June 2026</span>
             <span class="release-tag">Admin Data Management Module</span>

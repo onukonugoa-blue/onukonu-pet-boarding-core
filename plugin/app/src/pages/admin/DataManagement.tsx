@@ -600,7 +600,7 @@ function BookingsTab() {
                 <td className="px-4 py-2.5 text-gray-600 max-w-xs truncate">{b.pet_names ?? '—'}</td>
                 <td className="px-4 py-2.5 text-gray-600">{b.branch_name ?? '—'}</td>
                 <td className="px-4 py-2.5 text-right text-gray-700">
-                  ₱{Number(b.total_billing_amount).toLocaleString()}
+                  ₹{Number(b.total_billing_amount).toLocaleString('en-IN')}
                 </td>
                 <td className="px-4 py-2.5">
                   <div className="flex flex-col gap-1">
