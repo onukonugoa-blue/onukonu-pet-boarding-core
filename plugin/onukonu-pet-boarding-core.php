@@ -3,7 +3,7 @@
  * Plugin Name: Onukonu Pet Boarding Core
  * Plugin URI:  https://onukonu.com
  * Description: Replacement platform for the discontinued boarding SaaS. Manages clients, pets, bookings, invoices, payments, and operations across three branches.
- * Version:     2.6.1
+ * Version:     2.7.0
  * Author:      Onukonu Pet Homestyle Boarding
  * License:     GPL-2.0-or-later
  * Text Domain: opb
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'OPB_VERSION',     '2.6.0' );
+define( 'OPB_VERSION',     '2.7.0' );
 define( 'OPB_PLUGIN_FILE', __FILE__ );
 define( 'OPB_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
 define( 'OPB_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
@@ -65,6 +65,7 @@ require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-invoices-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-payments-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-tasks-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-expenses-api.php';
+require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-expense-categories-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-settings-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-dashboard-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-import-api.php';
@@ -121,7 +122,8 @@ function opb_register_rest_routes(): void {
     ( new OPB_Invoices_API()  )->register_routes();
     ( new OPB_Payments_API()  )->register_routes();
     ( new OPB_Tasks_API()     )->register_routes();
-    ( new OPB_Expenses_API()  )->register_routes();
+    ( new OPB_Expenses_API()            )->register_routes();
+    ( new OPB_Expense_Categories_API()  )->register_routes();
     ( new OPB_Settings_API()  )->register_routes();
     ( new OPB_Dashboard_API() )->register_routes();
     ( new OPB_Import_API()    )->register_routes();

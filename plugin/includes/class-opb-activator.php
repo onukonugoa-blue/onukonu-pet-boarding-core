@@ -379,6 +379,17 @@ class OPB_Activator {
             KEY idx_branch (branch_id)
         ) ENGINE=InnoDB $charset;";
 
+        // ── Expense Categories ────────────────────────────────────────────────────
+        $tables[] = "CREATE TABLE {$wpdb->prefix}opb_expense_categories (
+            id         INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+            name       VARCHAR(100)  NOT NULL,
+            is_active  TINYINT(1)    NOT NULL DEFAULT 1,
+            sort_order SMALLINT      NOT NULL DEFAULT 0,
+            created_at DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uq_cat_name (name)
+        ) ENGINE=InnoDB $charset;";
+
         // ── Inquiry & Onboarding Pipeline ─────────────────────────────────────────
 
         $tables[] = "CREATE TABLE {$wpdb->prefix}opb_inquiries (
@@ -643,6 +654,24 @@ class OPB_Activator {
                 KEY idx_event (event)
             ) ENGINE=InnoDB $charset"
         );
+
+        // expenses: recorded_by_name convenience field (v2.7.0)
+        $expenses_t = "{$wpdb->prefix}opb_expenses";
+        self::add_col( $expenses_t, 'recorded_by_name', 'VARCHAR(150) NULL AFTER recorded_by' );
+
+        // Seed default expense categories if table is empty (v2.7.0)
+        $cat_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}opb_expense_categories" );
+        if ( $cat_count === 0 ) {
+            $defaults = ['Food','Medical','Grooming','Maintenance','Salary','Transport','Marketing','Other'];
+            $order    = 0;
+            foreach ( $defaults as $name ) {
+                $wpdb->insert(
+                    "{$wpdb->prefix}opb_expense_categories",
+                    [ 'name' => $name, 'is_active' => 1, 'sort_order' => $order++ ],
+                    [ '%s', '%d', '%d' ]
+                );
+            }
+        }
 
         update_option( 'opb_db_version', OPB_VERSION );
     }

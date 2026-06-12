@@ -26,6 +26,7 @@ import BoardingCatalogue from './pages/settings/BoardingCatalogue'
 import AddonCatalogue from './pages/settings/AddonCatalogue'
 import KennelSettings from './pages/settings/KennelSettings'
 import Customization from './pages/settings/Customization'
+import ExpenseCategories from './pages/settings/ExpenseCategories'
 import Reports from './pages/Reports'
 import InquiryList from './pages/inquiries/InquiryList'
 import InquiryDetail from './pages/inquiries/InquiryDetail'
@@ -61,7 +62,8 @@ export default function App() {
         <Route path="/settings/addons"         element={<AddonCatalogue />} />
         <Route path="/settings/staff"          element={<Staff />} />
         <Route path="/settings/kennels"          element={<KennelSettings />} />
-        <Route path="/settings/customization"  element={<Customization />} />
+        <Route path="/settings/customization"        element={<Customization />} />
+        <Route path="/settings/expense-categories"  element={<ExpenseCategories />} />
         <Route path="/inquiries"               element={<InquiryList />} />
         <Route path="/inquiries/:id"           element={<InquiryDetail />} />
         <Route path="/reports"                 element={<ErrorBoundary><Reports /></ErrorBoundary>} />

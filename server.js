@@ -332,6 +332,29 @@ function renderPage(activeTab) {
 
         <div class="release-entry">
           <div class="release-header">
+            <span class="release-version">v2.7.0</span>
+            <span class="release-date">12 June 2026</span>
+            <span class="release-tag">Expense Management Enhancement</span>
+          </div>
+          <ul class="release-notes-list">
+            <li><strong>New: Expense Category Management</strong> — Settings → Expense Categories; Super Admin / Admin only; create, rename, archive and restore categories; 8 default categories seeded on activation (Food, Medical, Grooming, Maintenance, Salary, Transport, Marketing, Other); archived categories hidden from the Add Expense form but historical records remain intact</li>
+            <li><strong>New: Dynamic category filter</strong> — filter dropdown on Expenses page now generated from <code>GET /opb/v1/expenses/categories</code> which returns DISTINCT actual values from expense data; covers legacy imported categories that were never in the hard-coded list; no hard-coded list remains</li>
+            <li><strong>New: Default date range (current month)</strong> — Expenses page defaults to the current calendar month on load instead of showing all records; Clear button resets to current month, not blank</li>
+            <li><strong>New: Quick date filters</strong> — Today · This Month · Last Month · This Year preset buttons above the filter row</li>
+            <li><strong>New: Expense summary panel</strong> — three KPI cards above the table: Total Expenses (₹), Number of Entries, Top Category; computed from the same filtered dataset; no charts, no analytics</li>
+            <li><strong>New: User attribution (Created By)</strong> — new column <code>recorded_by_name VARCHAR(150)</code> added to <code>opb_expenses</code>; populated automatically on <code>create_item()</code> from WordPress <code>display_name</code>; cannot be overridden by client; <code>GET /expenses</code> also JOINs <code>wp_users</code> as fallback for existing records where <code>recorded_by</code> is set but <code>recorded_by_name</code> is null; imported records with no <code>recorded_by</code> display "System Import"</li>
+            <li><strong>Add expense form</strong> — Category dropdown now sourced from active managed categories (<code>GET /opb/v1/expense-categories</code>); immediately reflects newly added categories</li>
+            <li><strong>Schema</strong> — new table <code>opb_expense_categories</code> (id, name, is_active, sort_order, created_at, UNIQUE KEY on name); new column <code>recorded_by_name VARCHAR(150) NULL</code> on <code>opb_expenses</code>; both applied via idempotent <code>add_col()</code> and <code>CREATE TABLE IF NOT EXISTS</code> compatible with MySQL 5.7</li>
+            <li><strong>New REST endpoints</strong> — <code>GET /opb/v1/expense-categories</code>, <code>POST /opb/v1/expense-categories</code>, <code>PUT /opb/v1/expense-categories/{id}</code>, <code>DELETE /opb/v1/expense-categories/{id}</code> (soft archive), <code>GET /opb/v1/expenses/categories</code> (distinct filter values)</li>
+            <li><strong>Reports unaffected</strong> — <code>expenses_by_category</code> in Reports continues to group by the raw <code>category</code> string; no changes to reports logic</li>
+            <li><strong>Existing data preserved</strong> — no migration of expense records; imported records retain their original category strings; <code>recorded_by</code> / <code>recorded_by_name</code> remain NULL on imported rows</li>
+            <li>PHP syntax validated ✓ &nbsp;|&nbsp; TypeScript validated ✓ &nbsp;|&nbsp; Vite build: 110 modules, 0 warnings ✓</li>
+            <li>ZIP: <code>onukonu-pet-boarding-core-v2.7.0.zip</code> — 45 MB, 740 files</li>
+          </ul>
+        </div>
+
+        <div class="release-entry">
+          <div class="release-header">
             <span class="release-version">v2.6.1</span>
             <span class="release-date">11 June 2026</span>
             <span class="release-tag">Lifecycle Integrity Patch</span>
