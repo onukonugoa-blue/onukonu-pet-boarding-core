@@ -135,6 +135,9 @@ class OPB_Expenses_API extends OPB_REST_Base {
              LEFT JOIN {$wpdb->prefix}opb_branches b ON b.id=e.branch_id
              WHERE e.id=%d",$wpdb->insert_id
         ),ARRAY_A);
+        if ( $row ) {
+            OPB_Opsmail::push_expense_if_large( $row );
+        }
         return $this->success($row,201);
     }
 

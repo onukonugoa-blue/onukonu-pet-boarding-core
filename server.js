@@ -332,6 +332,24 @@ function renderPage(activeTab) {
 
         <div class="release-entry">
           <div class="release-header">
+            <span class="release-version">v2.8.0</span>
+            <span class="release-date">16 June 2026</span>
+            <span class="release-tag">OPSMAIL Operational Intelligence Layer</span>
+          </div>
+          <ul class="release-notes-list">
+            <li><strong>New: OPSMAIL event queue</strong> — additive-only <code>opb_opsmail_queue</code> table (19 columns); created via <code>dbDelta()</code>, MySQL 5.7 compatible; fields: <code>event_uuid</code> CHAR(36) UNIQUE, <code>event_type</code>, <code>entity_type</code>, <code>entity_id</code>, <code>branch_id</code>, <code>user_id</code>, <code>origin_type</code> ENUM(SYSTEM/TRUSTED_MAILBOX), <code>priority</code>, <code>subject</code>, <code>summary</code>, <code>payload_json</code>, <code>recipient_email</code>, <code>status</code> ENUM(PENDING/SENT/FAILED/ACKNOWLEDGED), <code>mail_attempts</code>, <code>last_error</code>, <code>created_at</code>, <code>sent_at</code></li>
+            <li><strong>New: <code>class-opb-opsmail.php</code></strong> — core engine; all public methods wrapped in <code>try/catch(\Throwable)</code> — OPSMAIL will never throw, never block, never break business workflows; event taxonomy: 11 event types; HTML email format with <code>X-Ops-*</code> custom headers; settings helpers: <code>is_enabled()</code>, <code>inbox_email()</code>, <code>trusted_origins()</code>, <code>expense_threshold()</code></li>
+            <li><strong>New: 5 hook points</strong> — <code>INQUIRY.RECEIVED</code> (after submit_inquiry); <code>CLIENT.ONBOARDING_RECEIVED</code> (after accept_terms → READY_FOR_REVIEW); <code>BOOKING.CONFIRMED</code> (after create_item + invoice generation); <code>TASK.CREATED</code> (after tasks insert); <code>EXPENSE.LARGE_RECORDED</code> (after expense insert when amount ≥ threshold)</li>
+            <li><strong>New: REST API</strong> — <code>GET /opb/v1/opsmail/queue</code> (paginated, filtered); <code>GET /opb/v1/opsmail/stats</code> (counts by status/event + recent failures); <code>POST /opb/v1/opsmail/queue/{id}/acknowledge</code> — all <code>manage_options</code> gated</li>
+            <li><strong>New: Administration → OPSMAIL Queue</strong> — PHP-rendered WP admin page (no React rebuild); live filterable table with status/config warning banner, pagination, HIGH-priority highlighting; hover shows full last_error</li>
+            <li><strong>New: OPSMAIL settings</strong> — 4 new entries in Customisation (category <code>opsmail</code>): <code>opsmail_enabled</code> (0/1), <code>opsmail_inbox_email</code>, <code>opsmail_trusted_origins</code> (textarea, one per line), <code>opsmail_expense_threshold</code> (default 5000)</li>
+            <li><strong>Zero regression</strong> — no existing class, method, route, or DB table modified; OPSMAIL code is purely additive</li>
+            <li>ZIP: <code>onukonu-pet-boarding-core-v2.8.0.zip</code> — 45 MB, 742 files</li>
+          </ul>
+        </div>
+
+        <div class="release-entry">
+          <div class="release-header">
             <span class="release-version">v2.7.0</span>
             <span class="release-date">12 June 2026</span>
             <span class="release-tag">Expense Management Enhancement</span>

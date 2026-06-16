@@ -2,6 +2,50 @@
 
 ---
 
+## v2.8.0 — OPSMAIL Operational Intelligence Layer — 2026-06-16
+
+### Overview
+OPSMAIL is an additive-only operational event queue with email emission, a queue viewer, and configurable settings. Zero regression on all existing functionality. Every OPSMAIL call is wrapped in `try/catch(\Throwable)` — it will never throw, never block, and never break any existing business workflow.
+
+### New: `opb_opsmail_queue` table
+- 19-column event queue: `event_uuid` (CHAR 36 UNIQUE), `event_type`, `entity_type`, `entity_id`, `branch_id`, `user_id`, `origin_type` ENUM (SYSTEM / TRUSTED_MAILBOX), `priority`, `subject`, `summary`, `payload_json`, `recipient_email`, `status` ENUM (PENDING / SENT / FAILED / ACKNOWLEDGED), `mail_attempts`, `last_error`, `created_at`, `sent_at`.
+- Created via `dbDelta()` inside `OPB_Activator::create_tables()` — MySQL 5.7 compatible, no `IF NOT EXISTS` column syntax.
+- Version bump to `2.8.0` triggers table creation on next WordPress `init`.
+
+### New: `plugin/includes/class-opb-opsmail.php` — Core OPSMAIL Engine
+- `OPB_Opsmail::push_inquiry_received($inquiry)` — fires after `submit_inquiry()` succeeds.
+- `OPB_Opsmail::push_onboarding_received($inquiry, $ob_client)` — fires after `accept_terms()` advances inquiry to READY_FOR_REVIEW.
+- `OPB_Opsmail::push_booking_confirmed($booking_id, $branch_id, $client_id)` — fires after `OPB_Invoice_Generator::create_for_booking()`.
+- `OPB_Opsmail::push_task_created($task_id, $branch_id, $data)` — fires after `opb_tasks` insert.
+- `OPB_Opsmail::push_expense_if_large($row)` — fires after expense insert when amount ≥ `opsmail_expense_threshold` (default ₹5,000).
+- Private `push_event()` appends to queue, then calls `emit()` only when `opsmail_enabled = 1` and inbox email is configured.
+- Private `emit()` calls `wp_mail()`, updates `status` to SENT or FAILED (with `last_error`). Never re-throws.
+- HTML email format: styled badge + event detail table + machine-readable JSON metadata block in `<pre>`. Custom `X-Ops-*` mail headers.
+- Settings helpers: `is_enabled()`, `inbox_email()`, `trusted_origins()`, `expense_threshold()`.
+
+### New: `plugin/includes/api/class-opb-opsmail-api.php` — REST Queue API
+- `GET /opb/v1/opsmail/queue` — paginated queue list with filters: `status`, `event_type`, `date_from`, `date_to`, `search`. `manage_options` only.
+- `GET /opb/v1/opsmail/stats` — counts by status + counts by event type + recent failures + `opsmail_enabled` / `inbox_configured` flags. `manage_options` only.
+- `POST /opb/v1/opsmail/queue/{id}/acknowledge` — marks one event as ACKNOWLEDGED. `manage_options` only.
+
+### New: OPSMAIL Queue admin page — `Administration → OPSMAIL Queue`
+- PHP-rendered WP admin page (no React rebuild required). Slug: `opb-opsmail-queue`.
+- Inline status/config warning banner when OPSMAIL is disabled or inbox is not configured.
+- Filterable table: event type, status, free-text search; paginated at 50 events per page.
+- Row hover shows full `last_error` text. HIGH-priority rows highlighted in red.
+
+### New: OPSMAIL settings — `Settings → Customisation → OPSMAIL`
+Four new entries in `OPB_Customizations::REGISTRY` (category `opsmail`):
+- `opsmail_enabled` — `'0'` / `'1'` toggle (default `'0'`). Controls email emission; queue is always populated.
+- `opsmail_inbox_email` — email address that receives all OPSMAIL events.
+- `opsmail_trusted_origins` — textarea; one trusted sender mailbox per line.
+- `opsmail_expense_threshold` — large-expense trigger amount (default `5000`).
+
+### Event taxonomy (initial set)
+`INQUIRY.RECEIVED`, `CLIENT.ONBOARDING_RECEIVED`, `BOOKING.REQUEST_RECEIVED`, `BOOKING.CONFIRMED`, `BOOKING.MODIFICATION_REQUESTED`, `BOOKING.CANCELLED`, `SUPPORT.REQUEST_RECEIVED`, `PAYMENT.ISSUE_REPORTED`, `EXPENSE.LARGE_RECORDED`, `TASK.CREATED`, `SYSTEM.ERROR`
+
+---
+
 ## Recovery & Stabilization Sprint — 2026-05-30
 
 ### Critical Fixes

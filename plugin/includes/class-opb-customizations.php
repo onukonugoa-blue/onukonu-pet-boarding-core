@@ -289,6 +289,32 @@ Thank you! 🐾
 {{FACILITY_NAME}}',
         ],
 
+        // ── OPSMAIL ───────────────────────────────────────────────────────────
+        'opsmail_enabled' => [
+            'category' => 'opsmail',
+            'label'    => 'OPSMAIL Enabled (enter 1 to enable, 0 to disable)',
+            'type'     => 'text',
+            'default'  => '0',
+        ],
+        'opsmail_inbox_email' => [
+            'category' => 'opsmail',
+            'label'    => 'OPSMAIL Inbox Email',
+            'type'     => 'text',
+            'default'  => '',
+        ],
+        'opsmail_trusted_origins' => [
+            'category' => 'opsmail',
+            'label'    => 'Trusted Origin Mailboxes (one per line)',
+            'type'     => 'textarea',
+            'default'  => '',
+        ],
+        'opsmail_expense_threshold' => [
+            'category' => 'opsmail',
+            'label'    => 'Large Expense Threshold (amount in base currency)',
+            'type'     => 'text',
+            'default'  => '5000',
+        ],
+
         // ── CLIENT PORTAL ─────────────────────────────────────────────────────
         'client_portal_whatsapp_message' => [
             'category' => 'client_portal',

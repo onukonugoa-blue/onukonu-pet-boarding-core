@@ -35,16 +35,202 @@ class OPB_Admin_Page {
                 [ self::class, 'render' ]
             );
         }
+
+        add_submenu_page(
+            'opb-dashboard',
+            'OPSMAIL Queue',
+            'OPSMAIL Queue',
+            'manage_options',
+            'opb-opsmail-queue',
+            [ self::class, 'render_opsmail_queue' ]
+        );
     }
 
     public static function render(): void {
         echo '<div id="opb-root"></div>';
     }
 
+    public static function render_opsmail_queue(): void {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'Insufficient permissions.' );
+        }
+
+        global $wpdb;
+        $table = "{$wpdb->prefix}opb_opsmail_queue";
+
+        $page     = max( 1, (int) ( $_GET['paged'] ?? 1 ) );
+        $per_page = 50;
+        $offset   = ( $page - 1 ) * $per_page;
+
+        $status     = sanitize_text_field( $_GET['opb_status']     ?? '' );
+        $event_type = sanitize_text_field( $_GET['opb_event_type'] ?? '' );
+        $search     = sanitize_text_field( $_GET['opb_search']     ?? '' );
+
+        $where = [ '1=1' ];
+        $args  = [];
+
+        if ( $status ) {
+            $where[] = 'q.status = %s';
+            $args[]  = $status;
+        }
+        if ( $event_type ) {
+            $where[] = 'q.event_type = %s';
+            $args[]  = $event_type;
+        }
+        if ( $search ) {
+            $like    = '%' . $wpdb->esc_like( $search ) . '%';
+            $where[] = '(q.subject LIKE %s OR q.event_type LIKE %s)';
+            $args    = array_merge( $args, [ $like, $like ] );
+        }
+
+        $where_sql = implode( ' AND ', $where );
+
+        $total = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$table} q WHERE {$where_sql}",
+            ...$args
+        ) );
+
+        $rows = $wpdb->get_results( $wpdb->prepare(
+            "SELECT q.id, q.event_uuid, q.event_type, q.entity_type, q.entity_id,
+                    q.branch_id, q.origin_type, q.priority, q.subject,
+                    q.recipient_email, q.status, q.mail_attempts, q.last_error,
+                    q.created_at, q.sent_at,
+                    b.name AS branch_name
+             FROM {$table} q
+             LEFT JOIN {$wpdb->prefix}opb_branches b ON b.id = q.branch_id
+             WHERE {$where_sql}
+             ORDER BY q.id DESC
+             LIMIT %d OFFSET %d",
+            ...[ ...$args, $per_page, $offset ]
+        ), ARRAY_A ) ?? [];
+
+        $total_pages = (int) ceil( $total / $per_page );
+
+        $status_badge = static function( string $s ): string {
+            $colours = [
+                'SENT'         => '#166534',
+                'PENDING'      => '#92400e',
+                'FAILED'       => '#991b1b',
+                'ACKNOWLEDGED' => '#374151',
+            ];
+            $colour = $colours[ $s ] ?? '#374151';
+            return '<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;'
+                . 'background:' . $colour . ';color:#fff;letter-spacing:.5px">' . esc_html( $s ) . '</span>';
+        };
+
+        $base_url = admin_url( 'admin.php?page=opb-opsmail-queue' );
+        $filter_qs = http_build_query( array_filter( [
+            'opb_status'     => $status,
+            'opb_event_type' => $event_type,
+            'opb_search'     => $search,
+        ] ) );
+        ?>
+        <div class="wrap" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+            <h1 style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+                <span style="background:#1e3a8a;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:4px;letter-spacing:2px">OPSMAIL</span>
+                Operational Event Queue
+                <span style="font-size:13px;color:#6b7280;font-weight:400"><?php echo esc_html( $total ); ?> event<?php echo $total !== 1 ? 's' : ''; ?></span>
+            </h1>
+
+            <?php
+            $enabled  = OPB_Opsmail::is_enabled();
+            $inbox_ok = OPB_Opsmail::inbox_email() !== '';
+            if ( ! $enabled || ! $inbox_ok ) {
+                echo '<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:12px 16px;margin-bottom:20px;color:#92400e">';
+                if ( ! $enabled ) echo '<strong>OPSMAIL emission is disabled.</strong> Set <code>opsmail_enabled</code> to <code>1</code> in Customisation settings to activate email sending. Events are still queued.<br>';
+                if ( ! $inbox_ok ) echo '<strong>No inbox email configured.</strong> Set <code>opsmail_inbox_email</code> in Customisation → OPSMAIL.';
+                echo '</div>';
+            }
+            ?>
+
+            <form method="get" style="margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                <input type="hidden" name="page" value="opb-opsmail-queue">
+                <input type="text" name="opb_search" value="<?php echo esc_attr( $search ); ?>"
+                    placeholder="Search subject / event…"
+                    style="padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;min-width:220px">
+                <select name="opb_status" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:13px">
+                    <option value="">All statuses</option>
+                    <?php foreach ( [ 'PENDING', 'SENT', 'FAILED', 'ACKNOWLEDGED' ] as $s ) : ?>
+                        <option value="<?php echo esc_attr( $s ); ?>" <?php selected( $status, $s ); ?>><?php echo esc_html( $s ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <select name="opb_event_type" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:13px">
+                    <option value="">All events</option>
+                    <?php foreach ( OPB_Opsmail::EVENT_TYPES as $et ) : ?>
+                        <option value="<?php echo esc_attr( $et ); ?>" <?php selected( $event_type, $et ); ?>><?php echo esc_html( $et ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="submit" class="button">Filter</button>
+                <?php if ( $status || $event_type || $search ) : ?>
+                    <a href="<?php echo esc_url( $base_url ); ?>" class="button">Clear</a>
+                <?php endif; ?>
+            </form>
+
+            <?php if ( empty( $rows ) ) : ?>
+                <p style="color:#6b7280;font-style:italic">No events found.</p>
+            <?php else : ?>
+                <table class="wp-list-table widefat striped" style="font-size:13px">
+                    <thead>
+                        <tr>
+                            <th style="width:40px">#</th>
+                            <th>Event Type</th>
+                            <th>Subject</th>
+                            <th>Entity</th>
+                            <th>Branch</th>
+                            <th>Origin</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Attempts</th>
+                            <th>Created</th>
+                            <th>Sent</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ( $rows as $row ) : ?>
+                            <tr title="<?php echo esc_attr( $row['last_error'] ?? '' ); ?>">
+                                <td style="color:#9ca3af"><?php echo (int) $row['id']; ?></td>
+                                <td><code style="font-size:11px"><?php echo esc_html( $row['event_type'] ); ?></code></td>
+                                <td><?php echo esc_html( $row['subject'] ); ?>
+                                    <?php if ( $row['last_error'] ) : ?>
+                                        <br><small style="color:#dc2626" title="<?php echo esc_attr( $row['last_error'] ); ?>">
+                                            ⚠ <?php echo esc_html( mb_substr( $row['last_error'], 0, 80 ) ); ?>
+                                        </small>
+                                    <?php endif; ?>
+                                </td>
+                                <td><?php echo esc_html( $row['entity_type'] ); ?> #<?php echo (int) $row['entity_id']; ?></td>
+                                <td><?php echo esc_html( $row['branch_name'] ?? ( $row['branch_id'] ? '#' . $row['branch_id'] : '—' ) ); ?></td>
+                                <td><span style="font-size:11px"><?php echo esc_html( $row['origin_type'] ); ?></span></td>
+                                <td style="font-size:11px;font-weight:<?php echo $row['priority'] === 'HIGH' ? '700' : '400'; ?>;color:<?php echo $row['priority'] === 'HIGH' ? '#dc2626' : 'inherit'; ?>">
+                                    <?php echo esc_html( $row['priority'] ); ?>
+                                </td>
+                                <td><?php echo $status_badge( $row['status'] ); ?></td>
+                                <td><?php echo (int) $row['mail_attempts']; ?></td>
+                                <td style="white-space:nowrap;font-size:11px"><?php echo esc_html( $row['created_at'] ); ?></td>
+                                <td style="white-space:nowrap;font-size:11px"><?php echo esc_html( $row['sent_at'] ?? '—' ); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+
+                <?php if ( $total_pages > 1 ) : ?>
+                    <div style="margin-top:16px;display:flex;gap:8px;align-items:center">
+                        <span style="color:#6b7280;font-size:13px">Page <?php echo $page; ?> of <?php echo $total_pages; ?></span>
+                        <?php if ( $page > 1 ) : ?>
+                            <a class="button" href="<?php echo esc_url( $base_url . '&paged=' . ( $page - 1 ) . ( $filter_qs ? '&' . $filter_qs : '' ) ); ?>">← Prev</a>
+                        <?php endif; ?>
+                        <?php if ( $page < $total_pages ) : ?>
+                            <a class="button" href="<?php echo esc_url( $base_url . '&paged=' . ( $page + 1 ) . ( $filter_qs ? '&' . $filter_qs : '' ) ); ?>">Next →</a>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+
     public static function enqueue_assets(): void {
         $dist = OPB_PLUGIN_URL . 'assets/dist/';
 
-        // Vite generates assets with hashes; we use a manifest if present
         $manifest_path = OPB_PLUGIN_DIR . 'assets/dist/.vite/manifest.json';
         $js_file  = 'assets/index.js';
         $css_file = 'assets/index.css';

@@ -101,6 +101,8 @@ class OPB_Public_API extends OPB_REST_Base {
         OPB_Notifications::notify_new_inquiry( $inquiry_for_notify );
         OPB_Notifications::notify_customer_inquiry_received( $inquiry_for_notify );
 
+        OPB_Opsmail::push_inquiry_received( $inquiry_for_notify );
+
         $response = [ 'message' => 'Thank you! Your inquiry has been received. Our team will be in touch shortly.' ];
 
         if ( $existing_client ) {
@@ -417,6 +419,7 @@ class OPB_Public_API extends OPB_REST_Base {
             ), ARRAY_A ) ?? [];
 
             OPB_Notifications::notify_onboarding_complete( $inquiry, $ob_client_row );
+            OPB_Opsmail::push_onboarding_received( $inquiry, $ob_client_row );
         }
 
         return $this->success( [ 'message' => 'Terms accepted. Thank you.' ] );

@@ -79,7 +79,9 @@ class OPB_Tasks_API extends OPB_REST_Base {
             'assignee'    => sanitize_text_field($d['assignee']??''),
             'assigned_by' => wp_get_current_user()->display_name,
         ]);
-        $req=new WP_REST_Request('GET'); $req['id']=(int)$wpdb->insert_id;
+        $task_id = (int)$wpdb->insert_id;
+        OPB_Opsmail::push_task_created( $task_id, (int)$d['branch_id'], $d );
+        $req=new WP_REST_Request('GET'); $req['id']=$task_id;
         return $this->get_item($req);
     }
 

@@ -189,6 +189,8 @@ class OPB_Bookings_API extends OPB_REST_Base {
 
         OPB_Invoice_Generator::create_for_booking($booking_id);
 
+        OPB_Opsmail::push_booking_confirmed( $booking_id, (int)$d['branch_id'], (int)$d['client_id'] );
+
         $req = new WP_REST_Request('GET'); $req['id'] = $booking_id;
         return $this->get_item($req);
     }

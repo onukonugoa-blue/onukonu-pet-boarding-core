@@ -1,0 +1,568 @@
+OPB v2.8.0 – OPSMAIL OPERATIONAL INTELLIGENCE LAYER
+
+Context
+
+Repository baseline:
+
+Commit:
+8a824d7c5c6945f1e1264a9c082e2e4403d6a238
+
+Release:
+v2.7.0 – Expense Management Enhancement
+
+This is a fresh Replit session.
+
+The objective is to implement the first production version of OPSMAIL.
+
+OPSMAIL is an Operational Intelligence Layer.
+
+It is NOT a customer notification system.
+
+It is NOT a replacement for SMTP.
+
+It is NOT a workflow engine.
+
+It is NOT a task management system.
+
+It is NOT a Telegram integration.
+
+OPSMAIL is a curated operational event queue designed for future consumption by:
+
+- Telegram Bots
+- Operations Groups
+- AI Summarizers
+- Task Generators
+- Reporting Systems
+
+---
+
+CRITICAL NON-NEGOTIABLE REQUIREMENT
+
+ZERO REGRESSION.
+
+Existing functionality must remain completely untouched.
+
+The following systems must continue functioning exactly as they do today:
+
+✓ OTP emails
+
+✓ Client Portal access
+
+✓ Customer notifications
+
+✓ Booking confirmation emails
+
+✓ Invoice emails
+
+✓ Contact form emails
+
+✓ SMTP configuration
+
+✓ Existing notification channels
+
+✓ Existing mail templates
+
+✓ Existing workflows
+
+OPSMAIL must be additive only.
+
+No existing email path may be intercepted, modified, wrapped, rerouted, delayed or replaced.
+
+If there is uncertainty:
+
+Preserve current behaviour.
+
+---
+
+OPSMAIL DESIGN PRINCIPLE
+
+OPSMAIL is NOT an audit log.
+
+OPSMAIL is NOT a generic event bus.
+
+OPSMAIL is a queue of operationally significant events.
+
+Only events that may require:
+
+- Awareness
+- Coordination
+- Assignment
+- Escalation
+- Follow-up
+- Review
+
+should enter OPSMAIL.
+
+The intended future flow is:
+
+OPB
+↓
+OPSMAIL Queue
+↓
+OPSMAIL Mailbox
+↓
+Telegram Group
+↓
+Manager Action
+
+The business database remains the source of truth.
+
+---
+
+FEATURE 1 – OPSMAIL QUEUE TABLE
+
+Create:
+
+opb_opsmail_queue
+
+Recommended fields:
+
+id
+
+event_uuid
+
+event_type
+
+entity_type
+
+entity_id
+
+branch_id
+
+user_id
+
+origin_type
+
+priority
+
+subject
+
+summary
+
+payload_json
+
+recipient_email
+
+status
+
+mail_attempts
+
+last_error
+
+created_at
+
+sent_at
+
+Definitions:
+
+event_uuid
+Unique idempotency identifier
+
+origin_type
+
+SYSTEM
+TRUSTED_MAILBOX
+
+status
+
+PENDING
+SENT
+FAILED
+ACKNOWLEDGED
+
+Requirements:
+
+Append-only queue.
+
+No event editing.
+
+Historical records preserved.
+
+---
+
+FEATURE 2 – OPSMAIL SETTINGS
+
+Add under:
+
+Settings
+→ Customisation
+→ OPSMAIL
+
+Fields:
+
+OPSMAIL Enabled
+
+OPSMAIL Inbox Email
+
+Trusted Origin Mailboxes
+
+Examples:
+
+events@onukonu.in
+
+devops@onukonu.in
+ops@onukonu.in
+
+Requirements:
+
+OPSMAIL Disabled
+→ Queue may still be populated
+→ No emails emitted
+
+OPSMAIL Enabled
+→ Queue populated
+→ Emails emitted
+
+---
+
+FEATURE 3 – OPERATIONAL EVENT TAXONOMY
+
+Implement only meaningful operational events.
+
+Initial events:
+
+INQUIRY.RECEIVED
+
+CLIENT.ONBOARDING_RECEIVED
+
+BOOKING.REQUEST_RECEIVED
+
+BOOKING.CONFIRMED
+
+BOOKING.MODIFICATION_REQUESTED
+
+BOOKING.CANCELLED
+
+SUPPORT.REQUEST_RECEIVED
+
+PAYMENT.ISSUE_REPORTED
+
+EXPENSE.LARGE_RECORDED
+
+TASK.CREATED
+
+SYSTEM.ERROR
+
+Do NOT generate OPSMAIL events for:
+
+CLIENT.UPDATED
+
+PET.UPDATED
+
+REPORT.VIEWED
+
+LOGIN.SUCCESS
+
+PAGE.VIEWED
+
+or other telemetry.
+
+OPSMAIL is for actionable intelligence.
+
+---
+
+FEATURE 4 – OPSMAIL EMAIL EMISSION
+
+When OPSMAIL is enabled:
+
+Generate operational email to:
+
+Configured OPSMAIL Inbox
+
+Use:
+
+Existing SMTP transport
+
+Do NOT create a new mail engine.
+
+Do NOT alter existing SMTP behaviour.
+
+---
+
+EMAIL SUBJECT FORMAT
+
+Example:
+
+[OPSMAIL] BOOKING.CONFIRMED #847
+
+[OPSMAIL] SUPPORT.REQUEST_RECEIVED #128
+
+Human-readable.
+
+Machine-readable.
+
+---
+
+EMAIL HEADERS
+
+Add:
+
+X-Ops-Version: 1
+
+X-Ops-Event: BOOKING.CONFIRMED
+
+X-Ops-Entity-Type: BOOKING
+
+X-Ops-Entity-ID: 847
+
+X-Ops-Event-UUID: {uuid}
+
+X-Ops-Origin: SYSTEM
+
+These supplement the email.
+
+Do not rely solely on headers.
+
+---
+
+EMAIL BODY FORMAT
+
+Section 1
+
+Human-readable operational summary.
+
+Example:
+
+New Booking Confirmed
+
+Client:
+John Smith
+
+Pet:
+Harley
+
+Branch:
+Goa
+
+Booking:
+847
+
+Section 2
+
+Machine-readable JSON metadata block.
+
+Example:
+
+{
+"event_uuid":"...",
+"event_type":"BOOKING.CONFIRMED",
+"entity_type":"BOOKING",
+"entity_id":847,
+"branch_id":2,
+"created_at":"..."
+}
+
+Use JSON only.
+
+---
+
+FEATURE 5 – TRUSTED ORIGIN SUPPORT
+
+Implement support for future mailbox-originated events.
+
+Trusted mailbox examples:
+
+devops@onukonu.in
+
+ops@onukonu.in
+
+These are not active consumers yet.
+
+Phase 1 requirement:
+
+Store configuration.
+
+Prepare queue model.
+
+Do NOT implement mailbox polling.
+
+Do NOT implement IMAP.
+
+Do NOT implement parsers.
+
+Do NOT implement Telegram ingestion.
+
+---
+
+FEATURE 6 – OPSMAIL QUEUE VIEWER
+
+Add:
+
+Administration
+→ OPSMAIL Queue
+
+Super Administrator only.
+
+Display:
+
+Created At
+
+Event Type
+
+Subject
+
+Branch
+
+Origin
+
+Status
+
+Mail Attempts
+
+Last Error
+
+Filters:
+
+Date Range
+
+Status
+
+Event Type
+
+Search
+
+Purpose:
+
+Operational visibility.
+
+Debugging.
+
+Future integration support.
+
+---
+
+RELIABILITY RULES
+
+OPSMAIL must never block business workflows.
+
+If SMTP fails:
+
+Booking still succeeds.
+
+Inquiry still succeeds.
+
+Task still succeeds.
+
+Client onboarding still succeeds.
+
+Expense entry still succeeds.
+
+Queue status becomes:
+
+FAILED
+
+with error details recorded.
+
+OPSMAIL is advisory.
+
+Business operations are primary.
+
+---
+
+SECURITY
+
+Never store:
+
+Passwords
+
+OTP values
+
+Session tokens
+
+Authentication secrets
+
+API keys
+
+Sensitive credentials
+
+Payloads must be operationally useful but minimal.
+
+---
+
+VALIDATION
+
+Verify:
+
+✓ OTP flow unchanged
+
+✓ Customer emails unchanged
+
+✓ Invoice emails unchanged
+
+✓ SMTP unchanged
+
+✓ Existing workflows unchanged
+
+✓ OPSMAIL queue records events
+
+✓ OPSMAIL emails generated when enabled
+
+✓ OPSMAIL emails suppressed when disabled
+
+✓ SMTP failures do not break workflows
+
+✓ Queue viewer functions correctly
+
+---
+
+DELIVERABLES
+
+Provide:
+
+1. Architecture assessment
+2. Schema changes
+3. Event sources implemented
+4. Files modified
+5. Validation results
+6. Commit hash
+7. Production ZIP
+
+---
+
+SUCCESS CRITERIA
+
+✓ No regression in existing mail channels
+
+✓ No regression in existing workflows
+
+✓ OPSMAIL queue implemented
+
+✓ OPSMAIL configurable
+
+✓ Operational emails emitted
+
+✓ SMTP failures non-blocking
+
+✓ Queue viewer implemented
+
+✓ Shared-hosting compatible
+
+✓ Foundation ready for future Telegram consumption
+
+IMPORTANT
+
+This release implements:
+
+Queue
++
+Email Emission
++
+Viewer
+
+ONLY.
+
+Do NOT implement:
+
+Telegram
+
+Gemini
+
+Mailbox polling
+
+Mailbox parsing
+
+Task automation
+
+Workflow automation
+
+Background workers

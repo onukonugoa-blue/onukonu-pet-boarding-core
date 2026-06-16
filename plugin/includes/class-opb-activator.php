@@ -593,6 +593,34 @@ class OPB_Activator {
             KEY idx_category (category)
         ) ENGINE=InnoDB $charset;";
 
+        // ── OPSMAIL Operational Intelligence Layer (v2.8.0) ───────────────────
+        $tables[] = "CREATE TABLE {$wpdb->prefix}opb_opsmail_queue (
+            id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+            event_uuid      CHAR(36)         NOT NULL,
+            event_type      VARCHAR(60)      NOT NULL,
+            entity_type     VARCHAR(60)      NOT NULL DEFAULT '',
+            entity_id       INT UNSIGNED,
+            branch_id       TINYINT UNSIGNED,
+            user_id         BIGINT UNSIGNED,
+            origin_type     ENUM('SYSTEM','TRUSTED_MAILBOX') NOT NULL DEFAULT 'SYSTEM',
+            priority        VARCHAR(20)      NOT NULL DEFAULT 'NORMAL',
+            subject         VARCHAR(250)     NOT NULL DEFAULT '',
+            summary         TEXT,
+            payload_json    LONGTEXT,
+            recipient_email VARCHAR(200),
+            status          ENUM('PENDING','SENT','FAILED','ACKNOWLEDGED') NOT NULL DEFAULT 'PENDING',
+            mail_attempts   TINYINT UNSIGNED NOT NULL DEFAULT 0,
+            last_error      TEXT,
+            created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            sent_at         DATETIME,
+            PRIMARY KEY (id),
+            UNIQUE KEY uq_event_uuid (event_uuid),
+            KEY idx_status (status),
+            KEY idx_event_type (event_type),
+            KEY idx_created_at (created_at),
+            KEY idx_branch (branch_id)
+        ) ENGINE=InnoDB $charset;";
+
         foreach ( $tables as $sql ) {
             dbDelta( $sql );
         }
