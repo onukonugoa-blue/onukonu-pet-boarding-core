@@ -8,6 +8,7 @@ const sections = [
   { to: '/settings/staff',              icon: '👤', title: 'Staff & Roles',       desc: 'Assign roles and branch access to users' },
   { to: '/settings/expense-categories', icon: '🏷', title: 'Expense Categories',  desc: 'Create, rename and archive expense categories' },
   { to: '/settings/customization',      icon: '✏️', title: 'Customization',       desc: 'Edit templates, T&C, facility info, and communications' },
+  { to: '/settings/customization?tab=opsmail', icon: '📡', title: 'OPSMAIL',             desc: 'Configure operational intelligence email alerts and inbox' },
 ]
 
 export default function Settings() {

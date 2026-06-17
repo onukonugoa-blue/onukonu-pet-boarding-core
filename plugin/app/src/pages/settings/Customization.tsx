@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { customizationsApi } from '../../api/customizations'
 import type { CustomizationItem, PreviewResult } from '../../api/customizations'
 
-type Tab = 'facility' | 'legal' | 'onboarding' | 'inquiry' | 'invoice' | 'invoice_branding' | 'client_portal' | 'preview' | 'export'
+type Tab = 'facility' | 'legal' | 'onboarding' | 'inquiry' | 'invoice' | 'invoice_branding' | 'client_portal' | 'opsmail' | 'preview' | 'export'
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'facility',         label: 'Facility Info',       icon: '🏢' },
@@ -13,9 +13,12 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'invoice',          label: 'Invoice & Delivery',  icon: '🧾' },
   { id: 'invoice_branding', label: 'Invoice Branding',    icon: '🖼' },
   { id: 'client_portal',    label: 'Client Portal',       icon: '🐾' },
+  { id: 'opsmail',          label: 'OPSMAIL',             icon: '📡' },
   { id: 'preview',          label: 'Preview',             icon: '👁' },
   { id: 'export',           label: 'Export',              icon: '⬇' },
 ]
+
+const VALID_TABS = new Set<Tab>(['facility','legal','onboarding','inquiry','invoice','invoice_branding','client_portal','opsmail','preview','export'])
 
 const VALID_PLACEHOLDERS = [
   '{{CLIENT_NAME}}', '{{FACILITY_NAME}}', '{{ONBOARDING_LINK}}',
@@ -34,6 +37,7 @@ const PLACEHOLDER_HINT: Record<string, string> = {
   invoice:          '{{CLIENT_NAME}} · {{FACILITY_NAME}} · {{INVOICE_NUMBER}} · {{INVOICE_LINK}} · {{INVOICE_TOTAL}} · {{INVOICE_PAID}} · {{INVOICE_DUE}}',
   invoice_branding: '',
   client_portal:    '{{CLIENT_NAME}} · {{FACILITY_NAME}} · {{MY_PETS_URL}} · {{CLIENT_EMAIL}} · {{CLIENT_PHONE}} · {{SUPPORT_EMAIL}} · {{SUPPORT_PHONE}}',
+  opsmail:          '',
 }
 
 // Section headers shown inside the Invoice Branding tab, keyed by the first item in each group
@@ -247,7 +251,12 @@ function SettingField({ item, value, mediaUrl, uploadingKey, onChange, onMediaUp
 // ── Main page ──────────────────────────────────────────────────────────────────
 
 export default function Customization() {
-  const [activeTab, setActiveTab] = useState<Tab>('facility')
+  const [searchParams] = useSearchParams()
+  const initialTab = ((): Tab => {
+    const t = searchParams.get('tab') as Tab | null
+    return t && VALID_TABS.has(t) ? t : 'facility'
+  })()
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab)
   const [items, setItems] = useState<CustomizationItem[]>([])
   const [edits, setEdits] = useState<Record<string, string>>({})
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({})
@@ -447,6 +456,21 @@ export default function Customization() {
                 <p className="font-semibold mb-0.5">Invoice Branding Settings</p>
                 <p className="text-indigo-700 text-xs leading-relaxed">
                   Images and text here appear on every generated PDF invoice. Upload images directly — they save instantly without needing the Save button.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* OPSMAIL intro banner */}
+          {activeTab === 'opsmail' && (
+            <div className="mb-4 flex items-start gap-3 px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800">
+              <span className="text-lg leading-none mt-0.5">📡</span>
+              <div>
+                <p className="font-semibold mb-0.5">OPSMAIL — Operational Intelligence</p>
+                <p className="text-slate-600 text-xs leading-relaxed">
+                  OPSMAIL sends automated email alerts to a configured inbox when key events occur (new bookings, inquiries, large expenses, tasks).
+                  Enable it, set an inbox email, and optionally restrict which origin mailboxes are trusted.
+                  View the event log in <strong>Administration → OPSMAIL Queue</strong>.
                 </p>
               </div>
             </div>

@@ -31,6 +31,7 @@ import Reports from './pages/Reports'
 import InquiryList from './pages/inquiries/InquiryList'
 import InquiryDetail from './pages/inquiries/InquiryDetail'
 import DataManagement from './pages/admin/DataManagement'
+import OpsmailQueue from './pages/admin/OpsmailQueue'
 
 export default function App() {
   return (
@@ -68,6 +69,7 @@ export default function App() {
         <Route path="/inquiries/:id"           element={<InquiryDetail />} />
         <Route path="/reports"                 element={<ErrorBoundary><Reports /></ErrorBoundary>} />
         <Route path="/admin/data-management"  element={<DataManagement />} />
+        <Route path="/admin/opsmail"          element={<OpsmailQueue />} />
         <Route path="*"                        element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
