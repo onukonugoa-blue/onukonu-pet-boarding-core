@@ -593,29 +593,44 @@ class OPB_Activator {
             KEY idx_category (category)
         ) ENGINE=InnoDB $charset;";
 
-        // ── OPSMAIL Operational Intelligence Layer (v2.8.0) ───────────────────
+        // ── OPSMAIL Operational Intelligence Repository (v2.9.0) ──────────────
+        //
+        // opb_opsmail_queue is the canonical operational intelligence store.
+        // All producers normalise events before insertion. Consumers (mail,
+        // Telegram, analytics) read from this table and track their own status.
+        //
+        // event_uuid  — globally unique, immutable, idempotency key for consumers
+        // source_system — OPB | WOOCOMMERCE | TRUSTED_ORIGIN | HUMAN_EMAIL
+        // content_hash  — md5(event_type:entity_type:entity_id) for dedup
+        // mail_status   — PENDING → SENT | FAILED; manually → ACKNOWLEDGED
+        // telegram_status — PENDING → SENT | FAILED (future Telegram consumer)
         $tables[] = "CREATE TABLE {$wpdb->prefix}opb_opsmail_queue (
-            id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
-            event_uuid      CHAR(36)         NOT NULL,
-            event_type      VARCHAR(60)      NOT NULL,
-            entity_type     VARCHAR(60)      NOT NULL DEFAULT '',
-            entity_id       INT UNSIGNED,
-            branch_id       TINYINT UNSIGNED,
-            user_id         BIGINT UNSIGNED,
-            origin_type     ENUM('SYSTEM','TRUSTED_MAILBOX') NOT NULL DEFAULT 'SYSTEM',
-            priority        VARCHAR(20)      NOT NULL DEFAULT 'NORMAL',
-            subject         VARCHAR(250)     NOT NULL DEFAULT '',
-            summary         TEXT,
-            payload_json    LONGTEXT,
-            recipient_email VARCHAR(200),
-            status          ENUM('PENDING','SENT','FAILED','ACKNOWLEDGED') NOT NULL DEFAULT 'PENDING',
-            mail_attempts   TINYINT UNSIGNED NOT NULL DEFAULT 0,
-            last_error      TEXT,
-            created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            sent_at         DATETIME,
+            id                INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+            event_uuid        CHAR(36)         NOT NULL,
+            event_type        VARCHAR(60)      NOT NULL,
+            source_system     VARCHAR(64)      NOT NULL DEFAULT 'OPB',
+            entity_type       VARCHAR(60)      NOT NULL DEFAULT '',
+            entity_id         INT UNSIGNED,
+            branch_id         TINYINT UNSIGNED,
+            user_id           BIGINT UNSIGNED,
+            origin_type       ENUM('SYSTEM','TRUSTED_MAILBOX') NOT NULL DEFAULT 'SYSTEM',
+            priority          VARCHAR(20)      NOT NULL DEFAULT 'NORMAL',
+            subject           VARCHAR(250)     NOT NULL DEFAULT '',
+            summary           TEXT,
+            payload_json      LONGTEXT,
+            content_hash      VARCHAR(64)      NULL,
+            recipient_email   VARCHAR(200),
+            mail_status       ENUM('PENDING','SENT','FAILED','ACKNOWLEDGED') NOT NULL DEFAULT 'PENDING',
+            telegram_status   ENUM('PENDING','SENT','FAILED')                NOT NULL DEFAULT 'PENDING',
+            mail_attempts     TINYINT UNSIGNED NOT NULL DEFAULT 0,
+            telegram_attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+            last_error        TEXT,
+            created_at        DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            sent_at           DATETIME,
+            telegram_sent_at  DATETIME,
             PRIMARY KEY (id),
             UNIQUE KEY uq_event_uuid (event_uuid),
-            KEY idx_status (status),
+            KEY idx_mail_status (mail_status),
             KEY idx_event_type (event_type),
             KEY idx_created_at (created_at),
             KEY idx_branch (branch_id)
@@ -699,6 +714,41 @@ class OPB_Activator {
                     [ '%s', '%d', '%d' ]
                 );
             }
+        }
+
+        // ── OPSMAIL v2.9.0: dual-channel status architecture ──────────────────
+        //
+        // Existing installations: rename status → mail_status; add new columns.
+        // New installations: CREATE TABLE above already has the correct schema.
+        // All helpers use INFORMATION_SCHEMA — MySQL 5.7 compatible.
+
+        $opsmail_t = "{$wpdb->prefix}opb_opsmail_queue";
+
+        if ( $wpdb->get_var( $wpdb->prepare(
+            'SHOW TABLES LIKE %s', $opsmail_t
+        ) ) ) {
+            // 1. Rename status → mail_status (column + index rename)
+            if ( self::col_exists( $opsmail_t, 'status' ) && ! self::col_exists( $opsmail_t, 'mail_status' ) ) {
+                $wpdb->query(
+                    "ALTER TABLE `{$opsmail_t}` CHANGE COLUMN `status` `mail_status`
+                     ENUM('PENDING','SENT','FAILED','ACKNOWLEDGED') NOT NULL DEFAULT 'PENDING'"
+                );
+                // After CHANGE COLUMN the old index still carries the name idx_status.
+                // Drop it and add idx_mail_status for clarity.
+                if ( self::idx_exists( $opsmail_t, 'idx_status' ) ) {
+                    $wpdb->query( "ALTER TABLE `{$opsmail_t}` DROP INDEX `idx_status`" );
+                }
+            }
+            if ( ! self::idx_exists( $opsmail_t, 'idx_mail_status' ) ) {
+                $wpdb->query( "ALTER TABLE `{$opsmail_t}` ADD KEY `idx_mail_status` (`mail_status`)" );
+            }
+
+            // 2. New columns (idempotent via add_col)
+            self::add_col( $opsmail_t, 'source_system',     "VARCHAR(64) NOT NULL DEFAULT 'OPB' AFTER event_type" );
+            self::add_col( $opsmail_t, 'content_hash',      'VARCHAR(64) NULL AFTER payload_json' );
+            self::add_col( $opsmail_t, 'telegram_status',   "ENUM('PENDING','SENT','FAILED') NOT NULL DEFAULT 'PENDING' AFTER mail_status" );
+            self::add_col( $opsmail_t, 'telegram_attempts', 'TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER mail_attempts' );
+            self::add_col( $opsmail_t, 'telegram_sent_at',  'DATETIME NULL AFTER sent_at' );
         }
 
         update_option( 'opb_db_version', OPB_VERSION );

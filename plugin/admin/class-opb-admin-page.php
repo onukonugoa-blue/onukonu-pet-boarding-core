@@ -70,7 +70,7 @@ class OPB_Admin_Page {
         $args  = [];
 
         if ( $status ) {
-            $where[] = 'q.status = %s';
+            $where[] = 'q.mail_status = %s';
             $args[]  = $status;
         }
         if ( $event_type ) {
@@ -91,9 +91,10 @@ class OPB_Admin_Page {
         ) );
 
         $rows = $wpdb->get_results( $wpdb->prepare(
-            "SELECT q.id, q.event_uuid, q.event_type, q.entity_type, q.entity_id,
+            "SELECT q.id, q.event_uuid, q.event_type, q.source_system,
+                    q.entity_type, q.entity_id,
                     q.branch_id, q.origin_type, q.priority, q.subject,
-                    q.recipient_email, q.status, q.mail_attempts, q.last_error,
+                    q.recipient_email, q.mail_status, q.mail_attempts, q.last_error,
                     q.created_at, q.sent_at,
                     b.name AS branch_name
              FROM {$table} q
@@ -203,7 +204,7 @@ class OPB_Admin_Page {
                                 <td style="font-size:11px;font-weight:<?php echo $row['priority'] === 'HIGH' ? '700' : '400'; ?>;color:<?php echo $row['priority'] === 'HIGH' ? '#dc2626' : 'inherit'; ?>">
                                     <?php echo esc_html( $row['priority'] ); ?>
                                 </td>
-                                <td><?php echo $status_badge( $row['status'] ); ?></td>
+                                <td><?php echo $status_badge( $row['mail_status'] ); ?></td>
                                 <td><?php echo (int) $row['mail_attempts']; ?></td>
                                 <td style="white-space:nowrap;font-size:11px"><?php echo esc_html( $row['created_at'] ); ?></td>
                                 <td style="white-space:nowrap;font-size:11px"><?php echo esc_html( $row['sent_at'] ?? '—' ); ?></td>

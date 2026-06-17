@@ -30,10 +30,10 @@ function StatusBadge({ status }: { status: string }) {
 
 function StatsBar({ stats }: { stats: OpsmailStats }) {
   const tiles = [
-    { label: 'Pending',      value: stats.by_status.PENDING,      cls: 'text-yellow-700 bg-yellow-50 border-yellow-200' },
-    { label: 'Sent',         value: stats.by_status.SENT,         cls: 'text-green-700 bg-green-50 border-green-200' },
-    { label: 'Failed',       value: stats.by_status.FAILED,       cls: 'text-red-700 bg-red-50 border-red-200' },
-    { label: 'Acknowledged', value: stats.by_status.ACKNOWLEDGED, cls: 'text-gray-600 bg-gray-50 border-gray-200' },
+    { label: 'Pending',      value: stats.by_mail_status.PENDING,      cls: 'text-yellow-700 bg-yellow-50 border-yellow-200' },
+    { label: 'Sent',         value: stats.by_mail_status.SENT,         cls: 'text-green-700 bg-green-50 border-green-200' },
+    { label: 'Failed',       value: stats.by_mail_status.FAILED,       cls: 'text-red-700 bg-red-50 border-red-200' },
+    { label: 'Acknowledged', value: stats.by_mail_status.ACKNOWLEDGED, cls: 'text-gray-600 bg-gray-50 border-gray-200' },
   ]
 
   return (
@@ -67,9 +67,13 @@ function StatsBar({ stats }: { stats: OpsmailStats }) {
         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium bg-blue-50 border-blue-200 text-blue-700">
           {stats.total} total events
         </span>
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium bg-gray-50 border-gray-200 text-gray-500">
+          <span className="w-1.5 h-1.5 rounded-full inline-block bg-gray-400" />
+          Telegram: {stats.by_telegram_status.PENDING} pending
+        </span>
       </div>
 
-      {stats.by_status.FAILED > 0 && stats.recent_failed.length > 0 && (
+      {stats.by_mail_status.FAILED > 0 && stats.recent_failed.length > 0 && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
           <p className="text-xs font-semibold text-red-800 mb-2 uppercase tracking-wide">Recent Failures</p>
           <div className="space-y-1.5">
@@ -95,11 +99,17 @@ function StatsBar({ stats }: { stats: OpsmailStats }) {
 const STATUS_OPTIONS = ['', 'PENDING', 'SENT', 'FAILED', 'ACKNOWLEDGED']
 const EVENT_TYPE_OPTIONS = [
   '',
-  'booking_confirmed',
-  'inquiry_received',
-  'onboarding_received',
-  'task_created',
-  'large_expense',
+  'INQUIRY.RECEIVED',
+  'CLIENT.ONBOARDING_RECEIVED',
+  'BOOKING.REQUEST_RECEIVED',
+  'BOOKING.CONFIRMED',
+  'BOOKING.MODIFICATION_REQUESTED',
+  'BOOKING.CANCELLED',
+  'SUPPORT.REQUEST_RECEIVED',
+  'PAYMENT.ISSUE_REPORTED',
+  'EXPENSE.LARGE_RECORDED',
+  'TASK.CREATED',
+  'SYSTEM.ERROR',
 ]
 
 interface FilterBarProps {
@@ -218,7 +228,7 @@ function QueueTable({ rows, loading, acknowledging, onAcknowledge }: QueueTableP
                 )}
               </td>
               <td className="px-4 py-2.5 whitespace-nowrap">
-                <StatusBadge status={row.status} />
+                <StatusBadge status={row.mail_status} />
               </td>
               <td className="px-4 py-2.5 text-center text-gray-700">
                 {row.mail_attempts}
@@ -233,7 +243,7 @@ function QueueTable({ rows, loading, acknowledging, onAcknowledge }: QueueTableP
                 )}
               </td>
               <td className="px-4 py-2.5 whitespace-nowrap">
-                {row.status !== 'ACKNOWLEDGED' ? (
+                {row.mail_status !== 'ACKNOWLEDGED' ? (
                   <button
                     onClick={() => onAcknowledge(row.id)}
                     disabled={acknowledging === row.id}
@@ -347,7 +357,7 @@ export default function OpsmailQueue() {
     setAckMsg('')
     try {
       await opsmailApi.acknowledge(id)
-      setRows((prev) => prev.map((r) => r.id === id ? { ...r, status: 'ACKNOWLEDGED' } : r))
+      setRows((prev) => prev.map((r) => r.id === id ? { ...r, mail_status: 'ACKNOWLEDGED' as const } : r))
       setAckMsg(`Event #${id} acknowledged.`)
       loadStats()
     } catch (e) {

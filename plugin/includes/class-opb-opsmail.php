@@ -2,7 +2,7 @@
 /**
  * OPB_Opsmail
  *
- * OPSMAIL Operational Intelligence Layer — v1.0 (OPB v2.8.0)
+ * OPSMAIL Operational Intelligence Platform — v2.0 (OPB v2.9.0)
  *
  * This class is the sole entry point for all OPSMAIL operations:
  *   - Appending events to opb_opsmail_queue
@@ -37,6 +37,19 @@ class OPB_Opsmail {
 
     const ORIGIN_SYSTEM        = 'SYSTEM';
     const ORIGIN_TRUSTED       = 'TRUSTED_MAILBOX';
+
+    // ── Source systems ──────────────────────────────────────────────────────────
+    // Identifies the producer that normalised and inserted the event.
+    //
+    // SOURCE_OPB            — Native OPB application event (booking, task, expense, …)
+    // SOURCE_WOOCOMMERCE    — Normalised WooCommerce order/payment event (future adapter)
+    // SOURCE_TRUSTED_ORIGIN — Inbound event from an authorised external mailbox (future)
+    // SOURCE_HUMAN_EMAIL    — Gemini-classified inbound customer email (future)
+
+    const SOURCE_OPB            = 'OPB';
+    const SOURCE_WOOCOMMERCE    = 'WOOCOMMERCE';
+    const SOURCE_TRUSTED_ORIGIN = 'TRUSTED_ORIGIN';
+    const SOURCE_HUMAN_EMAIL    = 'HUMAN_EMAIL';
 
     const STATUS_PENDING       = 'PENDING';
     const STATUS_SENT          = 'SENT';
@@ -101,18 +114,83 @@ class OPB_Opsmail {
      * @param int $client_id
      */
     public static function push_booking_confirmed( int $booking_id, int $branch_id, int $client_id ): void {
+        // Build rich payload so future consumers (Telegram, analytics) need no
+        // additional DB queries. Falls back to minimal payload on any error.
+        $subject = 'New booking #' . $booking_id . ' confirmed';
+        $payload = [
+            'booking_id' => $booking_id,
+            'client_id'  => $client_id,
+            'branch_id'  => $branch_id,
+        ];
+
+        try {
+            global $wpdb;
+
+            $booking = $wpdb->get_row( $wpdb->prepare(
+                "SELECT bk.*, cl.name AS client_name, br.name AS branch_name
+                 FROM {$wpdb->prefix}opb_bookings bk
+                 LEFT JOIN {$wpdb->prefix}opb_clients cl  ON cl.id  = bk.client_id
+                 LEFT JOIN {$wpdb->prefix}opb_branches br ON br.id  = bk.branch_id
+                 WHERE bk.id = %d",
+                $booking_id
+            ), ARRAY_A ) ?? [];
+
+            $stays = $wpdb->get_results( $wpdb->prepare(
+                "SELECT bs.pet_id, p.name AS pet_name, p.species,
+                        bs.check_in_date, bs.check_out_date
+                 FROM {$wpdb->prefix}opb_booking_stays bs
+                 LEFT JOIN {$wpdb->prefix}opb_pets p ON p.id = bs.pet_id
+                 WHERE bs.booking_id = %d",
+                $booking_id
+            ), ARRAY_A ) ?? [];
+
+            $pet_names    = array_values( array_filter( array_column( $stays, 'pet_name' ) ) );
+            $creator      = get_userdata( get_current_user_id() );
+            $creator_name = $creator ? $creator->display_name : '';
+
+            $payload = [
+                'booking_id'      => $booking_id,
+                'client_id'       => $client_id,
+                'client_name'     => $booking['client_name']        ?? '',
+                'branch_id'       => $branch_id,
+                'branch_name'     => $booking['branch_name']        ?? '',
+                'checkin_date'    => $stays[0]['check_in_date']  ?? ( $booking['check_in_date']  ?? '' ),
+                'checkout_date'   => $stays[0]['check_out_date'] ?? ( $booking['check_out_date'] ?? '' ),
+                'booking_value'   => isset( $booking['total_billing_amount'] )
+                                         ? (float) $booking['total_billing_amount']
+                                         : null,
+                'pets'            => array_map(
+                    fn( $s ) => [
+                        'id'      => (int) ( $s['pet_id']   ?? 0 ),
+                        'name'    => $s['pet_name'] ?? '',
+                        'species' => $s['species']  ?? '',
+                    ],
+                    $stays
+                ),
+                'pet_names'       => implode( ', ', $pet_names ),
+                'created_by'      => get_current_user_id() ?: null,
+                'created_by_name' => $creator_name,
+            ];
+
+            if ( $pet_names ) {
+                $subject = 'Booking #' . $booking_id . ' — ' . implode( ', ', $pet_names );
+                if ( ! empty( $booking['client_name'] ) ) {
+                    $subject .= ' (' . $booking['client_name'] . ')';
+                }
+            }
+
+        } catch ( \Throwable $e ) {
+            // Minimal payload already set above — continue with it.
+        }
+
         self::push_event(
             'BOOKING.CONFIRMED',
             'BOOKING',
             $booking_id,
             $branch_id ?: null,
-            'New booking #' . $booking_id . ' confirmed',
+            $subject,
             'A new boarding booking has been created by staff.',
-            [
-                'booking_id' => $booking_id,
-                'client_id'  => $client_id,
-                'branch_id'  => $branch_id,
-            ],
+            $payload,
             'NORMAL',
             get_current_user_id() ?: null
         );
@@ -196,8 +274,9 @@ class OPB_Opsmail {
         string $subject,
         string $summary,
         array  $payload,
-        string $priority  = 'NORMAL',
-        ?int   $user_id   = null
+        string $priority      = 'NORMAL',
+        ?int   $user_id       = null,
+        string $source_system = self::SOURCE_OPB
     ): void {
         try {
             global $wpdb;
@@ -210,26 +289,31 @@ class OPB_Opsmail {
                 return;
             }
 
-            $event_uuid  = wp_generate_uuid4();
-            $inbox_email = self::inbox_email();
-            $now         = current_time( 'mysql' );
+            $event_uuid   = wp_generate_uuid4();
+            $inbox_email  = self::inbox_email();
+            $now          = current_time( 'mysql' );
+            $content_hash = md5( $event_type . ':' . $entity_type . ':' . $entity_id );
 
             $wpdb->insert( $table, [
-                'event_uuid'      => $event_uuid,
-                'event_type'      => $event_type,
-                'entity_type'     => $entity_type,
-                'entity_id'       => $entity_id ?: null,
-                'branch_id'       => $branch_id,
-                'user_id'         => $user_id ?? ( get_current_user_id() ?: null ),
-                'origin_type'     => self::ORIGIN_SYSTEM,
-                'priority'        => $priority,
-                'subject'         => mb_substr( $subject, 0, 250 ),
-                'summary'         => $summary,
-                'payload_json'    => wp_json_encode( $payload, JSON_UNESCAPED_UNICODE ),
-                'recipient_email' => $inbox_email ?: null,
-                'status'          => self::STATUS_PENDING,
-                'mail_attempts'   => 0,
-                'created_at'      => $now,
+                'event_uuid'        => $event_uuid,
+                'event_type'        => $event_type,
+                'source_system'     => $source_system,
+                'entity_type'       => $entity_type,
+                'entity_id'         => $entity_id ?: null,
+                'branch_id'         => $branch_id,
+                'user_id'           => $user_id ?? ( get_current_user_id() ?: null ),
+                'origin_type'       => self::ORIGIN_SYSTEM,
+                'priority'          => $priority,
+                'subject'           => mb_substr( $subject, 0, 250 ),
+                'summary'           => $summary,
+                'payload_json'      => wp_json_encode( $payload, JSON_UNESCAPED_UNICODE ),
+                'content_hash'      => $content_hash,
+                'recipient_email'   => $inbox_email ?: null,
+                'mail_status'       => self::STATUS_PENDING,
+                'telegram_status'   => self::STATUS_PENDING,
+                'mail_attempts'     => 0,
+                'telegram_attempts' => 0,
+                'created_at'        => $now,
             ] );
 
             $queue_id = (int) $wpdb->insert_id;
@@ -305,8 +389,8 @@ class OPB_Opsmail {
                 $wpdb->update(
                     $table,
                     [
-                        'status'  => self::STATUS_SENT,
-                        'sent_at' => current_time( 'mysql' ),
+                        'mail_status' => self::STATUS_SENT,
+                        'sent_at'     => current_time( 'mysql' ),
                     ],
                     [ 'id' => $queue_id ]
                 );
@@ -314,8 +398,8 @@ class OPB_Opsmail {
                 $wpdb->update(
                     $table,
                     [
-                        'status'     => self::STATUS_FAILED,
-                        'last_error' => 'wp_mail() returned false — check SMTP configuration.',
+                        'mail_status' => self::STATUS_FAILED,
+                        'last_error'  => 'wp_mail() returned false — check SMTP configuration.',
                     ],
                     [ 'id' => $queue_id ]
                 );
@@ -325,8 +409,8 @@ class OPB_Opsmail {
             $wpdb->update(
                 $table,
                 [
-                    'status'     => self::STATUS_FAILED,
-                    'last_error' => mb_substr( $e->getMessage(), 0, 500 ),
+                    'mail_status' => self::STATUS_FAILED,
+                    'last_error'  => mb_substr( $e->getMessage(), 0, 500 ),
                 ],
                 [ 'id' => $queue_id ]
             );

@@ -5,6 +5,7 @@ export interface OpsmailQueueEvent {
   id: number
   event_uuid: string
   event_type: string
+  source_system: string
   entity_type: string
   entity_id: number
   branch_id: number | null
@@ -13,20 +14,28 @@ export interface OpsmailQueueEvent {
   subject: string
   summary: string | null
   recipient_email: string
-  status: 'PENDING' | 'SENT' | 'FAILED' | 'ACKNOWLEDGED'
+  mail_status: 'PENDING' | 'SENT' | 'FAILED' | 'ACKNOWLEDGED'
+  telegram_status: 'PENDING' | 'SENT' | 'FAILED'
   mail_attempts: number
+  telegram_attempts: number
   last_error: string | null
   created_at: string
   sent_at: string | null
+  telegram_sent_at: string | null
   branch_name: string | null
 }
 
 export interface OpsmailStats {
-  by_status: {
+  by_mail_status: {
     PENDING: number
     SENT: number
     FAILED: number
     ACKNOWLEDGED: number
+  }
+  by_telegram_status: {
+    PENDING: number
+    SENT: number
+    FAILED: number
   }
   total: number
   by_event: Array<{ event_type: string; cnt: number }>
@@ -68,5 +77,5 @@ export const opsmailApi = {
     api.get<OpsmailStats>('/opsmail/stats'),
 
   acknowledge: (id: number) =>
-    api.post<{ id: number; status: string }>(`/opsmail/queue/${id}/acknowledge`),
+    api.post<{ id: number; mail_status: string }>(`/opsmail/queue/${id}/acknowledge`),
 }
