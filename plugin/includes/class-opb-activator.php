@@ -751,6 +751,40 @@ class OPB_Activator {
             self::add_col( $opsmail_t, 'telegram_sent_at',  'DATETIME NULL AFTER sent_at' );
         }
 
+        // ── OPSMAIL v3.0.0: Mailbox processor + Gemini classification ─────────
+        //
+        // classification — Gemini classification string for HUMAN_EMAIL events
+        // confidence     — Gemini confidence score (0.000–1.000)
+        // origin_type ENUM extended with 'MAILBOX' for inbound unstructured mail
+        //
+        // All operations use INFORMATION_SCHEMA — MySQL 5.7 compatible.
+
+        $opsmail_t = "{$wpdb->prefix}opb_opsmail_queue";
+
+        if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $opsmail_t ) ) ) {
+            // 1. New Gemini columns (idempotent via add_col)
+            self::add_col( $opsmail_t, 'classification', 'VARCHAR(100) NULL' );
+            self::add_col( $opsmail_t, 'confidence',     'DECIMAL(4,3) NULL' );
+
+            // 2. Extend origin_type ENUM to include 'MAILBOX'
+            //    Read current COLUMN_TYPE and only ALTER if MAILBOX is absent.
+            //    MODIFY COLUMN on an ENUM is standard SQL — safe on MySQL 5.7.
+            $col_type = $wpdb->get_var( $wpdb->prepare(
+                "SELECT COLUMN_TYPE
+                 FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND TABLE_NAME   = %s
+                   AND COLUMN_NAME  = 'origin_type'",
+                $opsmail_t
+            ) );
+            if ( $col_type && strpos( $col_type, "'MAILBOX'" ) === false ) {
+                $wpdb->query(
+                    "ALTER TABLE `{$opsmail_t}` MODIFY COLUMN `origin_type`
+                     ENUM('SYSTEM','TRUSTED_MAILBOX','MAILBOX') NOT NULL DEFAULT 'SYSTEM'"
+                );
+            }
+        }
+
         update_option( 'opb_db_version', OPB_VERSION );
     }
 

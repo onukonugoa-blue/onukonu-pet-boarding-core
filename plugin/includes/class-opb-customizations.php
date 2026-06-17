@@ -315,6 +315,72 @@ Thank you! 🐾
             'default'  => '5000',
         ],
 
+        // ── OPSMAIL — Mailbox processor (v3.0.0) ─────────────────────────────
+        'mailbox_processing_enabled' => [
+            'category' => 'opsmail',
+            'label'    => 'Mailbox Processing Enabled (1 to enable, 0 to disable)',
+            'type'     => 'text',
+            'default'  => '0',
+        ],
+        'mailbox_imap_host' => [
+            'category' => 'opsmail',
+            'label'    => 'Mailbox IMAP Host (e.g. imap.hostinger.com)',
+            'type'     => 'text',
+            'default'  => '',
+        ],
+        'mailbox_imap_port' => [
+            'category' => 'opsmail',
+            'label'    => 'Mailbox IMAP Port (default 993 for SSL)',
+            'type'     => 'text',
+            'default'  => '993',
+        ],
+        'mailbox_imap_username' => [
+            'category' => 'opsmail',
+            'label'    => 'Mailbox IMAP Username (full email address)',
+            'type'     => 'text',
+            'default'  => '',
+        ],
+        'mailbox_imap_password' => [
+            'category' => 'opsmail',
+            'label'    => 'Mailbox IMAP Password',
+            'type'     => 'password',
+            'default'  => '',
+        ],
+        'mailbox_poll_interval' => [
+            'category' => 'opsmail',
+            'label'    => 'Mailbox Poll Interval (minutes, default 5)',
+            'type'     => 'text',
+            'default'  => '5',
+        ],
+
+        // ── OPSMAIL — Telegram consumer (v3.0.0) ─────────────────────────────
+        'telegram_bot_token' => [
+            'category' => 'opsmail',
+            'label'    => 'Telegram Bot Token',
+            'type'     => 'password',
+            'default'  => '',
+        ],
+        'telegram_chat_id' => [
+            'category' => 'opsmail',
+            'label'    => 'Telegram Chat ID (Operations Group)',
+            'type'     => 'text',
+            'default'  => '',
+        ],
+
+        // ── OPSMAIL — Gemini classifier (v3.0.0) ─────────────────────────────
+        'gemini_api_key' => [
+            'category' => 'opsmail',
+            'label'    => 'Gemini API Key',
+            'type'     => 'password',
+            'default'  => '',
+        ],
+        'gemini_model' => [
+            'category' => 'opsmail',
+            'label'    => 'Gemini Model (default: gemini-2.5-flash)',
+            'type'     => 'text',
+            'default'  => 'gemini-2.5-flash',
+        ],
+
         // ── CLIENT PORTAL ─────────────────────────────────────────────────────
         'client_portal_whatsapp_message' => [
             'category' => 'client_portal',

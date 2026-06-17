@@ -3,7 +3,7 @@
  * Plugin Name: Onukonu Pet Boarding Core
  * Plugin URI:  https://onukonu.com
  * Description: Replacement platform for the discontinued boarding SaaS. Manages clients, pets, bookings, invoices, payments, and operations across three branches.
- * Version:     2.9.0
+ * Version:     3.0.0
  * Author:      Onukonu Pet Homestyle Boarding
  * License:     GPL-2.0-or-later
  * Text Domain: opb
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'OPB_VERSION',     '2.9.0' );
+define( 'OPB_VERSION',     '3.0.0' );
 define( 'OPB_PLUGIN_FILE', __FILE__ );
 define( 'OPB_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
 define( 'OPB_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
@@ -51,6 +51,8 @@ require_once OPB_PLUGIN_DIR . 'includes/migration/adapters/class-opb-addons-adap
 
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-customizations.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-opsmail.php';
+require_once OPB_PLUGIN_DIR . 'includes/class-opb-telegram-consumer.php';
+require_once OPB_PLUGIN_DIR . 'includes/class-opb-mailbox-processor.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-onboarding-handler.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-notifications.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-public-portal.php';
@@ -150,4 +152,104 @@ function opb_enqueue_admin_assets( string $hook ): void {
         return;
     }
     OPB_Admin_Page::enqueue_assets();
+}
+
+// ── OPSMAIL v3.0.0: WP Cron pipeline ─────────────────────────────────────────
+
+/**
+ * Register custom cron intervals based on the mailbox_poll_interval setting.
+ * Called on 'cron_schedules' filter.
+ */
+add_filter( 'cron_schedules', 'opb_add_cron_schedules' );
+function opb_add_cron_schedules( array $schedules ): array {
+    try {
+        $minutes = (int) OPB_Customizations::get( 'mailbox_poll_interval' ) ?: 5;
+        $minutes = max( 1, min( 60, $minutes ) ); // clamp to 1–60 minutes
+        $schedules['opb_mailbox_interval'] = [
+            'interval' => $minutes * MINUTE_IN_SECONDS,
+            'display'  => 'OPB Mailbox Poll (every ' . $minutes . ' min)',
+        ];
+    } catch ( \Throwable $e ) {
+        error_log( '[OPB CRON] opb_add_cron_schedules error: ' . $e->getMessage() );
+    }
+    return $schedules;
+}
+
+/**
+ * Schedule both cron events on init if not already scheduled.
+ * Reschedules the mailbox cron if the poll interval setting has changed.
+ */
+add_action( 'init', 'opb_maybe_schedule_cron' );
+function opb_maybe_schedule_cron(): void {
+    try {
+        // ── Mailbox processor ──────────────────────────────────────────────────
+        $minutes          = (int) OPB_Customizations::get( 'mailbox_poll_interval' ) ?: 5;
+        $minutes          = max( 1, min( 60, $minutes ) );
+        $desired_interval = $minutes * MINUTE_IN_SECONDS;
+
+        $next_mailbox = wp_next_scheduled( 'opb_cron_process_mailbox' );
+
+        // If scheduled with a different interval, clear and reschedule
+        if ( $next_mailbox ) {
+            $crons = _get_cron_array();
+            $found = false;
+            foreach ( $crons as $timestamp => $hooks ) {
+                if ( isset( $hooks['opb_cron_process_mailbox'] ) ) {
+                    $keys = array_keys( $hooks['opb_cron_process_mailbox'] );
+                    $key  = reset( $keys );
+                    $schedule = $hooks['opb_cron_process_mailbox'][ $key ]['schedule'] ?? '';
+                    // If the schedule key is different, reschedule
+                    if ( $schedule !== 'opb_mailbox_interval' ) {
+                        wp_clear_scheduled_hook( 'opb_cron_process_mailbox' );
+                        $next_mailbox = false;
+                    }
+                    $found = true;
+                    break;
+                }
+            }
+        }
+
+        if ( ! $next_mailbox ) {
+            wp_schedule_event( time(), 'opb_mailbox_interval', 'opb_cron_process_mailbox' );
+        }
+
+        // ── Telegram consumer — runs on every minute (WP every_minute) ────────
+        // Uses WP's built-in every_minute schedule; no custom interval needed.
+        if ( ! wp_next_scheduled( 'opb_cron_process_telegram' ) ) {
+            wp_schedule_event( time(), 'hourly', 'opb_cron_process_telegram' );
+        }
+
+    } catch ( \Throwable $e ) {
+        error_log( '[OPB CRON] opb_maybe_schedule_cron error: ' . $e->getMessage() );
+    }
+}
+
+/**
+ * Cron handler: poll IMAP inbox for unstructured emails.
+ */
+add_action( 'opb_cron_process_mailbox', 'opb_cron_mailbox_handler' );
+function opb_cron_mailbox_handler(): void {
+    try {
+        $log = OPB_Mailbox_Processor::process();
+        if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+            error_log( '[OPB CRON] Mailbox: ' . wp_json_encode( $log ) );
+        }
+    } catch ( \Throwable $e ) {
+        error_log( '[OPB CRON] opb_cron_mailbox_handler fatal: ' . $e->getMessage() );
+    }
+}
+
+/**
+ * Cron handler: flush pending Telegram deliveries.
+ */
+add_action( 'opb_cron_process_telegram', 'opb_cron_telegram_handler' );
+function opb_cron_telegram_handler(): void {
+    try {
+        $log = OPB_Telegram_Consumer::process_queue();
+        if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+            error_log( '[OPB CRON] Telegram: ' . wp_json_encode( $log ) );
+        }
+    } catch ( \Throwable $e ) {
+        error_log( '[OPB CRON] opb_cron_telegram_handler fatal: ' . $e->getMessage() );
+    }
 }

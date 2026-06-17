@@ -4,9 +4,16 @@
  *
  * REST endpoints for the OPSMAIL Operational Intelligence Repository.
  *
- * GET  /opb/v1/opsmail/queue              — Paginated event list   (super admin only)
- * GET  /opb/v1/opsmail/stats             — Repository summary      (super admin only)
- * POST /opb/v1/opsmail/queue/{id}/acknowledge — Mark mail_status ACKNOWLEDGED (super admin only)
+ * GET  /opb/v1/opsmail/queue                    — Paginated event list     (super admin only)
+ * GET  /opb/v1/opsmail/stats                    — Repository summary       (super admin only)
+ * POST /opb/v1/opsmail/queue/{id}/acknowledge   — Mark mail_status ACKNOWLEDGED (super admin only)
+ *
+ * v3.0.0 pipeline endpoints (super admin only):
+ * POST /opb/v1/opsmail/process-mailbox          — Trigger mailbox poll immediately
+ * POST /opb/v1/opsmail/process-telegram         — Flush Telegram delivery queue
+ * POST /opb/v1/opsmail/test-telegram            — Send a test Telegram message
+ * POST /opb/v1/opsmail/test-gemini              — Classify a sample text via Gemini
+ * POST /opb/v1/opsmail/test-mailbox             — Test IMAP connection + count unseen
  *
  * Permission: manage_options (WP administrator / opb_super_admin)
  */
@@ -35,6 +42,48 @@ class OPB_Opsmail_API extends OPB_REST_Base {
             [
                 'methods'             => 'POST',
                 'callback'            => [ $this, 'acknowledge' ],
+                'permission_callback' => [ $this, 'super_admin_only' ],
+            ],
+        ] );
+
+        // ── v3.0.0 Pipeline endpoints ────────────────────────────────────────────
+
+        register_rest_route( $ns, '/opsmail/process-mailbox', [
+            [
+                'methods'             => 'POST',
+                'callback'            => [ $this, 'run_mailbox_processor' ],
+                'permission_callback' => [ $this, 'super_admin_only' ],
+            ],
+        ] );
+
+        register_rest_route( $ns, '/opsmail/process-telegram', [
+            [
+                'methods'             => 'POST',
+                'callback'            => [ $this, 'run_telegram_consumer' ],
+                'permission_callback' => [ $this, 'super_admin_only' ],
+            ],
+        ] );
+
+        register_rest_route( $ns, '/opsmail/test-telegram', [
+            [
+                'methods'             => 'POST',
+                'callback'            => [ $this, 'test_telegram' ],
+                'permission_callback' => [ $this, 'super_admin_only' ],
+            ],
+        ] );
+
+        register_rest_route( $ns, '/opsmail/test-gemini', [
+            [
+                'methods'             => 'POST',
+                'callback'            => [ $this, 'test_gemini' ],
+                'permission_callback' => [ $this, 'super_admin_only' ],
+            ],
+        ] );
+
+        register_rest_route( $ns, '/opsmail/test-mailbox', [
+            [
+                'methods'             => 'POST',
+                'callback'            => [ $this, 'test_mailbox' ],
                 'permission_callback' => [ $this, 'super_admin_only' ],
             ],
         ] );
@@ -210,5 +259,89 @@ class OPB_Opsmail_API extends OPB_REST_Base {
         );
 
         return $this->success( [ 'id' => $id, 'mail_status' => OPB_Opsmail::STATUS_ACKNOWLEDGED ] );
+    }
+
+    // ── v3.0.0 Pipeline handlers ───────────────────────────────────────────────
+
+    /**
+     * POST /opb/v1/opsmail/process-mailbox
+     * Poll the IMAP inbox immediately and process all UNSEEN messages.
+     */
+    public function run_mailbox_processor( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+        $log = OPB_Mailbox_Processor::process();
+        return $this->success( [ 'log' => $log ] );
+    }
+
+    /**
+     * POST /opb/v1/opsmail/process-telegram
+     * Flush all PENDING/FAILED queue entries through the Telegram consumer.
+     */
+    public function run_telegram_consumer( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+        $limit = max( 1, min( 200, (int) ( $r->get_param('limit') ?? 50 ) ) );
+        $log   = OPB_Telegram_Consumer::process_queue( $limit );
+        return $this->success( [ 'log' => $log ] );
+    }
+
+    /**
+     * POST /opb/v1/opsmail/test-telegram
+     * Send a test message to the configured Telegram chat.
+     */
+    public function test_telegram( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+        if ( ! OPB_Telegram_Consumer::is_configured() ) {
+            return $this->error( 'not_configured', 'Telegram bot token or chat ID is not configured.', 422 );
+        }
+
+        $site = get_bloginfo( 'name' );
+        $time = current_time( 'mysql' );
+        $text = "🧪 <b>OPSMAIL Test Message</b>\n"
+              . "Site: <i>" . htmlspecialchars( $site, ENT_QUOTES ) . "</i>\n"
+              . "Time: <code>{$time}</code>\n"
+              . "Status: ✅ Telegram delivery verified.";
+
+        $ok = OPB_Telegram_Consumer::send_telegram( $text );
+
+        if ( ! $ok ) {
+            return $this->error( 'telegram_failed', 'Telegram API request failed — check bot token, chat ID, and network access.', 502 );
+        }
+
+        return $this->success( [ 'ok' => true, 'message' => 'Test message delivered to Telegram.' ] );
+    }
+
+    /**
+     * POST /opb/v1/opsmail/test-gemini
+     * Classify a sample text via Gemini. Accepts {text} body parameter.
+     */
+    public function test_gemini( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+        $text = sanitize_textarea_field( $r->get_param('text') ?? '' );
+
+        if ( ! $text ) {
+            return $this->error( 'missing_text', 'Provide a {text} parameter to classify.', 422 );
+        }
+
+        $result = OPB_Mailbox_Processor::classify(
+            'test@example.com',
+            'Test classification request',
+            $text
+        );
+
+        if ( ! $result ) {
+            return $this->error( 'gemini_failed', 'Gemini classification failed — check API key, model name, and quota.', 502 );
+        }
+
+        return $this->success( [ 'ok' => true, 'result' => $result ] );
+    }
+
+    /**
+     * POST /opb/v1/opsmail/test-mailbox
+     * Test the IMAP connection and return inbox diagnostics.
+     */
+    public function test_mailbox( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+        $result = OPB_Mailbox_Processor::test_connection();
+
+        if ( ! $result['ok'] ) {
+            return $this->error( 'imap_failed', $result['error'] ?? 'IMAP connection failed.', 502 );
+        }
+
+        return $this->success( $result );
     }
 }
