@@ -58,6 +58,37 @@ export interface OpsmailStats {
   inbox_configured: boolean
   telegram_configured: boolean
   last_telegram_sent_at: string | null
+  gemini_configured: boolean
+  gemini_model: string
+}
+
+export interface GeminiRunParams {
+  text: string
+  send_telegram?: boolean
+}
+
+export interface GeminiRunResult {
+  ok: boolean
+  prompt: string
+  response: string
+  parsed: {
+    summary: string
+    category: string
+    priority: 'HIGH' | 'NORMAL'
+    action_required: boolean
+    confidence: number
+  } | null
+  timing_ms: number
+  usage: {
+    promptTokenCount?: number
+    candidatesTokenCount?: number
+    totalTokenCount?: number
+  } | null
+  telegram_payload: string | null
+  telegram: {
+    ok: boolean
+    error?: string
+  } | null
 }
 
 export interface TelegramProcessLog {
@@ -98,4 +129,7 @@ export const opsmailApi = {
 
   testTelegram: () =>
     api.post<{ ok: boolean; message: string }>('/opsmail/test-telegram'),
+
+  geminiRun: (params: GeminiRunParams) =>
+    api.post<GeminiRunResult>('/opsmail/gemini-run', params),
 }
