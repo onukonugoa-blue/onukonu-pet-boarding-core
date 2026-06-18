@@ -218,14 +218,34 @@ class OPB_Opsmail_API extends OPB_REST_Base {
             ARRAY_A
         ) ?? [];
 
+        // Last successful Telegram delivery timestamp
+        $last_telegram_sent_at = $wpdb->get_var(
+            "SELECT MAX(telegram_sent_at)
+             FROM {$wpdb->prefix}opb_opsmail_queue
+             WHERE telegram_status = 'SENT'"
+        );
+
+        // Recent Telegram failures for diagnostics panel
+        $recent_telegram_failed = $wpdb->get_results(
+            "SELECT id, event_type, subject, telegram_attempts, last_error, created_at
+             FROM {$wpdb->prefix}opb_opsmail_queue
+             WHERE telegram_status = 'FAILED'
+             ORDER BY id DESC
+             LIMIT 5",
+            ARRAY_A
+        ) ?? [];
+
         return $this->success( [
-            'by_mail_status'     => $by_mail_status,
-            'by_telegram_status' => $by_telegram_status,
-            'total'              => array_sum( $by_mail_status ),
-            'by_event'           => $by_event,
-            'recent_failed'      => $recent_failed,
-            'opsmail_enabled'    => OPB_Opsmail::is_enabled(),
-            'inbox_configured'   => OPB_Opsmail::inbox_email() !== '',
+            'by_mail_status'         => $by_mail_status,
+            'by_telegram_status'     => $by_telegram_status,
+            'total'                  => array_sum( $by_mail_status ),
+            'by_event'               => $by_event,
+            'recent_failed'          => $recent_failed,
+            'recent_telegram_failed' => $recent_telegram_failed,
+            'opsmail_enabled'        => OPB_Opsmail::is_enabled(),
+            'inbox_configured'       => OPB_Opsmail::inbox_email() !== '',
+            'telegram_configured'    => OPB_Telegram_Consumer::is_configured(),
+            'last_telegram_sent_at'  => $last_telegram_sent_at,
         ] );
     }
 
