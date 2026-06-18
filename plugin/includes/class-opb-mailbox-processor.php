@@ -304,11 +304,64 @@ class OPB_Mailbox_Processor {
         // ── Gemini classification ──────────────────────────────────────────────
         $gemini = self::classify( $sender, $subject, $body );
         if ( ! $gemini ) {
+            // SAFETY FALLBACK (Part 4): Gemini failed — NEVER silently drop a notification.
+            // Insert a raw queue entry and attempt immediate Telegram delivery.
+            $fallback_summary = 'Unclassified inbound email — Gemini unavailable.'
+                . ' From: ' . mb_substr( $sender, 0, 80 )
+                . ' — Subject: ' . mb_substr( $subject, 0, 120 );
+
+            $fallback_payload = wp_json_encode( [
+                'sender'       => $sender,
+                'subject'      => $subject,
+                'body_excerpt' => mb_substr( $body, 0, 500 ),
+                'fallback'     => true,
+                'reason'       => 'Gemini classification failed',
+            ], JSON_UNESCAPED_UNICODE );
+
+            $now = current_time( 'mysql' );
+            $wpdb->insert( $table, [
+                'event_uuid'        => wp_generate_uuid4(),
+                'event_type'        => 'OTHER.GENERAL',
+                'source_system'     => OPB_Opsmail::SOURCE_HUMAN_EMAIL,
+                'entity_type'       => 'EMAIL',
+                'entity_id'         => null,
+                'branch_id'         => null,
+                'user_id'           => null,
+                'origin_type'       => 'MAILBOX',
+                'priority'          => 'NORMAL',
+                'subject'           => mb_substr( $subject, 0, 250 ),
+                'summary'           => mb_substr( $fallback_summary, 0, 500 ),
+                'payload_json'      => $fallback_payload,
+                'content_hash'      => $content_hash,
+                'recipient_email'   => null,
+                'mail_status'       => OPB_Opsmail::STATUS_ACKNOWLEDGED,
+                'telegram_status'   => OPB_Opsmail::STATUS_PENDING,
+                'mail_attempts'     => 0,
+                'telegram_attempts' => 0,
+                'classification'    => 'OTHER.UNCLASSIFIED',
+                'confidence'        => null,
+                'created_at'        => $now,
+            ] );
+
+            $fallback_id = (int) $wpdb->insert_id;
+            $tg_ok = false;
+            if ( $fallback_id && OPB_Telegram_Consumer::is_configured() ) {
+                $fallback_row = $wpdb->get_row( $wpdb->prepare(
+                    "SELECT * FROM {$table} WHERE id = %d", $fallback_id
+                ), ARRAY_A );
+                if ( $fallback_row ) {
+                    $tg_ok = OPB_Telegram_Consumer::deliver_event( $fallback_row );
+                }
+            }
+
             return [
-                'status'  => 'error',
-                'reason'  => 'Gemini classification failed — email skipped',
-                'sender'  => $sender,
-                'subject' => $subject,
+                'status'      => 'ok',
+                'queue_id'    => $fallback_id ?: null,
+                'sender'      => $sender,
+                'subject'     => $subject,
+                'fallback'    => true,
+                'reason'      => 'Gemini classification failed — raw email delivered as fallback notification',
+                'telegram_ok' => $tg_ok,
             ];
         }
 
@@ -511,6 +564,131 @@ BODY:
 {$body_excerpt}
 
 Return ONLY the JSON object. No explanation, no markdown fences, no extra text.
+PROMPT;
+    }
+
+    // ── Gemini Lab: general operational text processing ────────────────────────
+
+    /**
+     * Process arbitrary text through Gemini with an operational summarization prompt.
+     * Returns full diagnostics including timing, token usage, and the raw prompt sent.
+     * Used by the Gemini Lab REST endpoint — NOT the mailbox classification pipeline.
+     *
+     * @param  string $text  Arbitrary text input (max 3000 chars used in prompt).
+     * @return array         { ok, prompt, response, parsed, timing_ms, usage, error? }
+     */
+    public static function process_text( string $text ): array {
+        try {
+            $api_key = trim( OPB_Customizations::get( 'gemini_api_key' ) );
+            $model   = trim( OPB_Customizations::get( 'gemini_model' ) ) ?: 'gemini-2.5-flash';
+
+            if ( ! $api_key ) {
+                return [ 'ok' => false, 'error' => 'Gemini API key not configured in Settings → Customization.' ];
+            }
+
+            $prompt = self::build_summarization_prompt( $text );
+            $url    = 'https://generativelanguage.googleapis.com/v1beta/models/'
+                    . rawurlencode( $model )
+                    . ':generateContent?key=' . rawurlencode( $api_key );
+
+            $start = microtime( true );
+
+            $response = wp_remote_post( $url, [
+                'timeout' => 30,
+                'headers' => [ 'Content-Type' => 'application/json' ],
+                'body'    => wp_json_encode( [
+                    'contents'         => [ [
+                        'parts' => [ [ 'text' => $prompt ] ],
+                    ] ],
+                    'generationConfig' => [
+                        'temperature'      => 0.2,
+                        'maxOutputTokens'  => 400,
+                        'responseMimeType' => 'application/json',
+                    ],
+                ] ),
+            ] );
+
+            $timing_ms = (int) round( ( microtime( true ) - $start ) * 1000 );
+
+            if ( is_wp_error( $response ) ) {
+                return [
+                    'ok'        => false,
+                    'error'     => 'Network error: ' . $response->get_error_message(),
+                    'timing_ms' => $timing_ms,
+                    'prompt'    => $prompt,
+                ];
+            }
+
+            $http_code = (int) wp_remote_retrieve_response_code( $response );
+            $body_raw  = wp_remote_retrieve_body( $response );
+
+            if ( $http_code !== 200 ) {
+                $api_err = json_decode( $body_raw, true );
+                $msg     = $api_err['error']['message'] ?? ( 'HTTP ' . $http_code );
+                return [
+                    'ok'        => false,
+                    'error'     => 'Gemini API error: ' . $msg,
+                    'timing_ms' => $timing_ms,
+                    'prompt'    => $prompt,
+                ];
+            }
+
+            $api_body = json_decode( $body_raw, true );
+            $text_out = $api_body['candidates'][0]['content']['parts'][0]['text'] ?? '';
+            $usage    = $api_body['usageMetadata'] ?? null;
+
+            if ( ! $text_out ) {
+                return [
+                    'ok'        => false,
+                    'error'     => 'Gemini returned an empty response. Check model name and quota.',
+                    'timing_ms' => $timing_ms,
+                    'prompt'    => $prompt,
+                ];
+            }
+
+            // Strip markdown fences if present despite responseMimeType hint
+            $clean  = preg_replace( '/^```(?:json)?\s*/i', '', trim( $text_out ) );
+            $clean  = preg_replace( '/\s*```$/i', '', $clean );
+            $parsed = json_decode( trim( $clean ), true );
+
+            return [
+                'ok'        => true,
+                'prompt'    => $prompt,
+                'response'  => $text_out,
+                'parsed'    => is_array( $parsed ) ? $parsed : null,
+                'timing_ms' => $timing_ms,
+                'usage'     => $usage,
+            ];
+
+        } catch ( \Throwable $e ) {
+            error_log( '[OPB MAILBOX] process_text() exception: ' . $e->getMessage() );
+            return [ 'ok' => false, 'error' => $e->getMessage() ];
+        }
+    }
+
+    /**
+     * Build the Gemini Lab operational summarization prompt.
+     * Different from the mailbox classification prompt — general purpose.
+     */
+    private static function build_summarization_prompt( string $text ): string {
+        $excerpt  = mb_substr( $text, 0, 3000 );
+        $facility = OPB_Customizations::facility_name();
+
+        return <<<PROMPT
+You are an operational intelligence assistant for "{$facility}", a pet boarding business.
+Analyze the text below and produce a concise operational summary for the operations team.
+
+Return ONLY a valid JSON object with these exact fields:
+- summary: string — 1 to 3 sentences capturing the key operational point (max 250 chars)
+- category: string — a brief label, e.g. "Booking Request", "Client Complaint", "Payment Issue", "Staff Update", "General Inquiry"
+- priority: string — "HIGH" if immediate staff action is needed, otherwise "NORMAL"
+- action_required: boolean — true if staff must take action on this
+- confidence: number — your confidence in this assessment, between 0.0 and 1.0
+
+Text to analyze:
+{$excerpt}
+
+Return ONLY the JSON object. No markdown fences, no explanation.
 PROMPT;
     }
 
