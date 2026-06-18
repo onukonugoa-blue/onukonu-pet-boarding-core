@@ -3,7 +3,7 @@
  * Plugin Name: Onukonu Pet Boarding Core
  * Plugin URI:  https://onukonu.com
  * Description: Replacement platform for the discontinued boarding SaaS. Manages clients, pets, bookings, invoices, payments, and operations across three branches.
- * Version:     3.0.0
+ * Version:     3.0.2
  * Author:      Onukonu Pet Homestyle Boarding
  * License:     GPL-2.0-or-later
  * Text Domain: opb
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'OPB_VERSION',     '3.0.0' );
+define( 'OPB_VERSION',     '3.0.2' );
 define( 'OPB_PLUGIN_FILE', __FILE__ );
 define( 'OPB_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
 define( 'OPB_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
@@ -172,6 +172,11 @@ function opb_add_cron_schedules( array $schedules ): array {
     } catch ( \Throwable $e ) {
         error_log( '[OPB CRON] opb_add_cron_schedules error: ' . $e->getMessage() );
     }
+    // Fixed 1-minute schedule for Telegram consumer
+    $schedules['opb_telegram_interval'] = [
+        'interval' => MINUTE_IN_SECONDS,
+        'display'  => 'OPB Telegram Consumer (every 1 min)',
+    ];
     return $schedules;
 }
 
@@ -213,10 +218,26 @@ function opb_maybe_schedule_cron(): void {
             wp_schedule_event( time(), 'opb_mailbox_interval', 'opb_cron_process_mailbox' );
         }
 
-        // ── Telegram consumer — runs on every minute (WP every_minute) ────────
-        // Uses WP's built-in every_minute schedule; no custom interval needed.
-        if ( ! wp_next_scheduled( 'opb_cron_process_telegram' ) ) {
-            wp_schedule_event( time(), 'hourly', 'opb_cron_process_telegram' );
+        // ── Telegram consumer — runs every minute via opb_telegram_interval ──────
+        $next_telegram = wp_next_scheduled( 'opb_cron_process_telegram' );
+        if ( $next_telegram ) {
+            // If it was scheduled with the wrong (e.g. 'hourly') interval, reschedule
+            $crons = _get_cron_array();
+            foreach ( $crons as $hooks ) {
+                if ( isset( $hooks['opb_cron_process_telegram'] ) ) {
+                    $keys     = array_keys( $hooks['opb_cron_process_telegram'] );
+                    $key      = reset( $keys );
+                    $schedule = $hooks['opb_cron_process_telegram'][ $key ]['schedule'] ?? '';
+                    if ( $schedule !== 'opb_telegram_interval' ) {
+                        wp_clear_scheduled_hook( 'opb_cron_process_telegram' );
+                        $next_telegram = false;
+                    }
+                    break;
+                }
+            }
+        }
+        if ( ! $next_telegram ) {
+            wp_schedule_event( time(), 'opb_telegram_interval', 'opb_cron_process_telegram' );
         }
 
     } catch ( \Throwable $e ) {
