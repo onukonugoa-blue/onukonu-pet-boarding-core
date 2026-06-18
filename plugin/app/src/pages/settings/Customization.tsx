@@ -174,6 +174,50 @@ function MediaWidget({ settingKey, label, currentUrl, isUploading, readOnly, isD
   )
 }
 
+// ── Password field with show / hide toggle ──────────────────────────────────────
+
+interface PasswordFieldProps {
+  item: CustomizationItem
+  value: string
+  onChange: (key: string, val: string) => void
+  readOnly: boolean
+}
+
+function PasswordField({ item, value, onChange, readOnly }: PasswordFieldProps) {
+  const [revealed, setRevealed] = useState(false)
+  const isDirty = value !== item.value
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center justify-between mb-1 gap-2">
+        <label className="form-label mb-0 font-semibold">{item.label}</label>
+        <span className={`text-xs ${item.is_default && !isDirty ? 'text-gray-400' : 'text-blue-600'}`}>
+          {isDirty ? '● unsaved' : metaLine(item)}
+        </span>
+      </div>
+      <div className="relative">
+        <input
+          type={revealed ? 'text' : 'password'}
+          className="form-input pr-20"
+          value={value}
+          onChange={(e) => onChange(item.key, e.target.value)}
+          disabled={readOnly}
+          placeholder={readOnly ? '••••••••' : item.label}
+          autoComplete="new-password"
+        />
+        <button
+          type="button"
+          onClick={() => setRevealed((v) => !v)}
+          tabIndex={-1}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-500 hover:text-gray-800 bg-white px-1.5 py-0.5 rounded border border-gray-200 select-none"
+        >
+          {revealed ? 'Hide' : 'Show'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Standard text / textarea / richtext field ───────────────────────────────────
 
 interface FieldProps {
@@ -199,6 +243,12 @@ function SettingField({ item, value, mediaUrl, uploadingKey, onChange, onMediaUp
         hint={MEDIA_HINTS[item.key]}
         onUpload={onMediaUpload}
       />
+    )
+  }
+
+  if (item.type === 'password') {
+    return (
+      <PasswordField item={item} value={value} onChange={onChange} readOnly={readOnly} />
     )
   }
 

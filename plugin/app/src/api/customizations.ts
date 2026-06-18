@@ -4,7 +4,7 @@ export interface CustomizationItem {
   key: string
   category: 'facility' | 'legal' | 'onboarding' | 'inquiry' | 'invoice' | 'invoice_branding' | 'client_portal' | 'opsmail'
   label: string
-  type: 'text' | 'textarea' | 'richtext' | 'media'
+  type: 'text' | 'textarea' | 'richtext' | 'media' | 'password'
   value: string
   media_url?: string
   is_default: boolean
