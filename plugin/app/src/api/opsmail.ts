@@ -46,8 +46,22 @@ export interface OpsmailStats {
     last_error: string | null
     created_at: string
   }>
+  recent_telegram_failed: Array<{
+    id: number
+    event_type: string
+    subject: string
+    telegram_attempts: number
+    last_error: string | null
+    created_at: string
+  }>
   opsmail_enabled: boolean
   inbox_configured: boolean
+  telegram_configured: boolean
+  last_telegram_sent_at: string | null
+}
+
+export interface TelegramProcessLog {
+  log: Array<Record<string, unknown>>
 }
 
 export interface QueueParams {
@@ -78,4 +92,10 @@ export const opsmailApi = {
 
   acknowledge: (id: number) =>
     api.post<{ id: number; mail_status: string }>(`/opsmail/queue/${id}/acknowledge`),
+
+  processTelegram: (limit = 50) =>
+    api.post<TelegramProcessLog>('/opsmail/process-telegram', { limit }),
+
+  testTelegram: () =>
+    api.post<{ ok: boolean; message: string }>('/opsmail/test-telegram'),
 }
