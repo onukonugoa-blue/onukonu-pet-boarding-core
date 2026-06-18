@@ -80,6 +80,14 @@ class OPB_Opsmail_API extends OPB_REST_Base {
             ],
         ] );
 
+        register_rest_route( $ns, '/opsmail/gemini-run', [
+            [
+                'methods'             => 'POST',
+                'callback'            => [ $this, 'gemini_run' ],
+                'permission_callback' => [ $this, 'super_admin_only' ],
+            ],
+        ] );
+
         register_rest_route( $ns, '/opsmail/test-mailbox', [
             [
                 'methods'             => 'POST',
@@ -246,6 +254,8 @@ class OPB_Opsmail_API extends OPB_REST_Base {
             'inbox_configured'       => OPB_Opsmail::inbox_email() !== '',
             'telegram_configured'    => OPB_Telegram_Consumer::is_configured(),
             'last_telegram_sent_at'  => $last_telegram_sent_at,
+            'gemini_configured'      => ! empty( trim( OPB_Customizations::get( 'gemini_api_key' ) ) ),
+            'gemini_model'           => trim( OPB_Customizations::get( 'gemini_model' ) ) ?: 'gemini-2.5-flash',
         ] );
     }
 
@@ -363,5 +373,79 @@ class OPB_Opsmail_API extends OPB_REST_Base {
         }
 
         return $this->success( $result );
+    }
+
+    /**
+     * POST /opb/v1/opsmail/gemini-run
+     * Process arbitrary text through Gemini with operational summarization prompt.
+     * Optionally delivers the formatted result to Telegram.
+     * Accepts: { text: string, send_telegram?: bool }
+     */
+    public function gemini_run( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+        $text          = sanitize_textarea_field( $r->get_param( 'text' ) ?? '' );
+        $send_telegram = (bool) ( $r->get_param( 'send_telegram' ) ?? false );
+
+        if ( ! $text ) {
+            return $this->error( 'missing_text', 'Provide a {text} parameter to process.', 422 );
+        }
+
+        $result = OPB_Mailbox_Processor::process_text( $text );
+
+        if ( ! $result['ok'] ) {
+            return $this->error( 'gemini_failed', $result['error'] ?? 'Gemini request failed.', 502 );
+        }
+
+        $telegram_payload = self::build_lab_telegram_payload( $result );
+        $telegram_result  = null;
+
+        if ( $send_telegram ) {
+            if ( ! OPB_Telegram_Consumer::is_configured() ) {
+                $telegram_result = [ 'ok' => false, 'error' => 'Telegram not configured.' ];
+            } else {
+                $tg_ok           = OPB_Telegram_Consumer::send_telegram( $telegram_payload );
+                $telegram_result = [ 'ok' => $tg_ok ];
+            }
+        }
+
+        return $this->success( [
+            'ok'               => true,
+            'prompt'           => $result['prompt'],
+            'response'         => $result['response'],
+            'parsed'           => $result['parsed'],
+            'timing_ms'        => $result['timing_ms'],
+            'usage'            => $result['usage'],
+            'telegram_payload' => $telegram_payload,
+            'telegram'         => $telegram_result,
+        ] );
+    }
+
+    /**
+     * Build a Telegram-formatted message from a process_text() result.
+     */
+    private static function build_lab_telegram_payload( array $result ): string {
+        $parsed   = $result['parsed'] ?? [];
+        $esc      = fn( string $s ) => htmlspecialchars( $s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' );
+
+        $summary  = $esc( (string) ( $parsed['summary']  ?? $result['response'] ?? '' ) );
+        $category = $esc( (string) ( $parsed['category'] ?? 'Gemini Lab' ) );
+        $priority = (string) ( $parsed['priority'] ?? 'NORMAL' );
+        $action   = ! empty( $parsed['action_required'] ) ? 'Yes' : 'No';
+        $conf     = isset( $parsed['confidence'] )
+                        ? round( (float) $parsed['confidence'] * 100 ) . '%'
+                        : '—';
+
+        $lines = [
+            '🤖 <b>Gemini Lab</b>',
+            '<i>' . $category . '</i>',
+            '',
+            $summary,
+            '',
+            ( $priority === 'HIGH' ? '🔴 HIGH' : '✅ NORMAL' )
+            . ' · Confidence: ' . $conf
+            . ' · Action: ' . $action,
+            '<code>GEMINI_LAB</code>',
+        ];
+
+        return implode( "\n", $lines );
     }
 }
