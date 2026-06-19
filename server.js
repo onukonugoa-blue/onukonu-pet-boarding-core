@@ -148,6 +148,17 @@ function renderPage(activeTab) {
   const rc1Sal          = readFileSafe('docs/RC1-SAL-AUDIT.md') || '';
   const rc1ReleaseNotes = readFileSafe('docs/RC1-RELEASE-NOTES.md') || '';
   const rc1Deployment   = readFileSafe('docs/RC1-DEPLOYMENT.md') || '';
+  const perm01 = readFileSafe('docs/PERMISSIONS-01-role-inventory.md') || '';
+  const perm02 = readFileSafe('docs/PERMISSIONS-02-capability-inventory.md') || '';
+  const perm03 = readFileSafe('docs/PERMISSIONS-03-user-type-audit.md') || '';
+  const perm04 = readFileSafe('docs/PERMISSIONS-04-branch-scope-audit.md') || '';
+  const perm05 = readFileSafe('docs/PERMISSIONS-05-module-permission-matrix.md') || '';
+  const perm06 = readFileSafe('docs/PERMISSIONS-06-opsmail-permission-matrix.md') || '';
+  const perm07 = readFileSafe('docs/PERMISSIONS-07-sal-permission-matrix.md') || '';
+  const perm08 = readFileSafe('docs/PERMISSIONS-08-conflict-report.md') || '';
+  const perm09 = readFileSafe('docs/PERMISSIONS-09-security-review.md') || '';
+  const perm10 = readFileSafe('docs/PERMISSIONS-10-architecture-documentation.md') || '';
+  const perm11 = readFileSafe('docs/PERMISSIONS-11-canonical-model-recommendation.md') || '';
   const legacyStats = getLegacyStats();
   const tree = getPluginTree();
   const pluginMeta = getPluginMeta();
@@ -630,6 +641,38 @@ function renderPage(activeTab) {
         </table>
       </div>
     `;
+  } else if (activeTab === 'permissions') {
+    title = 'Permission Audit';
+    const permDocs = [
+      { num: '01', label: 'Role Inventory',                  md: perm01 },
+      { num: '02', label: 'Capability Inventory',            md: perm02 },
+      { num: '03', label: 'User Type Audit',                 md: perm03 },
+      { num: '04', label: 'Branch Scope Audit',              md: perm04 },
+      { num: '05', label: 'Module Permission Matrix',        md: perm05 },
+      { num: '06', label: 'OPSMAIL Permission Matrix',       md: perm06 },
+      { num: '07', label: 'SAL Permission Matrix',           md: perm07 },
+      { num: '08', label: 'Conflict Detection Report',       md: perm08 },
+      { num: '09', label: 'Security Review',                 md: perm09 },
+      { num: '10', label: 'Architecture Documentation',      md: perm10 },
+      { num: '11', label: 'Canonical Model Recommendation',  md: perm11 },
+    ];
+    content = `
+      <div class="card">
+        <h2>Permission, Role, Scope &amp; Access Control Audit</h2>
+        <p style="color:#4a5568;font-size:14px">Plugin v3.1.0 &mdash; June 2026 &mdash; Read-only audit of the existing access-control architecture. No code changes made.</p>
+        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+          ${permDocs.map(d => `<a href="#perm-${d.num}" style="background:#ebf8ff;color:#2b6cb0;border:1px solid #bee3f8;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:600;text-decoration:none">Part ${d.num} — ${d.label}</a>`).join('')}
+        </div>
+      </div>
+      ${permDocs.map(d => `
+        <div class="card doc-content" id="perm-${d.num}">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;border-bottom:1px solid #e2e8f0;padding-bottom:10px">
+            <span style="background:#1a365d;color:white;border-radius:6px;padding:4px 12px;font-size:13px;font-weight:700">Part ${d.num}</span>
+            <span style="font-size:16px;font-weight:700;color:#1a365d">${d.label}</span>
+          </div>
+          ${d.md ? simpleMarkdown(d.md) : '<p style="color:#a0aec0">Document not found.</p>'}
+        </div>`).join('')}
+    `;
   }
 
   return `<!DOCTYPE html>
@@ -718,6 +761,7 @@ function renderPage(activeTab) {
     <a href="/plugin" class="${activeTab === 'plugin' ? 'active' : ''}">Plugin</a>
     <a href="/changelog" class="${activeTab === 'changelog' ? 'active' : ''}">Changelog</a>
     <a href="/rc1" class="${activeTab === 'rc1' ? 'active' : ''}" style="color:#68d391;font-weight:700">RC1 Audit</a>
+    <a href="/permissions" class="${activeTab === 'permissions' ? 'active' : ''}" style="color:#fbd38d;font-weight:700">Permission Audit</a>
   </nav>
   <main class="main">
     <div class="badges">
@@ -741,6 +785,7 @@ const server = http.createServer((req, res) => {
   else if (url === '/plugin') tab = 'plugin';
   else if (url === '/changelog') tab = 'changelog';
   else if (url === '/rc1') tab = 'rc1';
+  else if (url === '/permissions') tab = 'permissions';
   else if (url !== '/') {
     res.writeHead(301, { Location: '/' });
     res.end();
