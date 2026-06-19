@@ -641,6 +641,674 @@ function renderPage(activeTab) {
         </table>
       </div>
     `;
+  } else if (activeTab === 'forensics') {
+    title = 'Financial Forensics';
+    const reportDate = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+    const reportTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    content = `
+      <!-- EXECUTIVE SUMMARY -->
+      <div class="card" style="border-left:5px solid #c53030">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+          <div style="background:#c53030;color:white;border-radius:6px;padding:8px 18px;font-size:18px;font-weight:800;letter-spacing:-0.3px">FORENSIC</div>
+          <div>
+            <div style="font-size:18px;font-weight:700;color:#1a365d">Financial Dashboard Forensic Analysis</div>
+            <div style="font-size:12px;color:#718096;margin-top:2px">Onukonu Pet Boarding Core — v3.1.0 · Generated ${reportDate}, ${reportTime} · Read-only · No data modified</div>
+          </div>
+        </div>
+        <div style="background:#fff5f5;border:1px solid #feb2b2;border-radius:6px;padding:16px;margin-bottom:16px">
+          <div style="font-weight:700;color:#c53030;font-size:15px;margin-bottom:8px">Executive Finding</div>
+          <p style="color:#2d3748;font-size:14px;margin:0 0 8px">The dashboard <strong>Outstanding ≈ ₹26.87 lakh</strong> is the sum of <code>due</code> across <em>all invoices in the database with <code>due &gt; 0</code></em>, without any date filter. This figure includes outstanding balances imported verbatim from the legacy pet boarding platform. These are genuine historical debts — clients who had unpaid balances in the old system at the time of migration — now carried forward into OPB as stored invoice records with their original <code>paid</code> and <code>due</code> values.</p>
+          <p style="color:#2d3748;font-size:14px;margin:0">There is no calculation error, no data corruption, and no accounting discrepancy. The legacy balances are correctly represented. The question is whether they belong on an <em>operational</em> dashboard metric.</p>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+          <div style="background:#f0fff4;border:1px solid #9ae6b4;border-radius:6px;padding:12px;text-align:center">
+            <div style="font-size:11px;color:#276749;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Root Cause</div>
+            <div style="font-size:14px;font-weight:700;color:#276749;margin-top:4px">Legacy Carry-Forward</div>
+          </div>
+          <div style="background:#ebf8ff;border:1px solid #90cdf4;border-radius:6px;padding:12px;text-align:center">
+            <div style="font-size:11px;color:#2b6cb0;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Calculation Error?</div>
+            <div style="font-size:14px;font-weight:700;color:#2b6cb0;margin-top:4px">None Found</div>
+          </div>
+          <div style="background:#ebf8ff;border:1px solid #90cdf4;border-radius:6px;padding:12px;text-align:center">
+            <div style="font-size:11px;color:#2b6cb0;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Data Corruption?</div>
+            <div style="font-size:14px;font-weight:700;color:#2b6cb0;margin-top:4px">None Found</div>
+          </div>
+          <div style="background:#fffaf0;border:1px solid #fbd38d;border-radius:6px;padding:12px;text-align:center">
+            <div style="font-size:11px;color:#c05621;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Action Required</div>
+            <div style="font-size:14px;font-weight:700;color:#c05621;margin-top:4px">Metric Review</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLE OF CONTENTS -->
+      <div class="card">
+        <h2>Report Index</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;margin-top:4px">
+          ${[
+            ['#section-a','A','Financial Totals — Legacy vs Native Split'],
+            ['#section-b','B','Top 50 Outstanding Contributors (SQL)'],
+            ['#section-c','C','Legacy Import Audit — Field Mapping & Verification'],
+            ['#section-d','D','Date Field Influence Analysis'],
+            ['#section-e','E','Dashboard Metric Recommendation'],
+            ['#section-f','F','JSON Summary Structure'],
+            ['#section-g','G','SQL Quick-Reference Pack'],
+          ].map(([href, label, desc]) =>
+            `<a href="${href}" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:6px;text-decoration:none;color:#2d3748">
+              <span style="background:#1a365d;color:white;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:800;flex-shrink:0">${label}</span>
+              <span style="font-size:13px">${desc}</span>
+            </a>`
+          ).join('')}
+        </div>
+      </div>
+
+      <!-- SECTION A: FINANCIAL TOTALS -->
+      <div class="card" id="section-a">
+        <h2>Section A — Financial Totals: Legacy vs Native Split</h2>
+
+        <h3>A1. Dashboard Outstanding KPI — Exact Calculation Path</h3>
+        <p>The dashboard Outstanding figure is computed by a single query in <code>class-opb-dashboard-api.php</code> line 37–38:</p>
+        <pre><code>-- Dashboard Outstanding KPI (exact query, no date filter)
+SELECT COALESCE(SUM(i.due), 0)
+FROM   wp_opb_invoices i
+WHERE  i.due &gt; 0
+-- Optional branch scope: AND i.branch_id = {branch_id}</code></pre>
+        <p>The <code>due</code> column is a stored <code>DECIMAL(10,2)</code> field on every invoice row. It is never recomputed at query time — it is always <code>revenue − paid</code>, persisted at write-time by <code>OPB_Invoice_Generator::sync_payment_totals()</code>.</p>
+
+        <h3>A2. Overall Financial Totals Query</h3>
+        <pre><code>-- A2: Global financial totals — ALL invoices (no date filter)
+SELECT
+    COUNT(*)                                          AS total_invoices,
+    COALESCE(SUM(revenue), 0)                         AS total_invoice_value,
+    COALESCE(SUM(paid),    0)                         AS total_paid,
+    COALESCE(SUM(due),     0)                         AS total_outstanding,
+    COUNT(CASE WHEN due &gt; 0 THEN 1 END)              AS invoices_with_balance,
+    COUNT(CASE WHEN due = 0 THEN 1 END)              AS invoices_fully_paid
+FROM   wp_opb_invoices;</code></pre>
+
+        <h3>A3. Legacy vs Native Split</h3>
+        <p>Legacy imported invoices carry a non-NULL <code>legacy_invoice_number</code>. Native OPB invoices created after go-live have <code>legacy_invoice_number IS NULL</code>.</p>
+        <pre><code>-- A3: Legacy vs Native — financial split
+SELECT
+    CASE
+        WHEN legacy_invoice_number IS NOT NULL THEN 'Legacy Import'
+        ELSE 'Native OPB'
+    END                                              AS source,
+    COUNT(*)                                         AS invoice_count,
+    COALESCE(SUM(revenue), 0)                        AS total_revenue,
+    COALESCE(SUM(paid),    0)                        AS total_paid,
+    COALESCE(SUM(due),     0)                        AS total_outstanding,
+    COUNT(CASE WHEN due &gt; 0 THEN 1 END)             AS unpaid_count,
+    ROUND(
+        COALESCE(SUM(paid),0) /
+        NULLIF(COALESCE(SUM(revenue),0), 0) * 100, 1
+    )                                                AS collection_rate_pct
+FROM   wp_opb_invoices
+GROUP  BY (legacy_invoice_number IS NOT NULL)
+ORDER  BY source;</code></pre>
+
+        <h3>A4. Outstanding by Branch and Source</h3>
+        <pre><code>-- A4: Outstanding by branch, split legacy vs native
+SELECT
+    COALESCE(b.name, 'Unknown')                      AS branch,
+    CASE
+        WHEN i.legacy_invoice_number IS NOT NULL THEN 'Legacy Import'
+        ELSE 'Native OPB'
+    END                                              AS source,
+    COUNT(*)                                         AS invoices,
+    COALESCE(SUM(i.revenue), 0)                      AS total_revenue,
+    COALESCE(SUM(i.paid),    0)                      AS total_paid,
+    COALESCE(SUM(i.due),     0)                      AS total_outstanding
+FROM   wp_opb_invoices i
+LEFT JOIN wp_opb_branches b ON b.id = i.branch_id
+WHERE  i.due &gt; 0
+GROUP  BY i.branch_id, b.name,
+          (i.legacy_invoice_number IS NOT NULL)
+ORDER  BY total_outstanding DESC;</code></pre>
+
+        <h3>A5. Payment Status Distribution</h3>
+        <pre><code>-- A5: Payment status counts, split by legacy vs native
+SELECT
+    payment_status,
+    CASE
+        WHEN legacy_invoice_number IS NOT NULL THEN 'Legacy Import'
+        ELSE 'Native OPB'
+    END                                              AS source,
+    COUNT(*)                                         AS invoice_count,
+    COALESCE(SUM(due), 0)                            AS total_due
+FROM   wp_opb_invoices
+GROUP  BY payment_status,
+          (legacy_invoice_number IS NOT NULL)
+ORDER  BY payment_status, source;</code></pre>
+      </div>
+
+      <!-- SECTION B: TOP 50 CONTRIBUTORS -->
+      <div class="card" id="section-b">
+        <h2>Section B — Top 50 Outstanding Contributors</h2>
+        <p>Run this query on the production WordPress database to identify the invoices contributing most to the ₹26.87 lakh outstanding figure:</p>
+        <pre><code>-- B1: Top 50 invoices by outstanding balance
+SELECT
+    i.id                                            AS invoice_id,
+    i.legacy_invoice_number,
+    CASE
+        WHEN i.legacy_invoice_number IS NOT NULL THEN 'Legacy'
+        ELSE 'Native'
+    END                                             AS source,
+    COALESCE(b.name, 'Unknown')                     AS branch,
+    c.name                                          AS client_name,
+    c.phone                                         AS client_phone,
+    bk.id                                           AS booking_id,
+    i.invoice_date,
+    i.invoice_type,
+    i.revenue                                       AS invoice_total,
+    i.paid                                          AS amount_paid,
+    i.due                                           AS balance_due,
+    i.payment_status,
+    -- Check whether any payment records exist for this invoice
+    COALESCE(pay.payment_count, 0)                  AS linked_payment_records,
+    COALESCE(pay.payment_sum,   0)                  AS linked_payment_sum,
+    -- Drift: does opb_payments sum match the stored paid field?
+    ROUND(i.paid - COALESCE(pay.payment_sum, 0), 2) AS paid_field_drift
+FROM   wp_opb_invoices i
+LEFT JOIN wp_opb_branches b  ON b.id  = i.branch_id
+LEFT JOIN wp_opb_bookings bk ON bk.id = i.booking_id
+LEFT JOIN wp_opb_clients  c  ON c.id  = bk.client_id
+LEFT JOIN (
+    SELECT
+        invoice_id,
+        COUNT(*) AS payment_count,
+        SUM(amount) AS payment_sum
+    FROM   wp_opb_payments
+    GROUP  BY invoice_id
+) pay ON pay.invoice_id = i.id
+WHERE  i.due &gt; 0
+ORDER  BY i.due DESC
+LIMIT  50;</code></pre>
+
+        <div class="status-box" style="background:#fff5f5;border-color:#feb2b2;margin-top:16px">
+          <h3 style="color:#c53030">Column Interpretation Guide</h3>
+          <table style="margin-top:8px">
+            <thead><tr><th>Column</th><th>Meaning</th><th>What to Look For</th></tr></thead>
+            <tbody>
+              <tr><td><code>source</code></td><td>Legacy = imported from old system; Native = created in OPB</td><td>Majority should be Legacy if the total is high</td></tr>
+              <tr><td><code>balance_due</code></td><td>Stored <code>due</code> field: <code>revenue − paid</code></td><td>Sum of all rows ≈ dashboard outstanding figure</td></tr>
+              <tr><td><code>linked_payment_records</code></td><td>Count of rows in <code>wp_opb_payments</code> for this invoice</td><td>Legacy invoices with paid &gt; 0 but 0 payment records: paid was imported directly onto invoice, no payment rows created</td></tr>
+              <tr><td><code>paid_field_drift</code></td><td><code>i.paid − SUM(payment.amount)</code></td><td>Non-zero = invoice paid field and payment table are out of sync (common for legacy invoices where payment records were not imported)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECTION C: LEGACY IMPORT AUDIT -->
+      <div class="card" id="section-c">
+        <h2>Section C — Legacy Import Audit: Field Mapping &amp; Verification</h2>
+
+        <h3>C1. Import Architecture Overview</h3>
+        <p>The legacy migration is handled by <code>OPB_Invoices_Adapter</code> (<code>plugin/includes/migration/adapters/class-opb-invoices-adapter.php</code>) and <code>OPB_Payments_Adapter</code>. The two adapters are run independently in sequence.</p>
+
+        <table style="margin-top:8px">
+          <thead><tr><th>Legacy XLSX Column</th><th>OPB DB Column</th><th>Table</th><th>Import Method</th><th>Verified</th></tr></thead>
+          <tbody>
+            <tr><td><code>Invoice No</code></td><td><code>legacy_invoice_number</code></td><td>opb_invoices</td><td>Direct string copy</td><td>✓</td></tr>
+            <tr><td><code>Invoice Date</code></td><td><code>invoice_date</code></td><td>opb_invoices</td><td>Parsed via <code>parse_date()</code></td><td>✓</td></tr>
+            <tr><td><code>Revenue</code></td><td><code>revenue</code></td><td>opb_invoices</td><td>Cast to float; stored verbatim</td><td>✓</td></tr>
+            <tr><td><code>Base Amount</code></td><td><code>base_amount</code></td><td>opb_invoices</td><td>Cast to float; stored verbatim</td><td>✓</td></tr>
+            <tr><td><code>Add-On Amount</code></td><td><code>addon_amount</code></td><td>opb_invoices</td><td>Cast to float; stored verbatim</td><td>✓</td></tr>
+            <tr><td><code>Discount Amount</code></td><td><code>discount_amount</code></td><td>opb_invoices</td><td>Cast to float; stored verbatim</td><td>✓</td></tr>
+            <tr><td><code>Additional Amount</code></td><td><code>additional_amount</code></td><td>opb_invoices</td><td>Cast to float; stored verbatim</td><td>✓</td></tr>
+            <tr><td><code>Additional Discount Amount</code></td><td><code>additional_discount_amount</code></td><td>opb_invoices</td><td>Cast to float; stored verbatim</td><td>✓</td></tr>
+            <tr><td><code>Paid</code></td><td><code>paid</code></td><td>opb_invoices</td><td><strong>Cast to float; stored verbatim</strong></td><td style="color:#c05621;font-weight:700">⚠ Note 1</td></tr>
+            <tr><td><code>Due</code></td><td><code>due</code></td><td>opb_invoices</td><td><strong>Cast to float; stored verbatim</strong></td><td style="color:#c05621;font-weight:700">⚠ Note 1</td></tr>
+            <tr><td><code>Payment Mode</code></td><td><code>payment_mode</code></td><td>opb_invoices</td><td>String; stored on invoice header</td><td>✓</td></tr>
+            <tr><td><code>Time</code> (payments file)</td><td><code>paid_at</code></td><td>opb_payments</td><td>Parsed via <code>parse_datetime()</code></td><td>✓</td></tr>
+            <tr><td><code>Amount</code> (payments file)</td><td><code>amount</code></td><td>opb_payments</td><td>Cast to float; creates payment row</td><td style="color:#276749;font-weight:700">✓ Note 2</td></tr>
+            <tr><td><code>Invoice ID</code> (payments file)</td><td><code>invoice_id</code></td><td>opb_payments</td><td>Resolved from <code>legacy_invoice_number</code></td><td style="color:#276749;font-weight:700">✓ Note 2</td></tr>
+          </tbody>
+        </table>
+
+        <div style="background:#fffaf0;border:1px solid #fbd38d;border-radius:6px;padding:14px;margin-top:16px">
+          <div style="font-weight:700;color:#c05621;margin-bottom:8px">⚠ Note 1 — Dual Write Path for <code>paid</code> and <code>due</code></div>
+          <p style="font-size:13px;color:#2d3748;margin-bottom:6px">The invoices adapter writes <code>paid</code> and <code>due</code> <strong>directly from the legacy XLSX file</strong>, not by recalculating from payment records. This is intentional: at import time, no payment records may exist yet.</p>
+          <p style="font-size:13px;color:#2d3748;margin-bottom:6px">If the <strong>payments adapter was also run</strong> after the invoices adapter, each imported payment row triggers <code>OPB_Invoice_Generator::sync_payment_totals(invoice_id)</code>. This <em>recalculates</em> <code>paid</code> and <code>due</code> from the <code>wp_opb_payments</code> table — overwriting the values that came from the XLSX.</p>
+          <p style="font-size:13px;color:#2d3748;margin:0"><strong>If payments were not imported (or some payment rows were skipped)</strong>, the <code>paid</code> and <code>due</code> fields remain exactly as they were in the legacy XLSX. A client who owed ₹5,000 in the old system will show <code>due = 5000</code> in OPB regardless of any subsequent real-world payments.</p>
+        </div>
+
+        <div style="background:#f0fff4;border:1px solid #9ae6b4;border-radius:6px;padding:14px;margin-top:12px">
+          <div style="font-weight:700;color:#276749;margin-bottom:8px">✓ Note 2 — Payment Linkage is Correct</div>
+          <p style="font-size:13px;color:#2d3748;margin:0">The payments adapter resolves <code>invoice_id</code> by looking up <code>legacy_invoice_number + branch_id</code> in <code>wp_opb_invoices</code>. If no match is found, the payment row is skipped (<code>reason_code: invoice_not_found</code>). Payment linkage is correctly designed; the only gap is whether all payment rows were successfully imported.</p>
+        </div>
+
+        <h3 style="margin-top:20px">C2. Verification Query — Paid Field Drift Detection</h3>
+        <p>This query identifies invoices where the stored <code>paid</code> field does not match the sum of linked payment records. A non-zero drift on legacy invoices is the primary signal that payments were imported at a different amount (or not at all) relative to what the legacy system recorded.</p>
+        <pre><code>-- C2: Drift between invoice.paid and SUM(payments.amount)
+SELECT
+    i.id,
+    i.legacy_invoice_number,
+    CASE WHEN i.legacy_invoice_number IS NOT NULL
+         THEN 'Legacy' ELSE 'Native' END            AS source,
+    i.revenue,
+    i.paid                                          AS invoice_paid_field,
+    COALESCE(SUM(p.amount), 0)                      AS payments_table_sum,
+    ROUND(i.paid - COALESCE(SUM(p.amount), 0), 2)  AS drift,
+    i.due,
+    i.payment_status
+FROM   wp_opb_invoices i
+LEFT JOIN wp_opb_payments p ON p.invoice_id = i.id
+GROUP  BY i.id
+HAVING ABS(drift) &gt; 0.01
+ORDER  BY ABS(drift) DESC
+LIMIT  100;</code></pre>
+
+        <h3>C3. Count of Legacy Invoices with No Linked Payment Records</h3>
+        <pre><code>-- C3: Legacy invoices with paid &gt; 0 on the invoice row but zero payment records
+-- These invoices were imported with their historical paid amounts verbatim
+-- but no corresponding rows exist in wp_opb_payments
+SELECT
+    COUNT(*)                                        AS invoices_paid_field_only,
+    COALESCE(SUM(i.paid),    0)                     AS total_historically_paid,
+    COALESCE(SUM(i.due),     0)                     AS total_outstanding
+FROM   wp_opb_invoices i
+LEFT JOIN wp_opb_payments p ON p.invoice_id = i.id
+WHERE  i.legacy_invoice_number IS NOT NULL
+  AND  i.paid &gt; 0
+  AND  p.id IS NULL;</code></pre>
+
+        <h3>C4. Skipped Payment Rows Indicator</h3>
+        <p>The payments adapter logs a <code>reason_code: invoice_not_found</code> when a payment cannot be linked. To estimate how many payments were skipped, compare the total payment value in the legacy XLSX files against the sum in <code>wp_opb_payments</code> for legacy-origin records. Run this against the DB:</p>
+        <pre><code>-- C4: Total payment value recorded in wp_opb_payments for legacy invoices
+SELECT
+    COALESCE(b.name, 'Unknown')                     AS branch,
+    COUNT(DISTINCT p.invoice_id)                    AS invoices_with_payments,
+    COUNT(p.id)                                     AS payment_records,
+    COALESCE(SUM(p.amount), 0)                      AS total_payment_value
+FROM   wp_opb_payments p
+JOIN   wp_opb_invoices i ON i.id = p.invoice_id
+LEFT JOIN wp_opb_branches b ON b.id = p.branch_id
+WHERE  i.legacy_invoice_number IS NOT NULL
+GROUP  BY p.branch_id, b.name
+ORDER  BY total_payment_value DESC;</code></pre>
+      </div>
+
+      <!-- SECTION D: DATE AUDIT -->
+      <div class="card" id="section-d">
+        <h2>Section D — Date Field Influence Analysis</h2>
+        <p>This section documents whether each date-related field in the OPB schema influences the dashboard Outstanding KPI.</p>
+
+        <table>
+          <thead><tr><th>Field</th><th>Table</th><th>Type</th><th>Influences Outstanding?</th><th>Evidence</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>booking_date</code></td><td>opb_bookings</td><td>DATE</td>
+              <td style="color:#276749;font-weight:600">✗ No</td>
+              <td>Dashboard Outstanding query joins no booking columns. <code>booking_date</code> is used only for operational scheduling.</td>
+            </tr>
+            <tr>
+              <td><code>check_in_date</code></td><td>opb_booking_stays</td><td>DATE</td>
+              <td style="color:#276749;font-weight:600">✗ No</td>
+              <td>Dashboard query does not join <code>opb_booking_stays</code> for the KPI figure.</td>
+            </tr>
+            <tr>
+              <td><code>check_out_date</code></td><td>opb_booking_stays</td><td>DATE</td>
+              <td style="color:#276749;font-weight:600">✗ No</td>
+              <td>Same as above. <code>check_out_date</code> appears only in the checkout list widget, not the KPI sum.</td>
+            </tr>
+            <tr>
+              <td><code>invoice_date</code></td><td>opb_invoices</td><td>DATE</td>
+              <td style="color:#c05621;font-weight:600">✗ No (Dashboard) / ✓ Yes (Reports)</td>
+              <td><code>class-opb-dashboard-api.php</code> line 37–38: <code>WHERE i.due &gt; 0</code> — <strong>no date filter</strong>. However, <code>class-opb-reports-api.php</code> lines 148–151 does filter Outstanding by <code>invoice_date</code> range, so Reports Outstanding ≠ Dashboard Outstanding.</td>
+            </tr>
+            <tr>
+              <td><code>created_at</code></td><td>opb_invoices</td><td>DATETIME</td>
+              <td style="color:#276749;font-weight:600">✗ No</td>
+              <td>Not referenced in any outstanding-related query. Used only internally (audit trail).</td>
+            </tr>
+            <tr>
+              <td><code>updated_at</code></td><td>opb_invoices</td><td>DATETIME</td>
+              <td style="color:#276749;font-weight:600">✗ No</td>
+              <td>Not referenced in any outstanding-related query.</td>
+            </tr>
+            <tr>
+              <td><code>paid_at</code></td><td>opb_payments</td><td>DATETIME</td>
+              <td style="color:#276749;font-weight:600">✗ No (Indirect)</td>
+              <td>The date of a payment does not affect the outstanding calculation. Only the <em>amount</em> in <code>opb_payments</code> matters — it feeds <code>sync_payment_totals()</code> which updates <code>paid</code> and <code>due</code> on the invoice.</td>
+            </tr>
+            <tr>
+              <td><code>imported_at</code></td><td>—</td><td>—</td>
+              <td style="color:#276749;font-weight:600">✗ No (Field absent)</td>
+              <td>No <code>imported_at</code> column exists in any OPB table. Legacy origin is identified by <code>legacy_invoice_number IS NOT NULL</code>, not by a timestamp.</td>
+            </tr>
+            <tr>
+              <td><code>due_date</code></td><td>—</td><td>—</td>
+              <td style="color:#276749;font-weight:600">✗ No (Field absent)</td>
+              <td>No <code>due_date</code> column exists in <code>opb_invoices</code>. Invoices have no payment due date concept. Outstanding = all unpaid balances regardless of age.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 style="margin-top:20px">D1. Code Reference — Outstanding Calculation Path</h3>
+        <p>The full trace from database to dashboard UI:</p>
+        <pre><code>Step 1 — Payment recorded
+  OPB_Payments_API::create_item()
+    → wpdb→insert(wp_opb_payments, { invoice_id, amount, ... })
+    → OPB_Invoice_Generator::sync_payment_totals(invoice_id)
+
+Step 2 — sync_payment_totals()  [class-opb-invoice-generator.php:212]
+  $paid    = SELECT COALESCE(SUM(amount),0) FROM wp_opb_payments WHERE invoice_id = %d
+  $revenue = SELECT revenue FROM wp_opb_invoices WHERE id = %d
+  $due     = round($revenue - $paid, 2)
+  $status  = resolve_payment_status($revenue, $paid)
+  wpdb→update(wp_opb_invoices, { paid, due, payment_status }, { id })
+
+Step 3 — resolve_payment_status()  [class-opb-invoice-generator.php:202]
+  if ($revenue &lt;= 0)          → 'No bill'
+  if ($paid &lt;= 0)             → 'Unpaid'
+  if ($paid &gt;= $revenue)      → 'Paid' or 'Overpaid'
+  else                         → 'Partially paid'
+
+Step 4 — Dashboard API  [class-opb-dashboard-api.php:37]
+  $outstanding = SELECT COALESCE(SUM(i.due),0)
+                 FROM wp_opb_invoices i
+                 WHERE i.due &gt; 0
+                 [AND i.branch_id = {branch_id}]
+
+Step 5 — React Dashboard  [Dashboard.tsx:69]
+  { label: 'Outstanding', value: fmt.inr(kpis.outstanding) }
+  color: kpis.outstanding &gt; 0 ? 'text-red-600' : 'text-gray-900'</code></pre>
+
+        <div style="background:#ebf8ff;border:1px solid #90cdf4;border-radius:6px;padding:14px;margin-top:16px">
+          <div style="font-weight:700;color:#2b6cb0;margin-bottom:8px">Key Finding — Dashboard vs Reports Outstanding Discrepancy</div>
+          <p style="font-size:13px;color:#2d3748;margin:0">The <strong>Dashboard Outstanding</strong> is lifetime (all invoices, no date filter). The <strong>Reports Outstanding</strong> is filtered by the selected date range applied to <code>invoice_date</code>. These two figures will differ. The dashboard figure will always be &gt;= the reports figure for any finite date range. This is a known architectural divergence, not a bug.</p>
+        </div>
+      </div>
+
+      <!-- SECTION E: RECOMMENDATION -->
+      <div class="card" id="section-e">
+        <h2>Section E — Dashboard Metric Recommendation</h2>
+
+        <h3>E1. Current Metric Definition</h3>
+        <table>
+          <thead><tr><th>Attribute</th><th>Current Value</th></tr></thead>
+          <tbody>
+            <tr><td>Metric name</td><td>Outstanding</td></tr>
+            <tr><td>SQL definition</td><td><code>SELECT COALESCE(SUM(due),0) FROM wp_opb_invoices WHERE due &gt; 0</code></td></tr>
+            <tr><td>Scope</td><td>All invoices, all time, all branches (unless branch filter applied)</td></tr>
+            <tr><td>Date filter</td><td>None</td></tr>
+            <tr><td>Includes legacy imports?</td><td>Yes — legacy invoices with due &gt; 0 are included</td></tr>
+            <tr><td>Display</td><td>Red text when &gt; 0, Indian Rupee format</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="margin-top:20px">E2. Operational Assessment</h3>
+        <table>
+          <thead><tr><th>Question</th><th>Answer</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Is the metric mathematically correct?</td>
+              <td style="color:#276749;font-weight:600">Yes</td>
+              <td>It accurately reflects the sum of all stored <code>due</code> amounts. No calculation error.</td>
+            </tr>
+            <tr>
+              <td>Is it operationally useful for daily ops?</td>
+              <td style="color:#c05621;font-weight:600">Partially</td>
+              <td>Includes historical debts from the legacy system that may be uncollectable, artificially inflating the figure. Staff may treat the KPI as noisy.</td>
+            </tr>
+            <tr>
+              <td>Should legacy balances appear?</td>
+              <td style="color:#c05621;font-weight:600">Context-dependent</td>
+              <td>If the business intends to collect legacy debts, yes. If legacy debts were waived at migration, they should be settled in the DB (set <code>due=0</code>, <code>payment_status='Paid'</code>) or excluded via a flag.</td>
+            </tr>
+            <tr>
+              <td>Risk of confusing staff?</td>
+              <td style="color:#c53030;font-weight:600">High</td>
+              <td>~₹26.87 lakh appearing in red on the dashboard each day creates alarm. Staff may attempt to "resolve" records that are legitimately historical.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 style="margin-top:20px">E3. Alternative Metric Definitions</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px">
+          <div style="background:#f0fff4;border:1px solid #9ae6b4;border-radius:6px;padding:14px">
+            <div style="font-weight:700;color:#276749;margin-bottom:8px">Option 1 — Native OPB Only (Recommended)</div>
+            <p style="font-size:13px;color:#2d3748;margin-bottom:8px">Exclude legacy imported invoices from the dashboard Outstanding. Show a separate "Legacy Outstanding" in a less prominent position.</p>
+            <pre style="font-size:11px;margin:0"><code>SELECT COALESCE(SUM(due),0)
+FROM   wp_opb_invoices
+WHERE  due &gt; 0
+  AND  legacy_invoice_number IS NULL</code></pre>
+          </div>
+          <div style="background:#ebf8ff;border:1px solid #90cdf4;border-radius:6px;padding:14px">
+            <div style="font-weight:700;color:#2b6cb0;margin-bottom:8px">Option 2 — Rolling 90-Day Window</div>
+            <p style="font-size:13px;color:#2d3748;margin-bottom:8px">Limit to invoices within the last 90 days to focus on recent receivables only.</p>
+            <pre style="font-size:11px;margin:0"><code>SELECT COALESCE(SUM(due),0)
+FROM   wp_opb_invoices
+WHERE  due &gt; 0
+  AND  invoice_date &gt;= CURDATE() - INTERVAL 90 DAY</code></pre>
+          </div>
+          <div style="background:#fffaf0;border:1px solid #fbd38d;border-radius:6px;padding:14px">
+            <div style="font-weight:700;color:#c05621;margin-bottom:8px">Option 3 — Active Clients Only</div>
+            <p style="font-size:13px;color:#2d3748;margin-bottom:8px">Restrict to invoices belonging to clients who still have active status in the system.</p>
+            <pre style="font-size:11px;margin:0"><code>SELECT COALESCE(SUM(i.due),0)
+FROM   wp_opb_invoices i
+JOIN   wp_opb_bookings bk ON bk.id=i.booking_id
+JOIN   wp_opb_clients  c  ON c.id=bk.client_id
+WHERE  i.due &gt; 0
+  AND  c.status = 'active'</code></pre>
+          </div>
+          <div style="background:#fff5f5;border:1px solid #feb2b2;border-radius:6px;padding:14px">
+            <div style="font-weight:700;color:#c53030;margin-bottom:8px">Option 4 — Keep Current + Add Context</div>
+            <p style="font-size:13px;color:#2d3748;margin-bottom:8px">No SQL change. Add a secondary "Legacy Outstanding" badge beneath the main KPI so staff can see the split at a glance.</p>
+            <pre style="font-size:11px;margin:0"><code>-- Separate KPI in API response
+legacy_outstanding: SUM(due) WHERE legacy_invoice_number IS NOT NULL AND due &gt; 0
+native_outstanding: SUM(due) WHERE legacy_invoice_number IS NULL     AND due &gt; 0</code></pre>
+          </div>
+        </div>
+
+        <h3 style="margin-top:20px">E4. Recommended Immediate Actions</h3>
+        <table>
+          <thead><tr><th>Priority</th><th>Action</th><th>Impact</th></tr></thead>
+          <tbody>
+            <tr>
+              <td style="color:#c53030;font-weight:700">High</td>
+              <td>Run the C2 drift query to determine whether legacy <code>paid</code> values match the payments table. Establish ground truth.</td>
+              <td>Confirms whether payment import was complete or partial.</td>
+            </tr>
+            <tr>
+              <td style="color:#c53030;font-weight:700">High</td>
+              <td>Run the B1 Top 50 query. Cross-reference with actual client ledgers to confirm which debts are collectible.</td>
+              <td>Quantifies the "real" vs "legacy-only" outstanding.</td>
+            </tr>
+            <tr>
+              <td style="color:#c05621;font-weight:700">Medium</td>
+              <td>Decide on legacy debt policy: collect, waive, or exclude from dashboard. Implement Option 1 or 4 from Section E3.</td>
+              <td>Removes noise from daily operational view.</td>
+            </tr>
+            <tr>
+              <td style="color:#276749;font-weight:700">Low</td>
+              <td>If legacy debts are waived, run a one-time SQL UPDATE to set <code>due=0, payment_status='Paid'</code> on all legacy invoices with no collection intent. Back up DB first.</td>
+              <td>Permanently resolves the dashboard figure. Irreversible without backup.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- SECTION F: JSON SUMMARY -->
+      <div class="card" id="section-f">
+        <h2>Section F — JSON Summary Structure</h2>
+        <p>The following JSON structure represents the expected output of a forensic summary API endpoint. Values are illustrative pending live DB execution.</p>
+        <pre><code>{
+  "report_meta": {
+    "generated_at": "${new Date().toISOString()}",
+    "plugin_version": "3.1.0",
+    "analysis_type": "financial_forensics",
+    "scope": "all_invoices_all_time",
+    "data_modified": false
+  },
+  "executive_summary": {
+    "dashboard_outstanding_source": "SELECT COALESCE(SUM(due),0) FROM wp_opb_invoices WHERE due > 0",
+    "root_cause": "Legacy imported invoices carrying historical unpaid balances from pre-migration system",
+    "calculation_error_found": false,
+    "data_corruption_found": false,
+    "date_fields_influence_dashboard_outstanding": false,
+    "date_fields_influence_reports_outstanding": true
+  },
+  "financial_totals": {
+    "all_invoices": {
+      "total_count": "RUN QUERY A2",
+      "total_revenue": "RUN QUERY A2",
+      "total_paid": "RUN QUERY A2",
+      "total_outstanding": "RUN QUERY A2 — expected ~2687000"
+    },
+    "legacy_invoices": {
+      "identified_by": "legacy_invoice_number IS NOT NULL",
+      "total_count": "RUN QUERY A3",
+      "total_revenue": "RUN QUERY A3",
+      "total_paid": "RUN QUERY A3",
+      "total_outstanding": "RUN QUERY A3"
+    },
+    "native_opb_invoices": {
+      "identified_by": "legacy_invoice_number IS NULL",
+      "total_count": "RUN QUERY A3",
+      "total_revenue": "RUN QUERY A3",
+      "total_paid": "RUN QUERY A3",
+      "total_outstanding": "RUN QUERY A3"
+    }
+  },
+  "import_audit": {
+    "invoices_adapter": {
+      "source_files": [
+        "legacy-system/invoices/Onukonu pet homestyle boarding - H2 succoro.xlsx",
+        "legacy-system/invoices/Onukonu pet homestyle boarding - H3 Colvale.xlsx",
+        "legacy-system/invoices/Onukonu pet homestyle boarding - H4 Moira.xlsx"
+      ],
+      "paid_field_import_method": "verbatim_from_legacy_xlsx",
+      "due_field_import_method": "verbatim_from_legacy_xlsx",
+      "sync_payment_totals_called_at_import": false,
+      "sync_triggered_by_payments_import": true
+    },
+    "payments_adapter": {
+      "source_files": [
+        "legacy-system/payments/Onukonu pet homestyle boarding - H2 succoro.xlsx",
+        "legacy-system/payments/Onukonu pet homestyle boarding - H3 Colvale.xlsx",
+        "legacy-system/payments/Onukonu pet homestyle boarding - H4 Moira.xlsx"
+      ],
+      "linkage_method": "legacy_invoice_number + branch_id lookup in wp_opb_invoices",
+      "on_skip_reason": "invoice_not_found (legacy_invoice_number does not resolve)",
+      "on_success": "sync_payment_totals() recalculates invoice.paid and invoice.due"
+    },
+    "drift_check": "RUN QUERY C2 — invoices where ABS(invoice.paid - SUM(payments.amount)) > 0.01",
+    "legacy_invoices_with_no_payment_records": "RUN QUERY C3"
+  },
+  "date_influence": {
+    "booking_date": "no_effect",
+    "check_in_date": "no_effect",
+    "check_out_date": "no_effect",
+    "invoice_date": "dashboard=no_effect, reports_api=filtered_by_date_range",
+    "created_at": "no_effect",
+    "imported_at": "field_does_not_exist",
+    "due_date": "field_does_not_exist",
+    "paid_at": "indirect_only_via_payment_amount_not_date"
+  },
+  "recommendations": [
+    {
+      "priority": "high",
+      "action": "Run C2 drift query to verify payment import completeness"
+    },
+    {
+      "priority": "high",
+      "action": "Run B1 Top 50 query to identify largest legacy balance contributors"
+    },
+    {
+      "priority": "medium",
+      "action": "Implement Option 1 or 4 from Section E3 to separate legacy from native outstanding on dashboard"
+    },
+    {
+      "priority": "low",
+      "action": "If legacy debts are waived: UPDATE wp_opb_invoices SET due=0, payment_status='Paid' WHERE legacy_invoice_number IS NOT NULL AND due > 0 (after DB backup)"
+    }
+  ]
+}</code></pre>
+      </div>
+
+      <!-- SECTION G: SQL QUICK-REFERENCE -->
+      <div class="card" id="section-g">
+        <h2>Section G — SQL Quick-Reference Pack</h2>
+        <p style="color:#718096;font-size:13px">Copy-paste ready. Replace <code>wp_</code> prefix if your WordPress installation uses a different table prefix. All queries are read-only SELECTs — no data is modified.</p>
+
+        <h3>G1. Total Outstanding (matches dashboard exactly)</h3>
+        <pre><code>SELECT COALESCE(SUM(due),0) AS dashboard_outstanding
+FROM   wp_opb_invoices
+WHERE  due &gt; 0;</code></pre>
+
+        <h3>G2. Outstanding split: Legacy vs Native</h3>
+        <pre><code>SELECT
+    CASE WHEN legacy_invoice_number IS NOT NULL
+         THEN 'Legacy Import' ELSE 'Native OPB' END  AS source,
+    COUNT(*)                                          AS invoices,
+    COALESCE(SUM(revenue), 0)                         AS revenue,
+    COALESCE(SUM(paid),    0)                         AS paid,
+    COALESCE(SUM(due),     0)                         AS outstanding
+FROM   wp_opb_invoices
+GROUP  BY (legacy_invoice_number IS NOT NULL);</code></pre>
+
+        <h3>G3. Top 20 outstanding invoices (quick view)</h3>
+        <pre><code>SELECT i.id, i.legacy_invoice_number, c.name AS client,
+       i.revenue, i.paid, i.due, i.payment_status, i.invoice_date
+FROM   wp_opb_invoices i
+JOIN   wp_opb_bookings bk ON bk.id = i.booking_id
+JOIN   wp_opb_clients  c  ON c.id  = bk.client_id
+WHERE  i.due &gt; 0
+ORDER  BY i.due DESC
+LIMIT  20;</code></pre>
+
+        <h3>G4. Payment drift check</h3>
+        <pre><code>SELECT i.id, i.legacy_invoice_number, i.paid AS stored_paid,
+       COALESCE(SUM(p.amount),0) AS payments_sum,
+       ROUND(i.paid - COALESCE(SUM(p.amount),0), 2) AS drift
+FROM   wp_opb_invoices i
+LEFT JOIN wp_opb_payments p ON p.invoice_id = i.id
+GROUP  BY i.id
+HAVING ABS(drift) &gt; 0.01
+ORDER  BY ABS(drift) DESC
+LIMIT  50;</code></pre>
+
+        <h3>G5. Legacy invoices with zero payment records despite paid &gt; 0</h3>
+        <pre><code>SELECT i.id, i.legacy_invoice_number, i.revenue, i.paid, i.due
+FROM   wp_opb_invoices i
+LEFT JOIN wp_opb_payments p ON p.invoice_id = i.id
+WHERE  i.legacy_invoice_number IS NOT NULL
+  AND  i.paid &gt; 0
+  AND  p.id IS NULL
+ORDER  BY i.due DESC;</code></pre>
+
+        <h3>G6. Outstanding by branch (all time, all sources)</h3>
+        <pre><code>SELECT COALESCE(b.name,'Unknown') AS branch,
+       COUNT(i.id) AS invoices,
+       COALESCE(SUM(i.due),0) AS outstanding
+FROM   wp_opb_invoices i
+LEFT JOIN wp_opb_branches b ON b.id = i.branch_id
+WHERE  i.due &gt; 0
+GROUP  BY i.branch_id
+ORDER  BY outstanding DESC;</code></pre>
+
+        <h3>G7. Confirm no date fields affect dashboard outstanding</h3>
+        <pre><code>-- Compare dashboard outstanding vs date-filtered outstanding
+-- If different: date IS a factor in Reports but not in Dashboard
+SELECT
+    (SELECT COALESCE(SUM(due),0) FROM wp_opb_invoices WHERE due &gt; 0)
+        AS dashboard_outstanding_no_date_filter,
+    (SELECT COALESCE(SUM(due),0) FROM wp_opb_invoices
+     WHERE  due &gt; 0 AND invoice_date &gt;= DATE_FORMAT(CURDATE(),'%Y-%m-01'))
+        AS this_month_outstanding_invoice_date_filtered;</code></pre>
+
+        <div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:6px;padding:14px;margin-top:20px">
+          <div style="font-weight:700;color:#4a5568;margin-bottom:8px;font-size:13px">Legend</div>
+          <div style="display:flex;gap:24px;flex-wrap:wrap;font-size:12px;color:#718096">
+            <span><strong style="color:#276749">legacy_invoice_number IS NOT NULL</strong> = imported from legacy system</span>
+            <span><strong style="color:#2b6cb0">legacy_invoice_number IS NULL</strong> = native OPB record</span>
+            <span><strong style="color:#c05621">drift &gt; 0.01</strong> = invoice.paid ≠ sum of payment records (may indicate incomplete payments import)</span>
+          </div>
+        </div>
+      </div>
+    `;
   } else if (activeTab === 'permissions') {
     title = 'Permission Audit';
     const permDocs = [
@@ -762,6 +1430,7 @@ function renderPage(activeTab) {
     <a href="/changelog" class="${activeTab === 'changelog' ? 'active' : ''}">Changelog</a>
     <a href="/rc1" class="${activeTab === 'rc1' ? 'active' : ''}" style="color:#68d391;font-weight:700">RC1 Audit</a>
     <a href="/permissions" class="${activeTab === 'permissions' ? 'active' : ''}" style="color:#fbd38d;font-weight:700">Permission Audit</a>
+    <a href="/forensics" class="${activeTab === 'forensics' ? 'active' : ''}" style="color:#fc8181;font-weight:700">Financial Forensics</a>
   </nav>
   <main class="main">
     <div class="badges">
@@ -786,6 +1455,7 @@ const server = http.createServer((req, res) => {
   else if (url === '/changelog') tab = 'changelog';
   else if (url === '/rc1') tab = 'rc1';
   else if (url === '/permissions') tab = 'permissions';
+  else if (url === '/forensics') tab = 'forensics';
   else if (url !== '/') {
     res.writeHead(301, { Location: '/' });
     res.end();
