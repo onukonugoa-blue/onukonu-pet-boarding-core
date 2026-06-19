@@ -270,3 +270,21 @@ id = "0VM6__BkYE1OWjtu12NNn"
 uri = "file://onukonu-pet-boarding-core-v3.1.0.zip"
 type = "unspecified"
 title = "OPB v3.1.0 — SAL + Brief History Log"
+
+[[outputs]]
+id = "L0dq8VkVHo-pdUSAOVUmM"
+uri = "file://opsmail-production-v3.1.0.zip"
+type = "unspecified"
+title = "OPSMAIL Production ZIP — v3.1.0"
+
+[[outputs]]
+id = "6e-F9l2STak0ziN9XEr3l"
+uri = "file://docs/RELEASE-NOTES-v3.1.0.md"
+type = "text"
+title = "Release Notes — v3.1.0"
+
+[[outputs]]
+id = "xF4d2clmm_doGr9BHwJdl"
+uri = "file://docs/AUDIT-REPORT-v3.1.0.md"
+type = "text"
+title = "Audit Report — v3.1.0"
