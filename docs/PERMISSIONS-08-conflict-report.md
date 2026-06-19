@@ -19,29 +19,25 @@
 
 ---
 
-## Conflict 1 — `opb_view_reports` Declared but Not Enforced
+## Conflict 1 — `opb_view_reports` Declared but Not Enforced ✅ RESOLVED
 
 **Category:** Capability granted but never checked in the API  
-**Severity:** Medium
+**Severity:** Medium → **Fixed**
 
 | Field | Detail |
 |---|---|
 | **Capability** | `opb_view_reports` |
 | **Granted to** | `opb_super_admin`, `opb_branch_manager` |
 | **Intended exclusion** | `opb_reception`, `opb_staff` |
-| **Actual enforcement** | The Reports API (`class-opb-reports-api.php`) calls only `permission_check`, not `permission_manage('opb_view_reports')` |
-| **Effect** | Any logged-in OPB user — including `opb_reception` and `opb_staff` — can call `GET /opb/v1/reports` and receive financial data |
+| **Resolution** | `permission_callback` updated to `permission_manage('opb_view_reports')` in both the route registration and the callback guard inside `get_report()`. `opb_reception` and `opb_staff` now receive HTTP 403. |
 
-**Evidence:**
+**Fixed in:** `plugin/includes/api/class-opb-reports-api.php`
+
 ```php
-// class-opb-reports-api.php
+// After fix:
 [ 'methods' => 'GET', 'callback' => [ $this, 'get_report' ],
-  'permission_callback' => [ $this, 'permission_check' ] ],  // ← should be permission_manage('opb_view_reports')
+  'permission_callback' => fn($r) => $this->permission_manage('opb_view_reports', $r) ],
 ```
-
-**Design intent vs reality:**
-- Capability design says: reception and staff cannot view reports
-- Implementation says: everyone can
 
 ---
 
@@ -162,7 +158,7 @@ The one exception is `opb_view_reports`, which is assigned but not checked — d
 
 | ID | Type | Affected Component | Severity | Recommended Action |
 |---|---|---|---|---|
-| C-1 | Capability not enforced | `opb_view_reports` / Reports API | Medium | Add `permission_manage('opb_view_reports')` to the Reports API permission callback |
+| C-1 | Capability not enforced | `opb_view_reports` / Reports API | Medium | ✅ Fixed — `permission_manage('opb_view_reports')` now used |
 | C-2 | Redundant capabilities | `opb_record_payments` + `opb_manage_invoices` | Low | No action required unless a new role separation is introduced |
 | C-3 | Role/module intent mismatch | `opb_super_admin` vs OPSMAIL/SAL | Medium | Document clearly; optionally add `opb_manage_settings`-gated OPSMAIL read-only view |
 | C-4 | Missing branch guard | Branch-scoped roles with no `opb_branch_id` | Medium | Add validation in `update_staff` and consider server-side guard in `get_user_branch_id()` |

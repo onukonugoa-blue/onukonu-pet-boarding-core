@@ -205,7 +205,7 @@ All 12 OPB capabilities are declared in the `OPB_Roles::CAPS` constant in `plugi
 
 | File | Usage |
 |---|---|
-| *(none)* | ⚠ **Not enforced in the API.** The Reports API only calls `permission_check`, not `permission_manage('opb_view_reports', …)`. Any logged-in OPB user — including `opb_reception` and `opb_staff` — can call the reports endpoint. |
+| `api/class-opb-reports-api.php` | ✅ **Enforced** — `permission_callback` uses `permission_manage('opb_view_reports')`. `opb_reception` and `opb_staff` receive 403. |
 
 > This is documented as a conflict in Part 7 and a security finding in Part 9.
 
@@ -245,9 +245,7 @@ All 12 OPB capabilities are declared in the `OPB_Roles::CAPS` constant in `plugi
 
 ## 4. Capabilities Declared but Not Fully Enforced
 
-| Capability | Issue |
-|---|---|
-| `opb_view_reports` | Declared in CAPS, assigned to two roles, but the Reports API uses only `permission_check` — not `permission_manage('opb_view_reports')`. All OPB users can read report data. |
+All 12 OPB capabilities are correctly declared, assigned, and enforced. No gaps remain.
 
 ## 5. Capabilities With No Direct REST Check
 

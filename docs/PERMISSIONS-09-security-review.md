@@ -12,7 +12,7 @@
 
 | ID | Title | Severity | Status |
 |---|---|---|---|
-| S-1 | Reports endpoint does not check `opb_view_reports` | Medium | Open |
+| S-1 | Reports endpoint does not check `opb_view_reports` | Medium | ✅ Fixed |
 | S-2 | Branch-scoped users without `opb_branch_id` get unrestricted access | Medium | Open |
 | S-3 | `/client/me` uses `__return_true` — no WP-level auth gate | Low | Accepted pattern |
 | S-4 | No nonce validation on OPB REST endpoints | Info | By design (WP REST uses cookie+nonce or JWT) |
@@ -25,22 +25,14 @@
 
 ---
 
-## S-1 — Reports Endpoint Does Not Enforce `opb_view_reports`
+## S-1 — Reports Endpoint Does Not Enforce `opb_view_reports` ✅ FIXED
 
-**Severity:** Medium  
+**Severity:** Medium → Resolved  
 **File:** `plugin/includes/api/class-opb-reports-api.php`
 
-The `GET /opb/v1/reports` endpoint is protected by `permission_check`, which allows any logged-in OPB user to access it. The `opb_view_reports` capability exists and is assigned only to `opb_super_admin` and `opb_branch_manager`, but is not checked.
+The `permission_callback` was updated from `permission_check` to `permission_manage('opb_view_reports')`. The internal callback guard was also updated to match.
 
-**Impact:** `opb_reception` and `opb_staff` users can retrieve financial report data including revenue totals, expense summaries, and occupancy metrics — scoped to their branch by `branch_filter()`, but accessible nonetheless.
-
-**Actual data exposed to reception/staff:**
-- Monthly revenue for their branch
-- Total outstanding dues
-- Expense breakdowns by category
-- Occupancy statistics
-
-**Mitigating factor:** Branch filtering is still applied, so a reception user at Branch A cannot see Branch B's financial data.
+`opb_reception` and `opb_staff` now receive HTTP 403 when calling `GET /opb/v1/reports`. Access is restricted to `opb_super_admin`, `opb_branch_manager`, and WP `administrator` — as the capability design intended.
 
 ---
 
@@ -179,5 +171,5 @@ The Data Management API constructs its own permission check via a constructor-le
 | Infrastructure tools (OPSMAIL, SAL) | Well-locked — `manage_options` gate is strong |
 | Public endpoints | Appropriate use of `__return_true` for customer-facing flows |
 | Client portal auth | Valid custom pattern; fragile if discipline lapses |
-| Capability enforcement | One gap (`opb_view_reports` not enforced in API) |
+| Capability enforcement | All 12 OPB capabilities now enforced correctly |
 | WP security integration | Standard WP REST nonce/cookie model; no deviations |

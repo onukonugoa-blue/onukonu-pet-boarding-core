@@ -3,12 +3,12 @@ class OPB_Reports_API extends OPB_REST_Base {
 
     public function register_routes(): void {
         register_rest_route( $this->namespace, '/reports', [
-            [ 'methods' => 'GET', 'callback' => [ $this, 'get_report' ], 'permission_callback' => [ $this, 'permission_check' ] ],
+            [ 'methods' => 'GET', 'callback' => [ $this, 'get_report' ], 'permission_callback' => fn($r) => $this->permission_manage('opb_view_reports', $r) ],
         ]);
     }
 
     public function get_report( WP_REST_Request $r ): WP_REST_Response|WP_Error {
-        $check = $this->permission_check($r); if(is_wp_error($check)) return $check;
+        $check = $this->permission_manage('opb_view_reports', $r); if(is_wp_error($check)) return $check;
         global $wpdb;
 
         $today     = current_time('Y-m-d');

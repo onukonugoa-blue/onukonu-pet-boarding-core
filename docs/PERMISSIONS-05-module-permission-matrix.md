@@ -172,9 +172,9 @@ Covered under Pets — see Section 3. OPB has no standalone Documents module; do
 
 | Operation | Endpoint | Super Admin | Branch Manager | Reception | Staff | WP Admin |
 |---|---|:---:|:---:|:---:|:---:|:---:|
-| VIEW report | `GET /reports` | ✅ `pc` | ✅ `pc` | ⚠ `pc` | ⚠ `pc` | ✅ |
+| VIEW report | `GET /reports` | ✅ | ✅ | ❌ | ❌ | ✅ |
 
-> ⚠ **Design intention vs implementation gap:** `opb_view_reports` is granted only to `opb_super_admin` and `opb_branch_manager`, but the reports endpoint only calls `permission_check`. Any logged-in OPB user — including `opb_reception` and `opb_staff` — can access reports. See Part 7 (Conflicts) and Part 9 (Security Review).
+> `permission_callback` uses `permission_manage('opb_view_reports')`. `opb_reception` and `opb_staff` receive HTTP 403.
 
 ---
 
