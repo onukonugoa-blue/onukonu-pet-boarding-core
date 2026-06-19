@@ -151,6 +151,27 @@ class OPB_Settings_API extends OPB_REST_Base {
         $uid  = (int)$r['id'];
         $user = get_user_by('id',$uid);
         if(!$user) return $this->error('not_found','User not found',404);
+
+        // Determine the effective role after this update.
+        $existing_opb = array_values(array_intersect((array)$user->roles, array_keys(OPB_Roles::ROLES)));
+        $new_role     = (isset($d['role']) && in_array($d['role'], array_keys(OPB_Roles::ROLES), true))
+            ? $d['role']
+            : ($existing_opb[0] ?? '');
+
+        // If the resulting role is branch-scoped, a valid branch_id must be present
+        // — either supplied in this request or already stored in user meta.
+        if ( OPB_Roles::is_branch_scoped_role($new_role) ) {
+            $new_branch = isset($d['branch_id'])
+                ? (int)$d['branch_id']
+                : (int)get_user_meta($uid,'opb_branch_id',true);
+            if ( $new_branch < 1 ) {
+                return $this->error(
+                    'branch_required',
+                    'Branch assignment is required for Branch Manager, Reception and Staff roles.'
+                );
+            }
+        }
+
         if(isset($d['role'])){
             $valid = array_keys(OPB_Roles::ROLES);
             if(in_array($d['role'],$valid,true)){ $user->set_role($d['role']); }

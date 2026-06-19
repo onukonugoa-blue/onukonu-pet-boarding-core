@@ -75,19 +75,24 @@ This is architecturally intentional (OPSMAIL/SAL are infrastructure tools for si
 
 ---
 
-## Conflict 4 — Branch-Scoped User With No `opb_branch_id` Meta Acts as Unrestricted
+## Conflict 4 — Branch-Scoped User With No `opb_branch_id` Meta Acts as Unrestricted ✅ RESOLVED
 
 **Category:** Missing branch restriction on role without branch meta  
-**Severity:** Medium
+**Severity:** Medium → **Fixed**
 
 | Field | Detail |
 |---|---|
 | **Affected roles** | `opb_branch_manager`, `opb_reception`, `opb_staff` |
-| **Condition** | User created with a branch-scoped OPB role but no `opb_branch_id` meta set (value = 0 or empty string) |
-| **Behaviour** | `get_user_branch_id()` returns 0, which means unrestricted. `branch_filter()` then passes `branch_id = 0` to queries, returning data across all branches. |
-| **Effect** | A newly created branch-scoped user with a missing branch assignment silently has cross-branch read access. |
+| **Condition** | User created with a branch-scoped OPB role but no `opb_branch_id` user meta |
+| **Previous behaviour** | `get_user_branch_id()` returned 0 (unrestricted) — cross-branch access |
+| **Fixed behaviour** | `get_user_branch_id()` returns **-1** (denied sentinel) — HTTP 403 on all OPB endpoints |
 
-There is no runtime guard that checks "if role is branch-scoped and branch_id is 0, reject the request." The system trusts that branch_id will always be set for branch-scoped roles.
+**Resolution (v3.2.0):**
+- `get_user_branch_id()` now returns `-1` (denied sentinel) for any branch-scoped user with `opb_branch_id < 1`
+- `permission_check()` in `OPB_REST_Base` blocks on the `-1` sentinel with HTTP 403 and the message *"Your account has no branch assignment. Please contact an administrator."*
+- `update_staff()` in the Settings API rejects any request that would leave a branch-scoped role without a branch
+- WP Admin Edit User now validates branch assignment before save
+- Admin warning panel (Pet Boarding → User Management) lists all unassigned users with quick edit links
 
 ---
 
@@ -161,6 +166,6 @@ The one exception is `opb_view_reports`, which is assigned but not checked — d
 | C-1 | Capability not enforced | `opb_view_reports` / Reports API | Medium | ✅ Fixed — `permission_manage('opb_view_reports')` now used |
 | C-2 | Redundant capabilities | `opb_record_payments` + `opb_manage_invoices` | Low | No action required unless a new role separation is introduced |
 | C-3 | Role/module intent mismatch | `opb_super_admin` vs OPSMAIL/SAL | Medium | Document clearly; optionally add `opb_manage_settings`-gated OPSMAIL read-only view |
-| C-4 | Missing branch guard | Branch-scoped roles with no `opb_branch_id` | Medium | Add validation in `update_staff` and consider server-side guard in `get_user_branch_id()` |
+| C-4 | Missing branch guard | Branch-scoped roles with no `opb_branch_id` | Medium | ✅ Fixed — -1 sentinel, 403 runtime guard, write-time validation, admin panel |
 | C-5 | `__return_true` on data endpoint | `GET /client/me` | Low | Document; ensure callback always validates session first |
 | C-6 | Inconsistent permission pattern | Data Management API | Low | Refactor to use `permission_manage()` or document the equivalence |

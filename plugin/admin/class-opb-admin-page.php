@@ -53,10 +53,141 @@ class OPB_Admin_Page {
             'opb-sal',
             [ self::class, 'render' ]
         );
+
+        add_submenu_page(
+            'opb-dashboard',
+            'User Management',
+            'User Management',
+            'manage_options',
+            'opb-user-management',
+            [ self::class, 'render_user_management' ]
+        );
     }
 
     public static function render(): void {
         echo '<div id="opb-root"></div>';
+    }
+
+    public static function render_user_management(): void {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'Insufficient permissions.' );
+        }
+
+        global $wpdb;
+        $unassigned = OPB_Roles::get_unassigned_branch_scoped_users();
+        $all_staff  = get_users( [ 'role__in' => array_keys( OPB_Roles::ROLES ) ] );
+
+        // Load branch names for display.
+        $branch_map = [];
+        $branches   = $wpdb->get_results(
+            "SELECT id, name FROM {$wpdb->prefix}opb_branches WHERE is_active = 1 ORDER BY name",
+            ARRAY_A
+        ) ?: [];
+        foreach ( $branches as $b ) {
+            $branch_map[ (int) $b['id'] ] = $b['name'];
+        }
+
+        $role_labels = OPB_Roles::ROLES;
+        ?>
+        <div class="wrap" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+            <h1 style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+                <span style="background:#1e3a8a;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:4px;letter-spacing:2px">OPB</span>
+                User Management
+            </h1>
+
+            <?php if ( ! empty( $unassigned ) ) : ?>
+            <div style="background:#fef3c7;border:2px solid #f59e0b;border-radius:8px;padding:16px 20px;margin-bottom:28px">
+                <h2 style="margin:0 0 12px;font-size:15px;color:#92400e;display:flex;align-items:center;gap:8px">
+                    ⚠ <?php echo count( $unassigned ); ?> user<?php echo count( $unassigned ) > 1 ? 's' : ''; ?> require a branch assignment
+                </h2>
+                <p style="margin:0 0 14px;color:#78350f;font-size:13px">
+                    Branch Manager, Reception and Staff users must have a branch. Users below cannot access OPB until a branch is assigned.
+                </p>
+                <table class="wp-list-table widefat striped" style="font-size:13px;background:#fff">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Branch</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ( $unassigned as $user ) :
+                            $user_roles    = array_intersect( (array) $user->roles, array_keys( $role_labels ) );
+                            $role_label    = $role_labels[ reset( $user_roles ) ] ?? reset( $user_roles );
+                        ?>
+                        <tr>
+                            <td><strong><?php echo esc_html( $user->display_name ); ?></strong></td>
+                            <td><?php echo esc_html( $user->user_email ); ?></td>
+                            <td><?php echo esc_html( $role_label ); ?></td>
+                            <td><span style="color:#dc2626;font-weight:700">Not Assigned</span></td>
+                            <td>
+                                <a href="<?php echo esc_url( get_edit_user_link( $user->ID ) ); ?>"
+                                   class="button button-small">Edit User →</a>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php else : ?>
+            <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:12px 16px;margin-bottom:24px;color:#166534;font-size:13px">
+                ✅ All branch-scoped users have a branch assignment.
+            </div>
+            <?php endif; ?>
+
+            <h2 style="font-size:14px;margin-bottom:12px">All OPB Staff (<?php echo count( $all_staff ); ?>)</h2>
+            <table class="wp-list-table widefat striped" style="font-size:13px">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Branch</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ( $all_staff as $user ) :
+                        $user_roles  = array_intersect( (array) $user->roles, array_keys( $role_labels ) );
+                        $role_slug   = reset( $user_roles );
+                        $role_label  = $role_labels[ $role_slug ] ?? $role_slug;
+                        $branch_id   = (int) get_user_meta( $user->ID, 'opb_branch_id', true );
+                        $branch_name = $branch_id > 0 ? ( $branch_map[ $branch_id ] ?? "Branch #{$branch_id}" ) : null;
+                        $is_scoped   = OPB_Roles::is_branch_scoped_role( $role_slug );
+                        $needs_fix   = $is_scoped && $branch_id < 1;
+                    ?>
+                    <tr>
+                        <td><strong><?php echo esc_html( $user->display_name ); ?></strong></td>
+                        <td><?php echo esc_html( $user->user_email ); ?></td>
+                        <td><?php echo esc_html( $role_label ); ?></td>
+                        <td>
+                            <?php if ( $is_scoped ) : ?>
+                                <?php echo $branch_name ? esc_html( $branch_name ) : '<span style="color:#dc2626">Not Assigned</span>'; ?>
+                            <?php else : ?>
+                                <span style="color:#6b7280">Global (unrestricted)</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ( $needs_fix ) : ?>
+                                <span style="color:#dc2626;font-weight:700">⚠ No Branch</span>
+                            <?php else : ?>
+                                <span style="color:#166534">✅ OK</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <a href="<?php echo esc_url( get_edit_user_link( $user->ID ) ); ?>"
+                               class="button button-small">Edit</a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php
     }
 
     public static function render_opsmail_queue(): void {

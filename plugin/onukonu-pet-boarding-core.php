@@ -88,6 +88,7 @@ require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-data-management-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-opsmail-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-sal-api.php';
 require_once OPB_PLUGIN_DIR . 'admin/class-opb-admin-page.php';
+require_once OPB_PLUGIN_DIR . 'includes/class-opb-user-admin.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-portal.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-login-branding.php';
 
@@ -99,6 +100,11 @@ add_action( 'init', [ OPB_Roles::class, 'register' ] );
 
 // Portal — registers its own init/filter/action hooks
 OPB_Portal::register();
+
+// User Admin — WP admin branch-assignment field, validation, and warning panel
+if ( is_admin() ) {
+    OPB_User_Admin::register();
+}
 
 // Public portal — inquiry form & onboarding pages (no auth)
 OPB_Public_Portal::register();

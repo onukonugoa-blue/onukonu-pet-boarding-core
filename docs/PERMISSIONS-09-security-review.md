@@ -13,7 +13,7 @@
 | ID | Title | Severity | Status |
 |---|---|---|---|
 | S-1 | Reports endpoint does not check `opb_view_reports` | Medium | ✅ Fixed |
-| S-2 | Branch-scoped users without `opb_branch_id` get unrestricted access | Medium | Open |
+| S-2 | Branch-scoped users without `opb_branch_id` get unrestricted access | Medium | ✅ Fixed |
 | S-3 | `/client/me` uses `__return_true` — no WP-level auth gate | Low | Accepted pattern |
 | S-4 | No nonce validation on OPB REST endpoints | Info | By design (WP REST uses cookie+nonce or JWT) |
 | S-5 | `opb_super_admin` cannot reach OPSMAIL/SAL — intent/implementation split | Medium | Documented gap |
@@ -36,18 +36,21 @@ The `permission_callback` was updated from `permission_check` to `permission_man
 
 ---
 
-## S-2 — Branch-Scoped User With No Branch Assignment Is Unrestricted
+## S-2 — Branch-Scoped User With No Branch Assignment Is Unrestricted ✅ FIXED
 
-**Severity:** Medium  
-**File:** `plugin/includes/class-opb-roles.php` (`get_user_branch_id()`)
+**Severity:** Medium → Resolved  
+**Files:** `class-opb-roles.php`, `class-opb-rest-base.php`, `class-opb-settings-api.php`, `class-opb-user-admin.php`
 
-If a user is created with `opb_branch_manager`, `opb_reception`, or `opb_staff` role, but no `opb_branch_id` user meta is set (value = 0 or empty), `get_user_branch_id()` returns 0. This is the same return value as an unrestricted user.
+`get_user_branch_id()` now returns `-1` (denied sentinel) for any branch-scoped user (`opb_branch_manager`, `opb_reception`, `opb_staff`) whose `opb_branch_id` meta is missing or zero. `permission_check()` detects the sentinel and returns HTTP 403 with a clear configuration-error message before any query logic runs.
 
-**Impact:** The user can read data across all branches. For `opb_branch_manager` this also means write access (e.g., creating bookings, recording payments) across all branches.
+**Enforcement chain (all layers):**
+1. **Runtime gate:** `permission_check()` — HTTP 403 on every OPB endpoint
+2. **Write-time:** `update_staff()` — rejects branch-scoped role without a branch
+3. **WP Admin Edit User:** `user_profile_update_errors` — blocks save
+4. **WP Admin Add New User:** JS `required` field + server-side admin notice
+5. **Admin visibility:** User Management page + `admin_notices` warning on OPB pages
 
-**Trigger condition:** A user account created via WP Admin (Add User) — assigning an OPB role — without subsequently using the OPB Staff management screen to set a branch. This is a common setup mistake.
-
-**Mitigating factor:** Requires a logged-in OPB staff user, not a public user. An administrator who creates users this way must be aware of OPB's branch assignment requirement.
+Under no circumstances does a missing branch assignment result in unrestricted data access.
 
 ---
 
