@@ -2,9 +2,9 @@
 
 **Product:** Onukonu Pet Boarding Core (OPB)  
 **Release:** RC1  
-**Source base:** v3.1.0  
+**Source base:** v3.3.0  
 **Plugin slug:** `onukonu-pet-boarding-core`  
-**Plugin version constant:** `OPB_VERSION = '3.1.0'`  
+**Plugin version constant:** `OPB_VERSION = '3.3.0'`  
 **Release date:** 2026-06-19  
 **PHP requirement:** 8.2+  
 **WordPress requirement:** 6.4+  

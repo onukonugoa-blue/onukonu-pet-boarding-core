@@ -139,15 +139,17 @@ function renderPage(activeTab) {
   const readme = readFileSafe('README.md') || '# No README found';
   const architecture = readFileSafe('docs/ARCHITECTURE.md') || '# No ARCHITECTURE.md found';
   const analysis = readFileSafe('docs/ANALYSIS.md') || '# No ANALYSIS.md found';
-  const rc1RepoState    = readFileSafe('docs/RC1-REPOSITORY-STATE.md') || '';
-  const rc1Branding     = readFileSafe('docs/RC1-BRANDING-REPORT.md') || '';
-  const rc1Arch         = readFileSafe('docs/RC1-ARCHITECTURE.md') || '';
-  const rc1Build        = readFileSafe('docs/RC1-BUILD-AUDIT.md') || '';
-  const rc1Roles        = readFileSafe('docs/RC1-ROLES-AUDIT.md') || '';
-  const rc1Opsmail      = readFileSafe('docs/RC1-OPSMAIL-AUDIT.md') || '';
-  const rc1Sal          = readFileSafe('docs/RC1-SAL-AUDIT.md') || '';
-  const rc1ReleaseNotes = readFileSafe('docs/RC1-RELEASE-NOTES.md') || '';
-  const rc1Deployment   = readFileSafe('docs/RC1-DEPLOYMENT.md') || '';
+  const rc1RepoState      = readFileSafe('docs/RC1-REPOSITORY-STATE.md') || '';
+  const rc1RepoAudit      = readFileSafe('docs/RC1-REPOSITORY-AUDIT.md') || '';
+  const rc1ValidationRpt  = readFileSafe('docs/RC1-VALIDATION-REPORT.md') || '';
+  const rc1Branding       = readFileSafe('docs/RC1-BRANDING-REPORT.md') || '';
+  const rc1Arch           = readFileSafe('docs/RC1-ARCHITECTURE.md') || '';
+  const rc1Build          = readFileSafe('docs/RC1-BUILD-AUDIT.md') || '';
+  const rc1Roles          = readFileSafe('docs/RC1-ROLES-AUDIT.md') || '';
+  const rc1Opsmail        = readFileSafe('docs/RC1-OPSMAIL-AUDIT.md') || '';
+  const rc1Sal            = readFileSafe('docs/RC1-SAL-AUDIT.md') || '';
+  const rc1ReleaseNotes   = readFileSafe('docs/RC1-RELEASE-NOTES.md') || '';
+  const rc1Deployment     = readFileSafe('docs/RC1-DEPLOYMENT.md') || '';
   const perm01 = readFileSafe('docs/PERMISSIONS-01-role-inventory.md') || '';
   const perm02 = readFileSafe('docs/PERMISSIONS-02-capability-inventory.md') || '';
   const perm03 = readFileSafe('docs/PERMISSIONS-03-user-type-audit.md') || '';
@@ -292,15 +294,17 @@ function renderPage(activeTab) {
       : '—';
 
     const docs = [
-      { anchor: 'release-notes',  label: 'RC1 Release Notes',        md: rc1ReleaseNotes },
-      { anchor: 'deployment',     label: 'Deployment Instructions',   md: rc1Deployment   },
-      { anchor: 'architecture',   label: 'Architecture Reference',    md: rc1Arch         },
-      { anchor: 'roles',          label: 'Role & Scope Audit',        md: rc1Roles        },
-      { anchor: 'build',          label: 'Build Audit',               md: rc1Build        },
-      { anchor: 'opsmail',        label: 'OPSMAIL Audit',             md: rc1Opsmail      },
-      { anchor: 'sal',            label: 'SAL Audit',                 md: rc1Sal          },
-      { anchor: 'branding',       label: 'Branding Report',           md: rc1Branding     },
-      { anchor: 'repo-state',     label: 'Repository State',          md: rc1RepoState    },
+      { anchor: 'release-notes',    label: 'RC1 Release Notes',        md: rc1ReleaseNotes  },
+      { anchor: 'deployment',       label: 'Deployment Instructions',   md: rc1Deployment    },
+      { anchor: 'repo-audit',       label: 'Repository Audit',         md: rc1RepoAudit     },
+      { anchor: 'validation',       label: 'Validation Report',         md: rc1ValidationRpt },
+      { anchor: 'architecture',     label: 'Architecture Reference',    md: rc1Arch          },
+      { anchor: 'roles',            label: 'Role & Scope Audit',        md: rc1Roles         },
+      { anchor: 'build',            label: 'Build Audit',               md: rc1Build         },
+      { anchor: 'opsmail',          label: 'OPSMAIL Audit',             md: rc1Opsmail       },
+      { anchor: 'sal',              label: 'SAL Audit',                 md: rc1Sal           },
+      { anchor: 'branding',         label: 'Branding Report',           md: rc1Branding      },
+      { anchor: 'repo-state',       label: 'Repository State',          md: rc1RepoState     },
     ];
 
     const tocItems = docs.map(d =>

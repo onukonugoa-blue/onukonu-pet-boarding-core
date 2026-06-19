@@ -30,7 +30,7 @@
 
 ---
 
-## 2. Upgrade from v3.0.x or v3.1.0
+## 2. Upgrade from any prior version
 
 1. Deactivate the existing plugin
 2. Delete the existing plugin (or upload over it)
