@@ -445,6 +445,21 @@ export default function SalDashboard() {
 
         {previewResult && (
           <div>
+            {/* Operational window banner — accounts brief only */}
+            {previewResult.brief_type === 'accounts' && (previewResult.snapshot as any).op_start && (
+              <div style={{
+                marginBottom: 12, padding: '8px 14px',
+                background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 6,
+                fontSize: 13, color: '#1d4ed8', display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                <span>📅</span>
+                <span>
+                  <strong>Operational window active</strong> — figures exclude invoices before{' '}
+                  <strong>{(previewResult.snapshot as any).op_start}</strong>
+                </span>
+              </div>
+            )}
+
             {/* Pipeline tabs */}
             <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid #e5e7eb', marginBottom: 0 }}>
               {([
