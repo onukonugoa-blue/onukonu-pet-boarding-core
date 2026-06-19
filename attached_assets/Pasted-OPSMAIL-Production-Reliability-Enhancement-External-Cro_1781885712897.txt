@@ -1,0 +1,187 @@
+OPSMAIL Production Reliability Enhancement – External Cron Support
+
+Background
+
+OPSMAIL is evolving from a standard WordPress plugin into an operational messaging platform.
+
+The system now contains scheduled components including:
+
+- Telegram queue consumer
+- Situational Awareness Layer (SAL)
+- Morning Brief
+- Evening Brief
+- Accounts Snapshot
+- Future scheduled automations
+
+Problem
+
+WordPress WP-Cron is visitor-triggered.
+
+Scheduled jobs only execute when someone visits the site.
+
+Example:
+
+Morning Brief scheduled:
+07:00
+
+No visitor arrives until:
+08:17
+
+Result:
+
+Morning Brief executes at:
+08:17
+
+This is unacceptable for operational messaging.
+
+Objective
+
+Add production-grade support for external server cron execution.
+
+Requirements
+
+1. Cron Health Detection
+
+Create a scheduler health service.
+
+Detect:
+
+- Last WP-Cron execution
+- Last queue execution
+- Last SAL execution
+
+Display:
+
+✓ Healthy
+⚠ Delayed
+✗ Not Running
+
+inside OPSMAIL diagnostics.
+
+2. External Cron Guidance
+
+Create:
+
+OPSMAIL → Diagnostics
+
+Display:
+
+Recommended Hostinger cron command.
+
+Example:
+
+curl -s https://YOUR-DOMAIN/wp-cron.php?doing_wp_cron >/dev/null 2>&1
+
+or equivalent.
+
+The actual site URL should be generated automatically.
+
+3. Scheduler Status Panel
+
+Show:
+
+- Last Scheduler Run
+- Next Scheduler Run
+- Last Queue Run
+- Last SAL Run
+- External Cron Configured (Yes/No/Unknown)
+
+4. Warning Banner
+
+If no external cron appears to be active:
+
+Display:
+
+⚠ OPSMAIL is currently relying on visitor-triggered WP-Cron.
+
+Scheduled Telegram notifications and SAL briefings may execute late.
+
+For production deployments, configure a server cron job.
+
+5. Production Documentation
+
+Generate:
+
+OPSMAIL → Diagnostics → External Cron Setup
+
+Provide:
+
+Hostinger cPanel instructions.
+
+Example:
+
+Step 1:
+Open Cron Jobs.
+
+Step 2:
+Create new cron.
+
+Frequency:
+Every 5 minutes
+
+Command:
+
+curl -s https://YOUR-DOMAIN/wp-cron.php?doing_wp_cron >/dev/null 2>&1
+
+Step 3:
+Save.
+
+Step 4:
+Verify scheduler health.
+
+6. Recommended Schedule
+
+Use:
+
+Every 5 minutes
+
+NOT hourly.
+
+Reason:
+
+- Telegram queue processing remains responsive.
+- SAL briefings fire near scheduled times.
+- Future automations remain reliable.
+
+7. Queue Compatibility
+
+External cron must not bypass OPSMAIL.
+
+Required flow:
+
+Linux Cron
+↓
+WP-Cron
+↓
+OPSMAIL Scheduler
+↓
+Queue
+↓
+Telegram Consumer
+↓
+Telegram
+
+No direct Telegram sending.
+
+8. Acceptance Test
+
+After cron setup:
+
+- Queue jobs process automatically.
+- Morning Brief triggers at scheduled time.
+- Evening Brief triggers at scheduled time.
+- Accounts Snapshot triggers at scheduled time.
+- Diagnostics show scheduler healthy.
+
+Deliverables
+
+1. Scheduler health monitor.
+2. External cron detection.
+3. Diagnostics UI.
+4. Hostinger setup instructions.
+5. Auto-generated cron command using site URL.
+6. Production-ready ZIP.
+
+Goal
+
+Ensure OPSMAIL scheduled notifications and SAL briefings execute predictably and do not depend on website traffic.

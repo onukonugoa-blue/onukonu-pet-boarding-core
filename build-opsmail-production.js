@@ -2,7 +2,7 @@
 /**
  * OPSMAIL Production Build Script
  *
- * Produces: opsmail-production-v3.1.0.zip
+ * Produces: opsmail-production-v3.2.0.zip
  *
  * This script packages the Onukonu Pet Boarding Core plugin (which contains
  * the OPSMAIL Situational Awareness Layer) as a production-ready WordPress
@@ -23,7 +23,7 @@ const AdmZip = require('adm-zip');
 const fs     = require('fs');
 const path   = require('path');
 
-const VERSION     = '3.1.0';
+const VERSION     = '3.2.0';
 const LABEL       = 'opsmail-production';
 const OUTPUT_NAME = `${LABEL}-v${VERSION}.zip`;
 const OUTPUT_PATH = path.resolve(__dirname, OUTPUT_NAME);

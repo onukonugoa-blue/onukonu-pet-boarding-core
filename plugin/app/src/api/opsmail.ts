@@ -62,6 +62,30 @@ export interface OpsmailStats {
   gemini_model: string
 }
 
+export interface CronComponentStatus {
+  status: 'healthy' | 'delayed' | 'not_running'
+  last_run: string | null
+  elapsed_sec: number | null
+  healthy_threshold_sec: number
+  delayed_threshold_sec: number
+}
+
+export interface CronHealth {
+  site_url: string
+  wp_cron_url: string
+  wp_cron_disabled: boolean
+  components: {
+    queue: CronComponentStatus
+    mailbox: CronComponentStatus
+    sal: CronComponentStatus
+  }
+  external_cron: 'detected' | 'unknown' | 'not_detected'
+  overall_status: 'healthy' | 'delayed' | 'not_running'
+  cron_active: boolean
+  recommended_cron_command: string
+  recommended_frequency: string
+}
+
 export interface GeminiRunParams {
   text: string
   send_telegram?: boolean
@@ -132,4 +156,7 @@ export const opsmailApi = {
 
   geminiRun: (params: GeminiRunParams) =>
     api.post<GeminiRunResult>('/opsmail/gemini-run', params),
+
+  getCronHealth: () =>
+    api.get<CronHealth>('/opsmail/cron-health'),
 }

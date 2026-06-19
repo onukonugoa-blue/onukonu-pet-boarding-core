@@ -15,6 +15,9 @@
  * POST /opb/v1/opsmail/test-gemini              — Classify a sample text via Gemini
  * POST /opb/v1/opsmail/test-mailbox             — Test IMAP connection + count unseen
  *
+ * v3.2.0 scheduler health (super admin only):
+ * GET  /opb/v1/opsmail/cron-health              — Scheduler health snapshot + external cron detection
+ *
  * Permission: manage_options (WP administrator / opb_super_admin)
  */
 class OPB_Opsmail_API extends OPB_REST_Base {
@@ -92,6 +95,14 @@ class OPB_Opsmail_API extends OPB_REST_Base {
             [
                 'methods'             => 'POST',
                 'callback'            => [ $this, 'test_mailbox' ],
+                'permission_callback' => [ $this, 'super_admin_only' ],
+            ],
+        ] );
+
+        register_rest_route( $ns, '/opsmail/cron-health', [
+            [
+                'methods'             => 'GET',
+                'callback'            => [ $this, 'get_cron_health' ],
                 'permission_callback' => [ $this, 'super_admin_only' ],
             ],
         ] );
@@ -447,5 +458,25 @@ class OPB_Opsmail_API extends OPB_REST_Base {
         ];
 
         return implode( "\n", $lines );
+    }
+
+    // ── v3.2.0 Scheduler Health ────────────────────────────────────────────────
+
+    /**
+     * GET /opb/v1/opsmail/cron-health
+     *
+     * Returns a snapshot of the OPSMAIL scheduler health:
+     * - Per-component status (healthy / delayed / not_running)
+     * - External cron detection result
+     * - Auto-generated cron command using the live site URL
+     */
+    public function get_cron_health( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+        $health = OPB_Cron_Health::get_health();
+
+        if ( isset( $health['error'] ) ) {
+            return new WP_Error( 'cron_health_error', $health['error'], [ 'status' => 500 ] );
+        }
+
+        return new WP_REST_Response( $health, 200 );
     }
 }

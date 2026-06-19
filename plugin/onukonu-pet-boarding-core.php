@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'OPB_VERSION',     '3.1.0' );
+define( 'OPB_VERSION',     '3.2.0' );
 define( 'OPB_PLUGIN_FILE', __FILE__ );
 define( 'OPB_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
 define( 'OPB_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
@@ -24,6 +24,7 @@ define( 'OPB_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
 require_once OPB_PLUGIN_DIR . 'vendor/autoload.php';
 
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-activator.php';
+require_once OPB_PLUGIN_DIR . 'includes/class-opb-cron-health.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-deactivator.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-roles.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-pricing-engine.php';
@@ -167,6 +168,7 @@ add_action( 'init', [ OPB_SAL_Scheduler::class, 'maybe_schedule' ] );
 
 add_action( OPB_SAL_Scheduler::CRON_HOOK, 'opb_cron_sal_handler' );
 function opb_cron_sal_handler(): void {
+    OPB_Cron_Health::record_ping( 'sal' );
     try {
         OPB_SAL_Scheduler::check_and_run();
     } catch ( \Throwable $e ) {
@@ -270,6 +272,7 @@ function opb_maybe_schedule_cron(): void {
  */
 add_action( 'opb_cron_process_mailbox', 'opb_cron_mailbox_handler' );
 function opb_cron_mailbox_handler(): void {
+    OPB_Cron_Health::record_ping( 'mailbox' );
     try {
         $log = OPB_Mailbox_Processor::process();
         if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
@@ -285,6 +288,7 @@ function opb_cron_mailbox_handler(): void {
  */
 add_action( 'opb_cron_process_telegram', 'opb_cron_telegram_handler' );
 function opb_cron_telegram_handler(): void {
+    OPB_Cron_Health::record_ping( 'queue' );
     try {
         $log = OPB_Telegram_Consumer::process_queue();
         if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
