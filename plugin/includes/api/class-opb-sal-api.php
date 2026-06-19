@@ -62,6 +62,14 @@ class OPB_SAL_API extends OPB_REST_Base {
                 'permission_callback' => [ $this, 'super_admin_only' ],
             ],
         ] );
+
+        register_rest_route( $ns, '/sal/history', [
+            [
+                'methods'             => 'GET',
+                'callback'            => [ $this, 'get_history' ],
+                'permission_callback' => [ $this, 'super_admin_only' ],
+            ],
+        ] );
     }
 
     public function super_admin_only( WP_REST_Request $r ): bool|WP_Error {
@@ -214,6 +222,57 @@ class OPB_SAL_API extends OPB_REST_Base {
         }
 
         return $this->success( [ 'ok' => true, 'message' => 'SAL test message delivered to Telegram.' ] );
+    }
+
+    // ── History ────────────────────────────────────────────────────────────────
+
+    /**
+     * GET /opb/v1/sal/history?limit=50&type=all
+     * Returns the last N rows from opb_sal_brief_history.
+     */
+    public function get_history( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+        global $wpdb;
+
+        $limit = min( (int) ( $r->get_param( 'limit' ) ?: 50 ), 200 );
+        $type  = sanitize_text_field( $r->get_param( 'type' ) ?: '' );
+        $table = "{$wpdb->prefix}opb_sal_brief_history";
+
+        if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) {
+            return $this->success( [ 'history' => [], 'note' => 'History table not yet created — re-activate the plugin.' ] );
+        }
+
+        if ( $type && in_array( $type, [ 'morning', 'evening', 'accounts' ], true ) ) {
+            $rows = $wpdb->get_results( $wpdb->prepare(
+                "SELECT id, brief_type, trigger_type, sent_at, telegram_ok, used_fallback,
+                        timing_ms, queue_id, message_text, error
+                 FROM `{$table}`
+                 WHERE brief_type = %s
+                 ORDER BY sent_at DESC
+                 LIMIT %d",
+                $type, $limit
+            ), ARRAY_A );
+        } else {
+            $rows = $wpdb->get_results( $wpdb->prepare(
+                "SELECT id, brief_type, trigger_type, sent_at, telegram_ok, used_fallback,
+                        timing_ms, queue_id, message_text, error
+                 FROM `{$table}`
+                 ORDER BY sent_at DESC
+                 LIMIT %d",
+                $limit
+            ), ARRAY_A );
+        }
+
+        // Cast integer-like columns so JSON encodes them correctly
+        $rows = array_map( static function ( array $row ): array {
+            $row['id']           = (int) $row['id'];
+            $row['telegram_ok']  = (bool) $row['telegram_ok'];
+            $row['used_fallback']= (bool) $row['used_fallback'];
+            $row['timing_ms']    = (int)  $row['timing_ms'];
+            $row['queue_id']     = $row['queue_id'] !== null ? (int) $row['queue_id'] : null;
+            return $row;
+        }, $rows ?: [] );
+
+        return $this->success( [ 'history' => $rows ] );
     }
 
     // ── Diagnostics ────────────────────────────────────────────────────────────

@@ -153,6 +153,7 @@ class OPB_SAL_Scheduler {
                 $err = 'SAL Telegram not configured (bot token or chat ID missing).';
                 update_option( "opb_sal_last_failure_{$brief_type}", $now, false );
                 update_option( "opb_sal_last_error_{$brief_type}",   $err, false );
+                self::log_brief( $brief_type, $trigger, false, false, 0, null, '', $err );
                 return [ 'ok' => false, 'error' => $err ];
             }
 
@@ -209,6 +210,8 @@ class OPB_SAL_Scheduler {
                 update_option( "opb_sal_last_error_{$brief_type}",   'Telegram delivery failed.', false );
             }
 
+            self::log_brief( $brief_type, $trigger, $tg_ok, $used_fallback, $timing_ms, $queue_id ?: null, $telegram_message, $tg_ok ? '' : 'Telegram delivery failed.' );
+
             return [
                 'ok'           => true,
                 'queue_id'     => $queue_id,
@@ -222,8 +225,43 @@ class OPB_SAL_Scheduler {
             error_log( "[OPB SAL] run_brief({$brief_type}) error: {$err}" );
             update_option( "opb_sal_last_failure_{$brief_type}", $now, false );
             update_option( "opb_sal_last_error_{$brief_type}",   $err, false );
+            self::log_brief( $brief_type, $trigger, false, false, 0, null, '', $err );
             return [ 'ok' => false, 'error' => $err ];
         }
+    }
+
+    // ── History logger ─────────────────────────────────────────────────────────
+
+    /**
+     * Insert one row into opb_sal_brief_history for every delivery attempt.
+     */
+    private static function log_brief(
+        string  $brief_type,
+        string  $trigger,
+        bool    $telegram_ok,
+        bool    $used_fallback,
+        int     $timing_ms,
+        ?int    $queue_id,
+        string  $message_text,
+        string  $error
+    ): void {
+        global $wpdb;
+        $table = "{$wpdb->prefix}opb_sal_brief_history";
+        $wpdb->insert(
+            $table,
+            [
+                'brief_type'    => $brief_type,
+                'trigger_type'  => $trigger,
+                'sent_at'       => current_time( 'mysql' ),
+                'telegram_ok'   => $telegram_ok   ? 1 : 0,
+                'used_fallback' => $used_fallback  ? 1 : 0,
+                'timing_ms'     => $timing_ms,
+                'queue_id'      => $queue_id,
+                'message_text'  => $message_text !== '' ? $message_text : null,
+                'error'         => $error        !== '' ? substr( $error, 0, 500 ) : null,
+            ],
+            [ '%s', '%s', '%s', '%d', '%d', '%d', '%d', '%s', '%s' ]
+        );
     }
 
     // ── Queue insertion ────────────────────────────────────────────────────────

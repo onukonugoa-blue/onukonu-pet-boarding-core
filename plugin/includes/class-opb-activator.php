@@ -785,6 +785,29 @@ class OPB_Activator {
             }
         }
 
+        // ── SAL v3.1.0: Brief history log ─────────────────────────────────────
+        //
+        // Lightweight audit table: one row per brief delivery attempt.
+        // CREATE TABLE IF NOT EXISTS is standard SQL — safe on MySQL 5.7.
+
+        $wpdb->query(
+            "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}opb_sal_brief_history (
+                id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                brief_type    VARCHAR(20)  NOT NULL,
+                trigger_type  VARCHAR(20)  NOT NULL DEFAULT 'scheduled',
+                sent_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                telegram_ok   TINYINT(1)   NOT NULL DEFAULT 0,
+                used_fallback TINYINT(1)   NOT NULL DEFAULT 0,
+                timing_ms     INT UNSIGNED NOT NULL DEFAULT 0,
+                queue_id      INT UNSIGNED NULL,
+                message_text  MEDIUMTEXT   NULL,
+                error         VARCHAR(500) NULL,
+                PRIMARY KEY (id),
+                KEY idx_brief_type (brief_type),
+                KEY idx_sent_at    (sent_at)
+            ) ENGINE=InnoDB $charset"
+        );
+
         update_option( 'opb_db_version', OPB_VERSION );
     }
 

@@ -51,6 +51,19 @@ interface PreviewResult {
   timing_ms: number
 }
 
+interface HistoryEntry {
+  id: number
+  brief_type: BriefType
+  trigger_type: string
+  sent_at: string
+  telegram_ok: boolean
+  used_fallback: boolean
+  timing_ms: number
+  queue_id: number | null
+  message_text: string | null
+  error: string | null
+}
+
 const BRIEF_LABELS: Record<BriefType, string> = {
   morning: 'Morning Operations Brief',
   evening: 'Evening Closure Brief',
@@ -89,6 +102,12 @@ export default function SalDashboard() {
   const [sendingType, setSendingType] = useState<BriefType | null>(null)
   const [sendResults, setSendResults] = useState<Record<string, string>>({})
 
+  // History state
+  const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [historyFilter, setHistoryFilter] = useState<BriefType | 'all'>('all')
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [expandedRow, setExpandedRow] = useState<number | null>(null)
+
   const loadConfig = useCallback(async () => {
     try {
       const data = await apiFetch('/sal/config')
@@ -109,10 +128,24 @@ export default function SalDashboard() {
     }
   }, [])
 
+  const loadHistory = useCallback(async (type: BriefType | 'all' = 'all') => {
+    setHistoryLoading(true)
+    try {
+      const qs = type !== 'all' ? `?type=${type}&limit=100` : '?limit=100'
+      const data = await apiFetch(`/sal/history${qs}`)
+      setHistory(data.history ?? [])
+    } catch {
+      // ignore
+    } finally {
+      setHistoryLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     loadConfig()
     loadDiagnostics()
-  }, [loadConfig, loadDiagnostics])
+    loadHistory('all')
+  }, [loadConfig, loadDiagnostics, loadHistory])
 
   const handleSaveConfig = async () => {
     if (!config) return
@@ -477,8 +510,119 @@ export default function SalDashboard() {
         )}
       </Section>
 
-      {/* D. Diagnostics */}
-      <Section title="D. Diagnostics">
+      {/* D. Brief History */}
+      <Section title="D. Brief History">
+        <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {(['all', 'morning', 'evening', 'accounts'] as const).map(f => (
+            <button
+              key={f}
+              onClick={() => {
+                setHistoryFilter(f)
+                setExpandedRow(null)
+                loadHistory(f)
+              }}
+              style={{
+                ...btnStyle(historyFilter === f ? '#1d4ed8' : '#9ca3af'),
+                fontSize: 12, padding: '5px 12px',
+              }}
+            >
+              {f === 'all' ? 'All' : BRIEF_LABELS[f]}
+            </button>
+          ))}
+          <button
+            onClick={() => { setExpandedRow(null); loadHistory(historyFilter) }}
+            disabled={historyLoading}
+            style={{ ...btnStyle('#6b7280'), fontSize: 12, padding: '5px 10px' }}
+          >
+            {historyLoading ? 'Loading…' : '↻ Refresh'}
+          </button>
+        </div>
+
+        {history.length === 0 ? (
+          <p style={{ color: '#9ca3af', fontSize: 13 }}>
+            {historyLoading ? 'Loading…' : 'No briefs sent yet.'}
+          </p>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                  {['Sent At', 'Type', 'Trigger', 'Telegram', 'Fallback', 'Time (ms)', ''].map(h => (
+                    <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 600, color: '#374151', whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {history.map(row => (
+                  <>
+                    <tr
+                      key={row.id}
+                      style={{
+                        borderBottom: '1px solid #f3f4f6',
+                        background: expandedRow === row.id ? '#f0f9ff' : '#fff',
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => setExpandedRow(expandedRow === row.id ? null : row.id)}
+                    >
+                      <td style={{ padding: '8px 10px', whiteSpace: 'nowrap', color: '#374151' }}>{fmtTime(row.sent_at)}</td>
+                      <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
+                        <span>{BRIEF_ICONS[row.brief_type]} {BRIEF_LABELS[row.brief_type]}</span>
+                      </td>
+                      <td style={{ padding: '8px 10px', color: '#6b7280' }}>
+                        {row.trigger_type === 'scheduled' ? '🕐 Scheduled' : '👆 Manual'}
+                      </td>
+                      <td style={{ padding: '8px 10px' }}>
+                        {row.telegram_ok
+                          ? <span style={{ color: '#059669', fontWeight: 500 }}>✅ Sent</span>
+                          : <span style={{ color: '#dc2626', fontWeight: 500 }}>❌ Failed</span>}
+                      </td>
+                      <td style={{ padding: '8px 10px', color: '#6b7280' }}>
+                        {row.used_fallback ? '⚙️ Yes' : '✨ Gemini'}
+                      </td>
+                      <td style={{ padding: '8px 10px', color: '#6b7280', textAlign: 'right' }}>
+                        {row.timing_ms > 0 ? row.timing_ms.toLocaleString() : '—'}
+                      </td>
+                      <td style={{ padding: '8px 10px', color: '#9ca3af', fontSize: 11 }}>
+                        {expandedRow === row.id ? '▲' : '▼'}
+                      </td>
+                    </tr>
+                    {expandedRow === row.id && (
+                      <tr key={`${row.id}-detail`} style={{ background: '#f0f9ff' }}>
+                        <td colSpan={7} style={{ padding: '10px 14px' }}>
+                          {row.error && (
+                            <div style={{ marginBottom: 8, fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '6px 8px', borderRadius: 4 }}>
+                              <strong>Error:</strong> {row.error}
+                            </div>
+                          )}
+                          {row.message_text ? (
+                            <pre style={{
+                              margin: 0, fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                              background: '#1e293b', color: '#e2e8f0', padding: 12, borderRadius: 6,
+                              maxHeight: 300, overflowY: 'auto',
+                            }}>
+                              {row.message_text}
+                            </pre>
+                          ) : (
+                            <p style={{ margin: 0, fontSize: 12, color: '#9ca3af' }}>No message text recorded.</p>
+                          )}
+                          {row.queue_id && (
+                            <div style={{ marginTop: 6, fontSize: 11, color: '#6b7280' }}>
+                              Queue ID: #{row.queue_id}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Section>
+
+      {/* E. Diagnostics */}
+      <Section title="E. Diagnostics">
         {diagnostics ? (
           <div>
             <div style={{ marginBottom: 12 }}>
