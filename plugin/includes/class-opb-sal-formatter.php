@@ -2,7 +2,7 @@
 /**
  * OPB_SAL_Formatter
  *
- * Situational Awareness Layer — Gemini Formatter + Deterministic Fallback (v3.1.0)
+ * Situational Awareness Layer — Gemini Formatter + Deterministic Fallback (v3.3.0)
  *
  * Takes a structured snapshot from OPB_SAL_Snapshot and produces:
  *   1. A Telegram-ready situational awareness brief via Gemini.
@@ -218,7 +218,14 @@ PROMPT;
         $brief_type = $snapshot['brief_type'] ?? 'morning';
         $totals     = $snapshot['totals']     ?? [];
         $branches   = $snapshot['branches']   ?? [];
+        $op_start   = $snapshot['op_start']   ?? '';
         $lines      = [];
+
+        // Operational window header (accounts brief only)
+        if ( $brief_type === 'accounts' && $op_start ) {
+            $lines[] = "OPERATIONAL WINDOW: Since {$op_start} (figures exclude pre-operational invoices)";
+            $lines[] = '';
+        }
 
         // Totals
         if ( isset( $totals['total_active'] ) ) {
@@ -503,7 +510,11 @@ PROMPT;
         }
 
         if ( $brief_type === 'accounts' ) {
-            $lines[] = '<b>ACCOUNTS</b>';
+            $op_start = $snapshot['op_start'] ?? '';
+            $win_label = $op_start
+                ? ' <i>(since ' . $esc( $op_start ) . ')</i>'
+                : '';
+            $lines[] = "<b>ACCOUNTS</b>{$win_label}";
             foreach ( $branches as $b ) {
                 $bn  = $esc( $b['branch_name'] ?? 'Branch' );
                 $inv = $b['invoices']  ?? [];

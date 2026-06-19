@@ -2,7 +2,7 @@
 /**
  * OPB_SAL_Snapshot
  *
- * Situational Awareness Layer — Snapshot Engine (v3.1.0)
+ * Situational Awareness Layer — Snapshot Engine (v3.3.0)
  *
  * Queries the OPB database and returns a structured operational dataset.
  * This class is the SOLE data source for SAL briefs.
@@ -33,10 +33,15 @@ class OPB_SAL_Snapshot {
             $now      = current_time( 'mysql' );
             $branches = self::get_branches();
 
+            // Operational window: if set, accounts figures are bounded from this date forward.
+            $op_start = trim( OPB_Customizations::get( 'operational_start_date' ) );
+            $op_start = ( $op_start && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $op_start ) ) ? $op_start : '';
+
             $snapshot = [
                 'generated_at' => $now,
                 'brief_type'   => $brief_type,
                 'date'         => $today,
+                'op_start'     => $op_start,
                 'branches'     => [],
                 'totals'       => [],
             ];
@@ -57,7 +62,7 @@ class OPB_SAL_Snapshot {
                 }
 
                 if ( $brief_type === 'accounts' ) {
-                    $data['invoices']   = self::invoices_data( $bid, $today );
+                    $data['invoices']   = self::invoices_data( $bid, $today, $op_start );
                     $data['payments']   = self::payments_data( $bid, $today );
                     $data['expenses']   = self::expenses_data( $bid, $today );
                 }
@@ -385,11 +390,15 @@ class OPB_SAL_Snapshot {
 
     // ── Invoices data ──────────────────────────────────────────────────────────
 
-    private static function invoices_data( int $branch_id, string $today ): array {
+    private static function invoices_data( int $branch_id, string $today, string $op_start = '' ): array {
         global $wpdb;
         $inv_t = "{$wpdb->prefix}opb_invoices";
         $bk_t  = "{$wpdb->prefix}opb_bookings";
         $cli_t = "{$wpdb->prefix}opb_clients";
+
+        // Operational window clause — applied to all outstanding/unpaid figures.
+        $op_clause   = $op_start ? $wpdb->prepare( ' AND i.invoice_date >= %s', $op_start ) : '';
+        $op_clause_s = $op_start ? $wpdb->prepare( ' AND invoice_date >= %s',   $op_start ) : '';
 
         // Generated today
         $generated_today = (int) $wpdb->get_var( $wpdb->prepare(
@@ -398,7 +407,7 @@ class OPB_SAL_Snapshot {
             $branch_id, $today
         ) );
 
-        // Unpaid invoices
+        // Unpaid invoices (bounded by operational start date when set)
         $unpaid = $wpdb->get_results( $wpdb->prepare(
             "SELECT i.id, i.invoice_date, i.revenue, i.due, c.name AS client_name
              FROM {$inv_t} i
@@ -406,12 +415,13 @@ class OPB_SAL_Snapshot {
              JOIN {$cli_t} c ON c.id = bk.client_id
              WHERE i.branch_id = %d
                AND i.payment_status IN ('Unpaid','Partially paid')
+             {$op_clause}
              ORDER BY i.invoice_date ASC
              LIMIT 50",
             $branch_id
         ), ARRAY_A ) ?? [];
 
-        // Overdue invoices (unpaid and invoice date > 7 days ago)
+        // Overdue invoices (unpaid and invoice date > 7 days ago, bounded by op window)
         $overdue_date = date( 'Y-m-d', strtotime( $today . ' -7 days' ) );
         $overdue = $wpdb->get_results( $wpdb->prepare(
             "SELECT i.id, i.invoice_date, i.revenue, i.due, c.name AS client_name
@@ -421,17 +431,19 @@ class OPB_SAL_Snapshot {
              WHERE i.branch_id = %d
                AND i.payment_status IN ('Unpaid','Partially paid')
                AND i.invoice_date < %s
+             {$op_clause}
              ORDER BY i.invoice_date ASC
              LIMIT 30",
             $branch_id, $overdue_date
         ), ARRAY_A ) ?? [];
 
-        // Invoices with outstanding amount (total due > 0)
+        // Total outstanding (bounded by operational start date when set)
         $total_outstanding = (float) $wpdb->get_var( $wpdb->prepare(
             "SELECT COALESCE(SUM(due), 0)
              FROM {$inv_t}
              WHERE branch_id = %d
-               AND payment_status IN ('Unpaid','Partially paid')",
+               AND payment_status IN ('Unpaid','Partially paid')
+             {$op_clause_s}",
             $branch_id
         ) );
 
