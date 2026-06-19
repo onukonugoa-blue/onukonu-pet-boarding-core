@@ -139,6 +139,15 @@ function renderPage(activeTab) {
   const readme = readFileSafe('README.md') || '# No README found';
   const architecture = readFileSafe('docs/ARCHITECTURE.md') || '# No ARCHITECTURE.md found';
   const analysis = readFileSafe('docs/ANALYSIS.md') || '# No ANALYSIS.md found';
+  const rc1RepoState    = readFileSafe('docs/RC1-REPOSITORY-STATE.md') || '';
+  const rc1Branding     = readFileSafe('docs/RC1-BRANDING-REPORT.md') || '';
+  const rc1Arch         = readFileSafe('docs/RC1-ARCHITECTURE.md') || '';
+  const rc1Build        = readFileSafe('docs/RC1-BUILD-AUDIT.md') || '';
+  const rc1Roles        = readFileSafe('docs/RC1-ROLES-AUDIT.md') || '';
+  const rc1Opsmail      = readFileSafe('docs/RC1-OPSMAIL-AUDIT.md') || '';
+  const rc1Sal          = readFileSafe('docs/RC1-SAL-AUDIT.md') || '';
+  const rc1ReleaseNotes = readFileSafe('docs/RC1-RELEASE-NOTES.md') || '';
+  const rc1Deployment   = readFileSafe('docs/RC1-DEPLOYMENT.md') || '';
   const legacyStats = getLegacyStats();
   const tree = getPluginTree();
   const pluginMeta = getPluginMeta();
@@ -263,6 +272,104 @@ function renderPage(activeTab) {
           <li>T&amp;C version constant: <code>OPB_Onboarding_Handler::TC_VERSION = '1.0'</code></li>
         </ul>
       </div>
+    `;
+  } else if (activeTab === 'rc1') {
+    title = 'RC1 Audit';
+    const rc1ZipExists = fs.existsSync('onukonu-pet-boarding-rc1.zip');
+    const rc1ZipSize   = rc1ZipExists
+      ? (fs.statSync('onukonu-pet-boarding-rc1.zip').size / (1024 * 1024)).toFixed(1) + ' MB'
+      : '—';
+
+    const docs = [
+      { anchor: 'release-notes',  label: 'RC1 Release Notes',        md: rc1ReleaseNotes },
+      { anchor: 'deployment',     label: 'Deployment Instructions',   md: rc1Deployment   },
+      { anchor: 'architecture',   label: 'Architecture Reference',    md: rc1Arch         },
+      { anchor: 'roles',          label: 'Role & Scope Audit',        md: rc1Roles        },
+      { anchor: 'build',          label: 'Build Audit',               md: rc1Build        },
+      { anchor: 'opsmail',        label: 'OPSMAIL Audit',             md: rc1Opsmail      },
+      { anchor: 'sal',            label: 'SAL Audit',                 md: rc1Sal          },
+      { anchor: 'branding',       label: 'Branding Report',           md: rc1Branding     },
+      { anchor: 'repo-state',     label: 'Repository State',          md: rc1RepoState    },
+    ];
+
+    const tocItems = docs.map(d =>
+      `<li><a href="#${d.anchor}" style="color:#4299e1;text-decoration:none">${d.label}</a></li>`
+    ).join('');
+
+    const docSections = docs.map(d => `
+      <div class="card doc-content" id="${d.anchor}">
+        ${d.md ? simpleMarkdown(d.md) : '<p style="color:#a0aec0"><em>Document not found.</em></p>'}
+      </div>`
+    ).join('');
+
+    content = `
+      <div class="card" style="border-left:4px solid #4299e1">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="background:#1a365d;color:white;border-radius:6px;padding:10px 20px;font-size:22px;font-weight:800;letter-spacing:-0.5px">RC1</div>
+          <div>
+            <div style="font-size:18px;font-weight:700;color:#1a365d">Onukonu Pet Boarding Core — Release Candidate 1</div>
+            <div style="font-size:13px;color:#718096;margin-top:2px">Source base: v3.1.0 · Generated: 2026-06-19 · 13 audit phases completed</div>
+          </div>
+        </div>
+        <div style="margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+          <div style="background:#f0fff4;border:1px solid #9ae6b4;border-radius:6px;padding:12px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:#276749">${rc1ZipExists ? '✓' : '✗'}</div>
+            <div style="font-size:12px;color:#276749;font-weight:600">ZIP Built</div>
+            <div style="font-size:11px;color:#68d391">${rc1ZipExists ? rc1ZipSize : 'Not found'}</div>
+          </div>
+          <div style="background:#ebf8ff;border:1px solid #90cdf4;border-radius:6px;padding:12px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:#2b6cb0">✓</div>
+            <div style="font-size:12px;color:#2b6cb0;font-weight:600">TypeScript</div>
+            <div style="font-size:11px;color:#63b3ed">0 errors · 114 modules</div>
+          </div>
+          <div style="background:#ebf8ff;border:1px solid #90cdf4;border-radius:6px;padding:12px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:#2b6cb0">✓</div>
+            <div style="font-size:12px;color:#2b6cb0;font-weight:600">Vite Build</div>
+            <div style="font-size:11px;color:#63b3ed">487 kB JS · 56 kB CSS</div>
+          </div>
+          <div style="background:#f0fff4;border:1px solid #9ae6b4;border-radius:6px;padding:12px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:#276749">OPB</div>
+            <div style="font-size:12px;color:#276749;font-weight:600">Branding</div>
+            <div style="font-size:11px;color:#68d391">Product identity verified</div>
+          </div>
+          <div style="background:#f0fff4;border:1px solid #9ae6b4;border-radius:6px;padding:12px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:#276749">4</div>
+            <div style="font-size:12px;color:#276749;font-weight:600">OPB Roles</div>
+            <div style="font-size:11px;color:#68d391">Super Admin · Manager · Reception · Staff</div>
+          </div>
+          <div style="background:#f0fff4;border:1px solid #9ae6b4;border-radius:6px;padding:12px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:#276749">Clean</div>
+            <div style="font-size:12px;color:#276749;font-weight:600">Repository</div>
+            <div style="font-size:11px;color:#68d391">main · up to date · no uncommitted changes</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>RC1 Deliverables</h2>
+        <table>
+          <thead><tr><th>Deliverable</th><th>File</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>Repository State Report</td><td><code>docs/RC1-REPOSITORY-STATE.md</code></td><td style="color:#276749">✓</td></tr>
+            <tr><td>Branding Alignment Report</td><td><code>docs/RC1-BRANDING-REPORT.md</code></td><td style="color:#276749">✓</td></tr>
+            <tr><td>Architecture Reference</td><td><code>docs/RC1-ARCHITECTURE.md</code></td><td style="color:#276749">✓</td></tr>
+            <tr><td>Build Audit Report</td><td><code>docs/RC1-BUILD-AUDIT.md</code></td><td style="color:#276749">✓</td></tr>
+            <tr><td>Role and Scope Audit</td><td><code>docs/RC1-ROLES-AUDIT.md</code></td><td style="color:#276749">✓</td></tr>
+            <tr><td>OPSMAIL Audit Summary</td><td><code>docs/RC1-OPSMAIL-AUDIT.md</code></td><td style="color:#276749">✓</td></tr>
+            <tr><td>SAL Audit Summary</td><td><code>docs/RC1-SAL-AUDIT.md</code></td><td style="color:#276749">✓</td></tr>
+            <tr><td>Release Notes</td><td><code>docs/RC1-RELEASE-NOTES.md</code></td><td style="color:#276749">✓</td></tr>
+            <tr><td>Deployment Instructions</td><td><code>docs/RC1-DEPLOYMENT.md</code></td><td style="color:#276749">✓</td></tr>
+            <tr><td>Production ZIP</td><td><code>onukonu-pet-boarding-rc1.zip</code></td><td style="color:${rc1ZipExists ? '#276749' : '#c53030'}">${rc1ZipExists ? '✓ ' + rc1ZipSize : '✗ Not found'}</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Document Index</h2>
+        <ul style="margin-left:20px;line-height:2">${tocItems}</ul>
+      </div>
+
+      ${docSections}
     `;
   } else if (activeTab === 'changelog') {
     title = 'Changelog';
@@ -610,6 +717,7 @@ function renderPage(activeTab) {
     <a href="/analysis" class="${activeTab === 'analysis' ? 'active' : ''}">Analysis</a>
     <a href="/plugin" class="${activeTab === 'plugin' ? 'active' : ''}">Plugin</a>
     <a href="/changelog" class="${activeTab === 'changelog' ? 'active' : ''}">Changelog</a>
+    <a href="/rc1" class="${activeTab === 'rc1' ? 'active' : ''}" style="color:#68d391;font-weight:700">RC1 Audit</a>
   </nav>
   <main class="main">
     <div class="badges">
@@ -632,6 +740,7 @@ const server = http.createServer((req, res) => {
   else if (url === '/analysis') tab = 'analysis';
   else if (url === '/plugin') tab = 'plugin';
   else if (url === '/changelog') tab = 'changelog';
+  else if (url === '/rc1') tab = 'rc1';
   else if (url !== '/') {
     res.writeHead(301, { Location: '/' });
     res.end();

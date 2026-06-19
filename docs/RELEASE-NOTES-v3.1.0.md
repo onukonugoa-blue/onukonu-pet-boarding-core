@@ -1,6 +1,6 @@
-# OPB / OPSMAIL Production Release — v3.1.0
+# Onukonu Pet Boarding Core — v3.1.0
 
-**Release label:** `opsmail-production-v3.1.0`
+**Release label:** `onukonu-pet-boarding-core-v3.1.0`
 **Plugin slug:** `onukonu-pet-boarding-core`
 **Plugin version constant:** `OPB_VERSION = '3.1.0'`
 **Release date:** 2026-06-19

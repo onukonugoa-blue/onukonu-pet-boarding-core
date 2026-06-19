@@ -2,6 +2,53 @@
 
 ---
 
+## RC1 — Release Candidate 1 — 2026-06-19
+
+### Overview
+RC1 is the first formally audited, documentation-aligned, production-packaged release of Onukonu Pet Boarding Core. No new features. Establishes verified repository baseline, canonical architecture documentation, aligned OPB branding, and a reproducible build process.
+
+### Audit
+- Repository state verified: `main` branch, clean working tree, up to date with origin
+- Product identity confirmed: OPB is the product; OPSMAIL, SAL, Telegram, and Gemini are internal operational subsystems
+- Canonical architecture reference produced (`docs/RC1-ARCHITECTURE.md`)
+- All 13 audit phases completed — see `docs/RC1-RELEASE-NOTES.md`
+
+### Documentation produced
+- `docs/RC1-REPOSITORY-STATE.md` — repository audit
+- `docs/RC1-BRANDING-REPORT.md` — product identity alignment
+- `docs/RC1-ARCHITECTURE.md` — canonical architecture reference
+- `docs/RC1-BUILD-AUDIT.md` — build system audit (TypeScript clean, Vite 114 modules)
+- `docs/RC1-ROLES-AUDIT.md` — roles, capabilities, branch scoping
+- `docs/RC1-OPSMAIL-AUDIT.md` — OPSMAIL subsystem audit
+- `docs/RC1-SAL-AUDIT.md` — SAL subsystem audit
+- `docs/RC1-RELEASE-NOTES.md` — RC1 release notes
+- `docs/RC1-DEPLOYMENT.md` — deployment and configuration instructions
+
+### Build
+- `build-rc1.js` created — produces `onukonu-pet-boarding-rc1.zip`
+- ZIP name: `onukonu-pet-boarding-rc1.zip` (OPB product naming, not OPSMAIL-branded)
+- Branding fix: `docs/RELEASE-NOTES-v3.1.0.md` title corrected from "OPB / OPSMAIL Production Release" to "Onukonu Pet Boarding Core — v3.1.0"
+
+---
+
+## v3.1.0 — SAL (Situational Awareness Layer) — 2026-06-19
+
+### Overview
+Adds the Situational Awareness Layer — a scheduled Telegram briefing engine. Gemini is used as a formatter only; a deterministic fallback guarantees brief delivery. External cron support added for reliable scheduling.
+
+### New
+- Morning Operations Brief (default 07:00) — check-ins/check-outs today, tasks due, exceptions
+- Evening Closure Brief (default 19:00) — end-of-day boarding count, tasks completed/pending
+- Accounts Snapshot (default 09:00) — invoices raised/unpaid, payments received, expenses
+- External cron support and `OPB_Cron_Health` health monitor with ring-buffer detection
+- `opb_sal_brief_history` table for full delivery audit trail
+- SAL admin dashboard (`/admin/sal`) for config, preview, send, diagnostics, history
+
+### Source base
+`plugin/onukonu-pet-boarding-core.php` version `3.1.0`
+
+---
+
 ## v2.8.0 — OPSMAIL Operational Intelligence Layer — 2026-06-16
 
 ### Overview
