@@ -33,6 +33,7 @@ import InquiryDetail from './pages/inquiries/InquiryDetail'
 import DataManagement from './pages/admin/DataManagement'
 import OpsmailQueue from './pages/admin/OpsmailQueue'
 import GeminiLab from './pages/admin/GeminiLab'
+import SalDashboard from './pages/admin/SalDashboard'
 
 export default function App() {
   return (
@@ -72,6 +73,7 @@ export default function App() {
         <Route path="/admin/data-management"  element={<DataManagement />} />
         <Route path="/admin/opsmail"               element={<OpsmailQueue />} />
         <Route path="/admin/opsmail/gemini-lab"  element={<GeminiLab />} />
+        <Route path="/admin/sal"               element={<SalDashboard />} />
         <Route path="*"                        element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

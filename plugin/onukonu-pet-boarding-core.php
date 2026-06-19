@@ -3,7 +3,7 @@
  * Plugin Name: Onukonu Pet Boarding Core
  * Plugin URI:  https://onukonu.com
  * Description: Replacement platform for the discontinued boarding SaaS. Manages clients, pets, bookings, invoices, payments, and operations across three branches.
- * Version:     3.0.3
+ * Version:     3.1.0
  * Author:      Onukonu Pet Homestyle Boarding
  * License:     GPL-2.0-or-later
  * Text Domain: opb
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'OPB_VERSION',     '3.0.3' );
+define( 'OPB_VERSION',     '3.1.0' );
 define( 'OPB_PLUGIN_FILE', __FILE__ );
 define( 'OPB_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
 define( 'OPB_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
@@ -53,6 +53,9 @@ require_once OPB_PLUGIN_DIR . 'includes/class-opb-customizations.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-opsmail.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-telegram-consumer.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-mailbox-processor.php';
+require_once OPB_PLUGIN_DIR . 'includes/class-opb-sal-snapshot.php';
+require_once OPB_PLUGIN_DIR . 'includes/class-opb-sal-formatter.php';
+require_once OPB_PLUGIN_DIR . 'includes/class-opb-sal-scheduler.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-onboarding-handler.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-notifications.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-public-portal.php';
@@ -82,6 +85,7 @@ require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-health-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-client-relationship-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-data-management-api.php';
 require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-opsmail-api.php';
+require_once OPB_PLUGIN_DIR . 'includes/api/class-opb-sal-api.php';
 require_once OPB_PLUGIN_DIR . 'admin/class-opb-admin-page.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-portal.php';
 require_once OPB_PLUGIN_DIR . 'includes/class-opb-login-branding.php';
@@ -141,6 +145,7 @@ function opb_register_rest_routes(): void {
     ( new OPB_Client_Relationship_API()     )->register_routes();
     ( new OPB_Data_Management_API()        )->register_routes();
     ( new OPB_Opsmail_API()                )->register_routes();
+    ( new OPB_SAL_API()                    )->register_routes();
 }
 
 function opb_register_admin_menu(): void {
@@ -152,6 +157,21 @@ function opb_enqueue_admin_assets( string $hook ): void {
         return;
     }
     OPB_Admin_Page::enqueue_assets();
+}
+
+// ── SAL v3.1.0: Situational Awareness Layer Cron ─────────────────────────────
+
+add_filter( 'cron_schedules', [ OPB_SAL_Scheduler::class, 'add_schedule' ] );
+
+add_action( 'init', [ OPB_SAL_Scheduler::class, 'maybe_schedule' ] );
+
+add_action( OPB_SAL_Scheduler::CRON_HOOK, 'opb_cron_sal_handler' );
+function opb_cron_sal_handler(): void {
+    try {
+        OPB_SAL_Scheduler::check_and_run();
+    } catch ( \Throwable $e ) {
+        error_log( '[OPB CRON] SAL handler fatal: ' . $e->getMessage() );
+    }
 }
 
 // ── OPSMAIL v3.0.0: WP Cron pipeline ─────────────────────────────────────────

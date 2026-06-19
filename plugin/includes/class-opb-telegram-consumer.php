@@ -375,6 +375,58 @@ class OPB_Telegram_Consumer {
         return htmlspecialchars( $s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' );
     }
 
+    // ── Explicit-target send ───────────────────────────────────────────────────
+
+    /**
+     * Send a Telegram message to an explicitly specified chat ID.
+     * Used by the SAL to deliver to the configured SAL reporting destination
+     * rather than the default operations chat.
+     *
+     * @param  string $bot_token  Telegram bot token.
+     * @param  string $chat_id    Target chat/group ID.
+     * @param  string $text       HTML-formatted message (Telegram HTML subset).
+     * @return bool
+     */
+    public static function send_telegram_to( string $bot_token, string $chat_id, string $text ): bool {
+        try {
+            if ( ! $bot_token || ! $chat_id ) {
+                error_log( '[OPB TELEGRAM] send_telegram_to: token or chat_id empty' );
+                return false;
+            }
+
+            $response = wp_remote_post(
+                'https://api.telegram.org/bot' . $bot_token . '/sendMessage',
+                [
+                    'timeout' => 15,
+                    'headers' => [ 'Content-Type' => 'application/json' ],
+                    'body'    => wp_json_encode( [
+                        'chat_id'    => $chat_id,
+                        'text'       => $text,
+                        'parse_mode' => 'HTML',
+                    ] ),
+                ]
+            );
+
+            if ( is_wp_error( $response ) ) {
+                error_log( '[OPB TELEGRAM] send_telegram_to wp_remote_post error: ' . $response->get_error_message() );
+                return false;
+            }
+
+            $code = (int) wp_remote_retrieve_response_code( $response );
+            if ( $code !== 200 ) {
+                error_log( '[OPB TELEGRAM] send_telegram_to API returned HTTP ' . $code . ': ' . wp_remote_retrieve_body( $response ) );
+                return false;
+            }
+
+            $body = json_decode( wp_remote_retrieve_body( $response ), true );
+            return ! empty( $body['ok'] );
+
+        } catch ( \Throwable $e ) {
+            error_log( '[OPB TELEGRAM] send_telegram_to exception: ' . $e->getMessage() );
+            return false;
+        }
+    }
+
     // ── Settings accessors ─────────────────────────────────────────────────────
 
     public static function is_configured(): bool {

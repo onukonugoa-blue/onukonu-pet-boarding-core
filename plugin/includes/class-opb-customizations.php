@@ -381,6 +381,56 @@ Thank you! 🐾
             'default'  => 'gemini-2.5-flash',
         ],
 
+        // ── SAL — Situational Awareness Layer (v3.1.0) ───────────────────────────
+        'sal_enabled' => [
+            'category' => 'sal',
+            'label'    => 'SAL Enabled (1 = enabled, 0 = disabled)',
+            'type'     => 'text',
+            'default'  => '1',
+        ],
+        'sal_morning_brief_enabled' => [
+            'category' => 'sal',
+            'label'    => 'Morning Brief Enabled (1 = enabled, 0 = disabled)',
+            'type'     => 'text',
+            'default'  => '1',
+        ],
+        'sal_morning_brief_time' => [
+            'category' => 'sal',
+            'label'    => 'Morning Brief Time (HH:MM, 24h)',
+            'type'     => 'text',
+            'default'  => '07:00',
+        ],
+        'sal_evening_brief_enabled' => [
+            'category' => 'sal',
+            'label'    => 'Evening Brief Enabled (1 = enabled, 0 = disabled)',
+            'type'     => 'text',
+            'default'  => '1',
+        ],
+        'sal_evening_brief_time' => [
+            'category' => 'sal',
+            'label'    => 'Evening Brief Time (HH:MM, 24h)',
+            'type'     => 'text',
+            'default'  => '19:00',
+        ],
+        'sal_accounts_snapshot_enabled' => [
+            'category' => 'sal',
+            'label'    => 'Accounts Snapshot Enabled (1 = enabled, 0 = disabled)',
+            'type'     => 'text',
+            'default'  => '1',
+        ],
+        'sal_accounts_snapshot_time' => [
+            'category' => 'sal',
+            'label'    => 'Accounts Snapshot Time (HH:MM, 24h)',
+            'type'     => 'text',
+            'default'  => '09:00',
+        ],
+        'sal_telegram_chat_id' => [
+            'category' => 'sal',
+            'label'    => 'SAL Reporting Chat ID (leave blank to use main Telegram Chat ID)',
+            'type'     => 'text',
+            'default'  => '',
+        ],
+
         // ── CLIENT PORTAL ─────────────────────────────────────────────────────
         'client_portal_whatsapp_message' => [
             'category' => 'client_portal',

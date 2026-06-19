@@ -264,3 +264,9 @@ id = "O-JlmfOkbA7oefKqz1dke"
 uri = "file://onukonu-pet-boarding-core-v2.8.0.zip"
 type = "unspecified"
 title = "onukonu-pet-boarding-core-v2.8.0.zip"
+
+[[outputs]]
+id = "0VM6__BkYE1OWjtu12NNn"
+uri = "file://onukonu-pet-boarding-core-v3.1.0.zip"
+type = "unspecified"
+title = "OPB v3.1.0 — SAL Situational Awareness Layer"

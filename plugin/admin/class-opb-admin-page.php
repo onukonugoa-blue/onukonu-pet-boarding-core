@@ -44,6 +44,15 @@ class OPB_Admin_Page {
             'opb-opsmail-queue',
             [ self::class, 'render_opsmail_queue' ]
         );
+
+        add_submenu_page(
+            'opb-dashboard',
+            'SAL — Situational Awareness',
+            'SAL',
+            'manage_options',
+            'opb-sal',
+            [ self::class, 'render' ]
+        );
     }
 
     public static function render(): void {
