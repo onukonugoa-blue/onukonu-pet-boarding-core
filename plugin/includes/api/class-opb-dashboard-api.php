@@ -15,28 +15,51 @@ class OPB_Dashboard_API extends OPB_REST_Base {
         $today     = current_time('Y-m-d');
         $month_start = date('Y-m-01', strtotime($today));
 
-        $b_where = $branch_id ? $wpdb->prepare(' AND bk.branch_id=%d',$branch_id) : '';
-        $bs_where= $branch_id ? $wpdb->prepare(' AND bs.booking_id IN (SELECT id FROM '.$wpdb->prefix.'opb_bookings WHERE branch_id=%d)',$branch_id) : '';
-        $inv_where=$branch_id ? $wpdb->prepare(' AND i.branch_id=%d',$branch_id) : '';
-        $exp_where=$branch_id ? $wpdb->prepare(' AND e.branch_id=%d',$branch_id) : '';
+        // ── Operational Start Date ────────────────────────────────────────────
+        // Reads from opb_customizations. Empty string = no filter (legacy behaviour).
+        $op_start = OPB_Customizations::get('operational_start_date');
+        $op_start = ( $op_start && preg_match('/^\d{4}-\d{2}-\d{2}$/', $op_start) ) ? $op_start : '';
+
+        // For revenue_month: lower bound is the later of month_start and op_start
+        $rev_lower = ( $op_start && $op_start > $month_start ) ? $op_start : $month_start;
+
+        $b_where  = $branch_id ? $wpdb->prepare(' AND bk.branch_id=%d',$branch_id) : '';
+        $bs_where = $branch_id ? $wpdb->prepare(' AND bs.booking_id IN (SELECT id FROM '.$wpdb->prefix.'opb_bookings WHERE branch_id=%d)',$branch_id) : '';
+        $inv_where= $branch_id ? $wpdb->prepare(' AND i.branch_id=%d',$branch_id) : '';
+        $exp_where= $branch_id ? $wpdb->prepare(' AND e.branch_id=%d',$branch_id) : '';
         $task_where=$branch_id? $wpdb->prepare(' AND t.branch_id=%d',$branch_id) : '';
 
-        // KPIs
+        // ── KPIs ─────────────────────────────────────────────────────────────
+
+        // Active stays — current operational status, no date-range filter needed
         $active_stays = (int)$wpdb->get_var(
             "SELECT COUNT(*) FROM {$wpdb->prefix}opb_booking_stays bs WHERE bs.status='Active'$bs_where"
         );
+
+        // Today's check-ins/outs — today-only, unaffected by op_start
         $checkins_today = (int)$wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->prefix}opb_booking_stays bs WHERE bs.check_in_date=%s AND bs.status IN ('Upcoming','Active')$bs_where",$today
         ));
         $checkouts_today = (int)$wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->prefix}opb_booking_stays bs WHERE bs.check_out_date=%s AND bs.status IN ('Active','Completed')$bs_where",$today
         ));
+
+        // Revenue this month — bounded by op_start if set and op_start is within this month
         $revenue_month = (float)$wpdb->get_var($wpdb->prepare(
-            "SELECT COALESCE(SUM(i.revenue),0) FROM {$wpdb->prefix}opb_invoices i WHERE i.invoice_date>=%s AND i.invoice_date<=%s$inv_where",$month_start,$today
+            "SELECT COALESCE(SUM(i.revenue),0) FROM {$wpdb->prefix}opb_invoices i WHERE i.invoice_date>=%s AND i.invoice_date<=%s$inv_where",$rev_lower,$today
         ));
-        $outstanding = (float)$wpdb->get_var(
-            "SELECT COALESCE(SUM(i.due),0) FROM {$wpdb->prefix}opb_invoices i WHERE i.due>0$inv_where"
-        );
+
+        // Outstanding — apply op_start as lower bound when set
+        if ( $op_start ) {
+            $outstanding = (float)$wpdb->get_var($wpdb->prepare(
+                "SELECT COALESCE(SUM(i.due),0) FROM {$wpdb->prefix}opb_invoices i WHERE i.due>0 AND i.invoice_date>=%s$inv_where", $op_start
+            ));
+        } else {
+            $outstanding = (float)$wpdb->get_var(
+                "SELECT COALESCE(SUM(i.due),0) FROM {$wpdb->prefix}opb_invoices i WHERE i.due>0$inv_where"
+            );
+        }
+
         $current_user_display_name = wp_get_current_user()->display_name;
         $tasks_due = (int)$wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->prefix}opb_tasks t
@@ -120,11 +143,12 @@ class OPB_Dashboard_API extends OPB_REST_Base {
                 'tasks_due'       => $tasks_due,
                 'new_inquiries'   => $new_inquiries,
             ],
-            'todays_checkins'  => $todays_checkins,
-            'todays_checkouts' => $todays_checkouts,
-            'open_tasks'       => $open_tasks,
-            'pet_birthdays'    => $pet_birthdays,
-            'date'             => $today,
+            'todays_checkins'       => $todays_checkins,
+            'todays_checkouts'      => $todays_checkouts,
+            'open_tasks'            => $open_tasks,
+            'pet_birthdays'         => $pet_birthdays,
+            'date'                  => $today,
+            'operational_start_date'=> $op_start,
         ]);
     }
 }

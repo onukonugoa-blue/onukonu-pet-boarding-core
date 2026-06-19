@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { customizationsApi } from '../../api/customizations'
 import type { CustomizationItem, PreviewResult } from '../../api/customizations'
 
-type Tab = 'facility' | 'legal' | 'onboarding' | 'inquiry' | 'invoice' | 'invoice_branding' | 'client_portal' | 'opsmail' | 'preview' | 'export'
+type Tab = 'facility' | 'legal' | 'onboarding' | 'inquiry' | 'invoice' | 'invoice_branding' | 'client_portal' | 'opsmail' | 'system' | 'preview' | 'export'
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'facility',         label: 'Facility Info',       icon: '🏢' },
@@ -14,11 +14,12 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'invoice_branding', label: 'Invoice Branding',    icon: '🖼' },
   { id: 'client_portal',    label: 'Client Portal',       icon: '🐾' },
   { id: 'opsmail',          label: 'OPSMAIL',             icon: '📡' },
+  { id: 'system',           label: 'System',              icon: '⚙️' },
   { id: 'preview',          label: 'Preview',             icon: '👁' },
   { id: 'export',           label: 'Export',              icon: '⬇' },
 ]
 
-const VALID_TABS = new Set<Tab>(['facility','legal','onboarding','inquiry','invoice','invoice_branding','client_portal','opsmail','preview','export'])
+const VALID_TABS = new Set<Tab>(['facility','legal','onboarding','inquiry','invoice','invoice_branding','client_portal','opsmail','system','preview','export'])
 
 const VALID_PLACEHOLDERS = [
   '{{CLIENT_NAME}}', '{{FACILITY_NAME}}', '{{ONBOARDING_LINK}}',
@@ -38,6 +39,7 @@ const PLACEHOLDER_HINT: Record<string, string> = {
   invoice_branding: '',
   client_portal:    '{{CLIENT_NAME}} · {{FACILITY_NAME}} · {{MY_PETS_URL}} · {{CLIENT_EMAIL}} · {{CLIENT_PHONE}} · {{SUPPORT_EMAIL}} · {{SUPPORT_PHONE}}',
   opsmail:          '',
+  system:           '',
 }
 
 // Section headers shown inside the Invoice Branding tab, keyed by the first item in each group
@@ -275,6 +277,16 @@ function SettingField({ item, value, mediaUrl, uploadingKey, onChange, onMediaUp
         />
       )}
 
+      {item.type === 'date' && (
+        <input
+          type="date"
+          className="form-input max-w-xs"
+          value={value}
+          onChange={(e) => onChange(item.key, e.target.value)}
+          disabled={readOnly}
+        />
+      )}
+
       {(item.type === 'textarea' || item.type === 'richtext') && (
         <textarea
           className={`form-input font-mono text-sm ${item.type === 'richtext' ? 'min-h-[220px]' : 'min-h-[110px]'}`}
@@ -506,6 +518,21 @@ export default function Customization() {
                 <p className="font-semibold mb-0.5">Invoice Branding Settings</p>
                 <p className="text-indigo-700 text-xs leading-relaxed">
                   Images and text here appear on every generated PDF invoice. Upload images directly — they save instantly without needing the Save button.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* System intro banner */}
+          {activeTab === 'system' && (
+            <div className="mb-4 flex items-start gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900">
+              <span className="text-lg leading-none mt-0.5">⚙️</span>
+              <div>
+                <p className="font-semibold mb-0.5">System Settings</p>
+                <p className="text-blue-700 text-xs leading-relaxed">
+                  <strong>Operational Start Date</strong> — When set, dashboard KPIs (Revenue, Outstanding, and other summary cards)
+                  will only include records on or after this date. Historical legacy data remains fully accessible in all
+                  reports, exports, invoices, and payment screens. Leave blank to show all data on the dashboard (existing behaviour).
                 </p>
               </div>
             </div>

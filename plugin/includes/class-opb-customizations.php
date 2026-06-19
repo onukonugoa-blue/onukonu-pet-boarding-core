@@ -472,6 +472,14 @@ Thank you',
             'type'     => 'textarea',
             'default'  => 'Hi {{FACILITY_NAME}} team, I\'d like some help regarding my pets / booking. My name is {{CLIENT_NAME}} ({{CLIENT_EMAIL}}).',
         ],
+
+        // ── SYSTEM ────────────────────────────────────────────────────────────
+        'operational_start_date' => [
+            'category' => 'system',
+            'label'    => 'Operational Start Date',
+            'type'     => 'date',
+            'default'  => '',
+        ],
     ];
 
     // ── Core accessors ────────────────────────────────────────────────────────

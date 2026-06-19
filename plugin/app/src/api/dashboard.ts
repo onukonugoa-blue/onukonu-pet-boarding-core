@@ -15,6 +15,7 @@ export interface DashboardData {
   open_tasks: TaskItem[]
   pet_birthdays: BirthdayItem[]
   date: string
+  operational_start_date: string
 }
 
 export interface CheckinItem {

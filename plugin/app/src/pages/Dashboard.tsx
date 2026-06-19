@@ -24,7 +24,10 @@ export default function Dashboard() {
   if (loading) return <div className="flex items-center justify-center py-20 text-gray-400">Loading dashboard…</div>
   if (!data) return null
 
-  const { kpis, todays_checkins, todays_checkouts, open_tasks, pet_birthdays, date } = data
+  const { kpis, todays_checkins, todays_checkouts, open_tasks, pet_birthdays, date, operational_start_date } = data
+
+  const fmtOpDate = (iso: string) =>
+    new Date(iso + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 
   return (
     <div className="space-y-5">
@@ -34,6 +37,30 @@ export default function Dashboard() {
         <h1 className="page-title">Dashboard</h1>
         <span className="text-sm text-gray-500">{fmt.date(date)}</span>
       </div>
+
+      {/* Operational Window banner — shown when operational_start_date is configured */}
+      {operational_start_date && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg bg-blue-50 border border-blue-200 text-sm">
+          <div className="flex items-center gap-2.5">
+            <svg className="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span className="font-semibold text-blue-900">Operational Window</span>
+            <span className="text-blue-700">Since {fmtOpDate(operational_start_date)}</span>
+            <span className="text-blue-400 text-xs">— KPIs reflect records from this date onwards</span>
+          </div>
+          <a
+            href="?page=opb-admin#/forensics"
+            className="text-xs font-medium text-blue-500 hover:text-blue-700 whitespace-nowrap transition-colors"
+            onClick={(e) => {
+              e.preventDefault()
+              window.location.hash = '/forensics'
+            }}
+          >
+            View Legacy Summary →
+          </a>
+        </div>
+      )}
 
       {/* New Inquiries Banner — only shown when actionable */}
       {kpis.new_inquiries > 0 && (

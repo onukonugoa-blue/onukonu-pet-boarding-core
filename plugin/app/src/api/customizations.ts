@@ -2,9 +2,9 @@ import { api } from './client'
 
 export interface CustomizationItem {
   key: string
-  category: 'facility' | 'legal' | 'onboarding' | 'inquiry' | 'invoice' | 'invoice_branding' | 'client_portal' | 'opsmail'
+  category: 'facility' | 'legal' | 'onboarding' | 'inquiry' | 'invoice' | 'invoice_branding' | 'client_portal' | 'opsmail' | 'sal' | 'system'
   label: string
-  type: 'text' | 'textarea' | 'richtext' | 'media' | 'password'
+  type: 'text' | 'textarea' | 'richtext' | 'media' | 'password' | 'date'
   value: string
   media_url?: string
   is_default: boolean
