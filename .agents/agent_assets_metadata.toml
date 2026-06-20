@@ -300,3 +300,45 @@ id = "mMMmVeePP79hks2JYyMHI"
 uri = "file://onukonu-pet-boarding-rc1.zip"
 type = "unspecified"
 title = "onukonu-pet-boarding-rc1.zip — OPB v3.3.0 RC1"
+
+[[outputs]]
+id = "O3BbT9LpBCIWlfgfCdmQ-"
+uri = "file://documentation/OPB-Feature-Index.xlsx"
+type = "table"
+title = "OPB Feature Index (XLSX)"
+
+[[outputs]]
+id = "RI6-0tWyuCGl-00lnL5Qe"
+uri = "file://documentation/OPB-Feature-Index.csv"
+type = "table"
+title = "OPB Feature Index (CSV)"
+
+[[outputs]]
+id = "hHXPpvGEyNy9Agm7zwxH2"
+uri = "file://documentation/OPB-Feature-Index.pdf"
+type = "pdf"
+title = "OPB Feature Index (PDF)"
+
+[[outputs]]
+id = "rtVUbTz12v997mG_GXC7s"
+uri = "file://documentation/OPB-Product-Brochure.pdf"
+type = "pdf"
+title = "OPB Product Brochure (PDF)"
+
+[[outputs]]
+id = "LiO8ccSU-XDlu1BIoUj5f"
+uri = "file://documentation/OPB-Product-Brochure.docx"
+type = "word_document"
+title = "OPB Product Brochure (DOCX)"
+
+[[outputs]]
+id = "-pC6Yr6dAO7zMgXf64Tyl"
+uri = "file://documentation/OPB-User-Manual.pdf"
+type = "pdf"
+title = "OPB User Manual (PDF)"
+
+[[outputs]]
+id = "flAmtC0ZUsvT3JjFu5wDQ"
+uri = "file://documentation/OPB-User-Manual.docx"
+type = "word_document"
+title = "OPB User Manual (DOCX)"
