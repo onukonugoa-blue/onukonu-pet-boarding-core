@@ -95,6 +95,10 @@ class OPB_SAL_API extends OPB_REST_Base {
             'sal_telegram_configured'        => OPB_SAL_API::sal_chat_id() !== '',
             'sal_fallback_chat_id'           => OPB_Customizations::get( 'telegram_chat_id' ),
             'next_scheduled'                 => self::next_scheduled_times(),
+            'sal_morning_prompt'             => OPB_Customizations::get( 'sal_morning_prompt' ),
+            'sal_evening_prompt'             => OPB_Customizations::get( 'sal_evening_prompt' ),
+            'sal_accounts_prompt'            => OPB_Customizations::get( 'sal_accounts_prompt' ),
+            'sal_default_prompt'             => OPB_SAL_Formatter::get_default_prompt(),
         ] );
     }
 
@@ -112,6 +116,9 @@ class OPB_SAL_API extends OPB_REST_Base {
             'sal_accounts_snapshot_enabled',
             'sal_accounts_snapshot_time',
             'sal_telegram_chat_id',
+            'sal_morning_prompt',
+            'sal_evening_prompt',
+            'sal_accounts_prompt',
         ];
 
         foreach ( $keys as $key ) {

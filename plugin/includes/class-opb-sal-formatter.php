@@ -137,22 +137,12 @@ class OPB_SAL_Formatter {
 
     // ── Prompt builder ─────────────────────────────────────────────────────────
 
-    private static function build_prompt( array $snapshot ): string {
-        $date       = $snapshot['date']       ?? current_time( 'Y-m-d' );
-        $brief_type = $snapshot['brief_type'] ?? 'morning';
-        $totals     = $snapshot['totals']     ?? [];
-        $branches   = $snapshot['branches']   ?? [];
-
-        $brief_label = match( $brief_type ) {
-            'morning'  => 'Morning Operations Brief',
-            'evening'  => 'Evening Closure Brief',
-            'accounts' => 'Accounts Snapshot',
-            default    => 'Situational Awareness Brief',
-        };
-
-        $data_block = self::build_data_block( $snapshot );
-
-        return <<<PROMPT
+    /**
+     * The hardcoded default prompt instructions.
+     * Returned by get_default_prompt() and used as fallback when no custom prompt is stored.
+     */
+    public static function get_default_prompt(): string {
+        return <<<'DEFAULT'
 You are an operations reporting assistant for a pet boarding facility.
 
 You will receive structured operational data extracted from the OPB database.
@@ -171,8 +161,8 @@ You must NOT:
 - Invent information.
 
 Output format — use EXACTLY this structure with Telegram HTML formatting:
-🐾 <b>OPB {$brief_label}</b>
-<i>{$date}</i>
+🐾 <b>OPB {brief_label}</b>
+<i>{date}</i>
 
 <b>SUMMARY</b>
 [2–3 sentences summarising the overall operational state for the day]
@@ -202,13 +192,43 @@ Important:
 - Maximum 300 words total.
 - Use Telegram HTML only: <b>, <i>, <code>. No markdown.
 - Every fact must come from the data block below. Do not add context not present in the data.
+DEFAULT;
+    }
 
----
-OPERATIONAL DATA ({$brief_label} · {$date})
+    private static function build_prompt( array $snapshot ): string {
+        $date       = $snapshot['date']       ?? current_time( 'Y-m-d' );
+        $brief_type = $snapshot['brief_type'] ?? 'morning';
 
-{$data_block}
----
-PROMPT;
+        $brief_label = match( $brief_type ) {
+            'morning'  => 'Morning Operations Brief',
+            'evening'  => 'Evening Closure Brief',
+            'accounts' => 'Accounts Snapshot',
+            default    => 'Situational Awareness Brief',
+        };
+
+        $data_block = self::build_data_block( $snapshot );
+
+        // Check for a per-brief-type custom prompt stored in WordPress options.
+        $custom_raw = trim( OPB_Customizations::get( "sal_{$brief_type}_prompt" ) );
+
+        if ( $custom_raw !== '' ) {
+            // Replace the two supported placeholders in the custom instructions.
+            $instructions = str_replace(
+                [ '{brief_label}', '{date}' ],
+                [ $brief_label,   $date    ],
+                $custom_raw
+            );
+        } else {
+            // Use the hardcoded default, replacing its placeholders.
+            $instructions = str_replace(
+                [ '{brief_label}', '{date}' ],
+                [ $brief_label,   $date    ],
+                self::get_default_prompt()
+            );
+        }
+
+        // The data block is always appended — users cannot accidentally omit it.
+        return $instructions . "\n\n---\nOPERATIONAL DATA ({$brief_label} · {$date})\n\n{$data_block}\n---";
     }
 
     /**

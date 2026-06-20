@@ -430,6 +430,24 @@ Thank you! 🐾
             'type'     => 'text',
             'default'  => '',
         ],
+        'sal_morning_prompt' => [
+            'category' => 'sal',
+            'label'    => 'SAL Morning Brief — Custom Gemini Prompt (blank = built-in default)',
+            'type'     => 'textarea',
+            'default'  => '',
+        ],
+        'sal_evening_prompt' => [
+            'category' => 'sal',
+            'label'    => 'SAL Evening Brief — Custom Gemini Prompt (blank = built-in default)',
+            'type'     => 'textarea',
+            'default'  => '',
+        ],
+        'sal_accounts_prompt' => [
+            'category' => 'sal',
+            'label'    => 'SAL Accounts Snapshot — Custom Gemini Prompt (blank = built-in default)',
+            'type'     => 'textarea',
+            'default'  => '',
+        ],
 
         // ── CLIENT PORTAL ─────────────────────────────────────────────────────
         'client_portal_whatsapp_message' => [

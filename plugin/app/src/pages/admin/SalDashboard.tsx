@@ -26,6 +26,10 @@ interface Config {
   sal_telegram_configured: boolean
   sal_fallback_chat_id: string
   next_scheduled: Record<BriefType, string | null>
+  sal_morning_prompt: string
+  sal_evening_prompt: string
+  sal_accounts_prompt: string
+  sal_default_prompt: string
 }
 
 interface DiagEntry {
@@ -109,6 +113,13 @@ export default function SalDashboard() {
   const [historyLoading, setHistoryLoading] = useState(false)
   const [expandedRow, setExpandedRow] = useState<number | null>(null)
 
+  // Prompt customization state
+  const [promptDraft, setPromptDraft] = useState<Record<BriefType, string>>({ morning: '', evening: '', accounts: '' })
+  const [activePromptTab, setActivePromptTab] = useState<BriefType>('morning')
+  const [promptSaving, setPromptSaving] = useState(false)
+  const [promptSaveMsg, setPromptSaveMsg] = useState('')
+  const [showDefaultPrompt, setShowDefaultPrompt] = useState(false)
+
   const loadConfig = useCallback(async () => {
     setConfigError('')
     try {
@@ -148,6 +159,16 @@ export default function SalDashboard() {
     loadDiagnostics()
     loadHistory('all')
   }, [loadConfig, loadDiagnostics, loadHistory])
+
+  // Sync prompt draft whenever config is (re-)loaded
+  useEffect(() => {
+    if (!config) return
+    setPromptDraft({
+      morning:  config.sal_morning_prompt  ?? '',
+      evening:  config.sal_evening_prompt  ?? '',
+      accounts: config.sal_accounts_prompt ?? '',
+    })
+  }, [config])
 
   const handleSaveConfig = async () => {
     if (!config) return
@@ -227,6 +248,46 @@ export default function SalDashboard() {
       setSendResults(prev => ({ ...prev, [briefType]: '❌ ' + e.message }))
     } finally {
       setSendingType(null)
+    }
+  }
+
+  const handleSavePrompts = async () => {
+    setPromptSaving(true)
+    setPromptSaveMsg('')
+    try {
+      await apiFetch('/sal/config', {
+        method: 'POST',
+        body: JSON.stringify({
+          sal_morning_prompt:  promptDraft.morning,
+          sal_evening_prompt:  promptDraft.evening,
+          sal_accounts_prompt: promptDraft.accounts,
+        }),
+      })
+      setPromptSaveMsg('Prompts saved.')
+      loadConfig()
+    } catch (e: any) {
+      setPromptSaveMsg('Error: ' + e.message)
+    } finally {
+      setPromptSaving(false)
+    }
+  }
+
+  const handleResetPrompt = async (type: BriefType) => {
+    const updated = { ...promptDraft, [type]: '' }
+    setPromptDraft(updated)
+    setPromptSaveMsg('')
+    setPromptSaving(true)
+    try {
+      await apiFetch('/sal/config', {
+        method: 'POST',
+        body: JSON.stringify({ [`sal_${type}_prompt`]: '' }),
+      })
+      setPromptSaveMsg(`${BRIEF_LABELS[type]} prompt reset to built-in default.`)
+      loadConfig()
+    } catch (e: any) {
+      setPromptSaveMsg('Error: ' + e.message)
+    } finally {
+      setPromptSaving(false)
     }
   }
 
@@ -665,8 +726,116 @@ export default function SalDashboard() {
         )}
       </Section>
 
-      {/* E. Diagnostics */}
-      <Section title="E. Diagnostics">
+      {/* E. Prompt Customization */}
+      <Section title="E. Prompt Customization">
+        <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 14 }}>
+          Override the Gemini instructions sent for each brief type. Leave blank to use the built-in default.
+          The operational data block is always appended automatically — you cannot accidentally remove it.
+          Use <code style={{ background: '#f3f4f6', padding: '1px 4px', borderRadius: 3, fontSize: 12 }}>{'{brief_label}'}</code> and{' '}
+          <code style={{ background: '#f3f4f6', padding: '1px 4px', borderRadius: 3, fontSize: 12 }}>{'{date}'}</code> anywhere in your custom prompt.
+        </p>
+
+        {/* Tab bar */}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid #e5e7eb', paddingBottom: 0 }}>
+          {(['morning', 'evening', 'accounts'] as BriefType[]).map(type => {
+            const isCustom = promptDraft[type].trim() !== ''
+            return (
+              <button
+                key={type}
+                onClick={() => setActivePromptTab(type)}
+                style={{
+                  padding: '7px 14px', fontSize: 13, fontWeight: activePromptTab === type ? 600 : 400,
+                  background: 'none', border: 'none', borderBottom: activePromptTab === type ? '2px solid #2563eb' : '2px solid transparent',
+                  cursor: 'pointer', color: activePromptTab === type ? '#2563eb' : '#6b7280',
+                  marginBottom: -1,
+                }}
+              >
+                {BRIEF_ICONS[type]} {BRIEF_LABELS[type].split(' ')[0]}
+                {isCustom && (
+                  <span style={{ marginLeft: 6, fontSize: 10, background: '#dbeafe', color: '#1d4ed8', borderRadius: 9, padding: '1px 6px', fontWeight: 600 }}>
+                    CUSTOM
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Active tab panel */}
+        {(['morning', 'evening', 'accounts'] as BriefType[]).map(type => (
+          activePromptTab === type && (
+            <div key={type}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>
+                  {BRIEF_ICONS[type]} {BRIEF_LABELS[type]}
+                  {promptDraft[type].trim()
+                    ? <span style={{ marginLeft: 8, fontSize: 11, color: '#1d4ed8' }}>● Custom prompt active</span>
+                    : <span style={{ marginLeft: 8, fontSize: 11, color: '#6b7280' }}>Using built-in default</span>
+                  }
+                </div>
+                <button
+                  onClick={() => setShowDefaultPrompt(v => !v)}
+                  style={{ fontSize: 12, background: 'none', border: '1px solid #d1d5db', borderRadius: 5, padding: '4px 10px', cursor: 'pointer', color: '#6b7280' }}
+                >
+                  {showDefaultPrompt ? 'Hide default' : 'View default'}
+                </button>
+              </div>
+
+              {showDefaultPrompt && config && (
+                <pre style={{
+                  fontSize: 11, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6,
+                  padding: '10px 12px', marginBottom: 10, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                  maxHeight: 200, overflowY: 'auto', color: '#475569',
+                }}>
+                  {config.sal_default_prompt}
+                </pre>
+              )}
+
+              <textarea
+                value={promptDraft[type]}
+                onChange={e => setPromptDraft(prev => ({ ...prev, [type]: e.target.value }))}
+                placeholder={`Leave blank to use the built-in default for ${BRIEF_LABELS[type]}…`}
+                rows={14}
+                style={{
+                  width: '100%', boxSizing: 'border-box', fontSize: 12, fontFamily: 'monospace',
+                  border: '1px solid #d1d5db', borderRadius: 6, padding: '10px 12px',
+                  resize: 'vertical', color: '#1f2937', lineHeight: 1.6,
+                }}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, flexWrap: 'wrap', gap: 8 }}>
+                <span style={{ fontSize: 11, color: '#9ca3af' }}>
+                  {promptDraft[type].length} chars · {promptDraft[type].trim() === '' ? 'default active' : promptDraft[type].trim().split(/\s+/).length + ' words'}
+                </span>
+                <button
+                  onClick={() => handleResetPrompt(type)}
+                  disabled={promptSaving || promptDraft[type].trim() === ''}
+                  style={{ ...btnStyle('#9ca3af'), fontSize: 12, opacity: promptDraft[type].trim() === '' ? 0.4 : 1 }}
+                >
+                  Reset to default
+                </button>
+              </div>
+            </div>
+          )
+        ))}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
+          <button
+            onClick={handleSavePrompts}
+            disabled={promptSaving}
+            style={btnStyle('#2563eb')}
+          >
+            {promptSaving ? 'Saving…' : 'Save Prompts'}
+          </button>
+          {promptSaveMsg && (
+            <span style={{ fontSize: 13, color: promptSaveMsg.startsWith('Error') ? '#dc2626' : '#059669' }}>
+              {promptSaveMsg}
+            </span>
+          )}
+        </div>
+      </Section>
+
+      {/* F. Diagnostics */}
+      <Section title="F. Diagnostics">
         {diagnostics ? (
           <div>
             <div style={{ marginBottom: 12 }}>
