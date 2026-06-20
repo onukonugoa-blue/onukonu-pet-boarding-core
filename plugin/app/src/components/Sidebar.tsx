@@ -22,6 +22,7 @@ const ALL_LINKS: NavItem[] = [
   { to: '/admin/data-management', label: 'Data Management', icon: '🛡', roles: ['opb_super_admin'] },
   { to: '/admin/opsmail',         label: 'OPSMAIL Queue',   icon: '📡', roles: ['opb_super_admin'] },
   { to: '/admin/opsmail/gemini-lab', label: 'Gemini Lab',   icon: '🤖', roles: ['opb_super_admin'] },
+  { to: '/admin/sal',             label: 'SAL',             icon: '🛰', roles: ['opb_super_admin'] },
   { to: '/settings', label: 'Settings',     icon: '⚙',  roles: ['opb_super_admin'] },
   { to: '/import',   label: 'Import',       icon: '📥', roles: ['opb_super_admin'] },
 ]

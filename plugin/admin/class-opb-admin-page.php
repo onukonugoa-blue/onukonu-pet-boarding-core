@@ -12,46 +12,56 @@ class OPB_Admin_Page {
             30
         );
 
-        $screens = [
-            'opb-dashboard'  => 'Dashboard',
-            'opb-clients'    => 'Clients',
-            'opb-pets'       => 'Pets',
-            'opb-bookings'   => 'Bookings',
-            'opb-kennel'     => 'Kennel Board',
-            'opb-invoices'   => 'Invoices',
-            'opb-tasks'      => 'Tasks',
-            'opb-expenses'   => 'Expenses',
-            'opb-settings'   => 'Settings',
-            'opb-import'     => 'Import',
+        // Rename the auto-generated first submenu from "Pet Boarding" to "Dashboard".
+        add_submenu_page(
+            'opb-dashboard',
+            'Dashboard',
+            'Dashboard',
+            'manage_options',
+            'opb-dashboard',
+            [ self::class, 'render' ]
+        );
+
+        // SPA-routed submenus: use a full URL (with hash fragment) as the page slug.
+        // WordPress treats http-prefixed slugs as direct navigation links — no separate
+        // admin page callback is registered. HashRouter reads the fragment on load and
+        // renders the correct React component. The underlying page remains opb-dashboard
+        // so the SPA assets are still enqueued by opb_enqueue_admin_assets().
+        $base = admin_url( 'admin.php?page=opb-dashboard' );
+
+        $spa_submenus = [
+            $base . '#/clients'               => 'Clients',
+            $base . '#/bookings'              => 'Bookings',
+            $base . '#/kennel'                => 'Kennel Board',
+            $base . '#/invoices'              => 'Invoices',
+            $base . '#/tasks'                 => 'Tasks',
+            $base . '#/expenses'              => 'Expenses',
+            $base . '#/admin/data-management' => 'Data Management',
+            $base . '#/admin/opsmail'         => 'OPSMAIL Queue',
+            $base . '#/admin/sal'             => 'SAL',
+            $base . '#/settings'              => 'Settings',
+            $base . '#/import'                => 'Import',
         ];
 
-        foreach ( $screens as $slug => $label ) {
+        foreach ( $spa_submenus as $url => $label ) {
             add_submenu_page(
                 'opb-dashboard',
                 $label,
                 $label,
                 'manage_options',
-                $slug,
-                [ self::class, 'render' ]
+                $url
             );
         }
 
+        // PHP-rendered admin pages — these have their own complete HTML output
+        // and are not SPA-routed:
         add_submenu_page(
             'opb-dashboard',
-            'OPSMAIL Queue',
-            'OPSMAIL Queue',
+            'OPSMAIL Queue Admin',
+            'OPSMAIL Admin',
             'manage_options',
             'opb-opsmail-queue',
             [ self::class, 'render_opsmail_queue' ]
-        );
-
-        add_submenu_page(
-            'opb-dashboard',
-            'SAL — Situational Awareness',
-            'SAL',
-            'manage_options',
-            'opb-sal',
-            [ self::class, 'render' ]
         );
 
         add_submenu_page(
