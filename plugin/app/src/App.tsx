@@ -73,7 +73,7 @@ export default function App() {
         <Route path="/admin/data-management"  element={<DataManagement />} />
         <Route path="/admin/opsmail"               element={<OpsmailQueue />} />
         <Route path="/admin/opsmail/gemini-lab"  element={<GeminiLab />} />
-        <Route path="/admin/sal"               element={<SalDashboard />} />
+        <Route path="/admin/sal"               element={<ErrorBoundary><SalDashboard /></ErrorBoundary>} />
         <Route path="*"                        element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

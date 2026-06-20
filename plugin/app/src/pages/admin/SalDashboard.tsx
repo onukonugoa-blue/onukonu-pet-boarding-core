@@ -86,6 +86,7 @@ export default function SalDashboard() {
   const [config, setConfig] = useState<Config | null>(null)
   const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null)
   const [configLoading, setConfigLoading] = useState(true)
+  const [configError, setConfigError] = useState<string>('')
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
   const [testingTelegram, setTestingTelegram] = useState(false)
@@ -109,11 +110,12 @@ export default function SalDashboard() {
   const [expandedRow, setExpandedRow] = useState<number | null>(null)
 
   const loadConfig = useCallback(async () => {
+    setConfigError('')
     try {
       const data = await apiFetch('/sal/config')
       setConfig(data)
-    } catch {
-      // ignore
+    } catch (e: any) {
+      setConfigError(e?.message ?? 'Failed to load SAL configuration.')
     } finally {
       setConfigLoading(false)
     }
@@ -241,7 +243,34 @@ export default function SalDashboard() {
     )
   }
 
-  const c = config!
+  if (!config) {
+    return (
+      <div style={{ padding: 32, maxWidth: 560 }}>
+        <div style={{
+          padding: '20px 24px', background: '#fef2f2', border: '1px solid #fecaca',
+          borderRadius: 8,
+        }}>
+          <h2 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: '#991b1b' }}>
+            ⚠️ SAL failed to load
+          </h2>
+          <p style={{ margin: '0 0 12px', fontSize: 13, color: '#7f1d1d' }}>
+            {configError || 'The SAL configuration API did not respond. Verify that the plugin is active, the REST API is accessible, and that your account has the required permission (manage_options).'}
+          </p>
+          <button
+            onClick={() => { setConfigLoading(true); loadConfig() }}
+            style={{
+              padding: '7px 16px', background: '#dc2626', color: '#fff',
+              border: 'none', borderRadius: 6, fontSize: 13, cursor: 'pointer', fontWeight: 500,
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const c = config
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 16px', fontFamily: 'inherit' }}>
