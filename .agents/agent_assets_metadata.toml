@@ -294,3 +294,9 @@ id = "IgwMH67dEKnIv6BPhzp9e"
 uri = "file://onukonu-pet-boarding-core-v3.2.0.zip"
 type = "unspecified"
 title = "OPB v3.2.0 — Operational Start Date"
+
+[[outputs]]
+id = "mMMmVeePP79hks2JYyMHI"
+uri = "file://onukonu-pet-boarding-rc1.zip"
+type = "unspecified"
+title = "onukonu-pet-boarding-rc1.zip — OPB v3.3.0 RC1"
