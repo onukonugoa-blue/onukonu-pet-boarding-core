@@ -490,6 +490,7 @@ class OPB_Admin_Page {
             'nonce'     => wp_create_nonce( 'wp_rest' ),
             'adminUrl'  => admin_url( 'admin.php' ),
             'logoutUrl' => wp_logout_url( admin_url() ),
+            'version'   => OPB_VERSION,
             'user'      => [
                 'id'       => $user->ID,
                 'name'     => $user->display_name,

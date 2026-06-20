@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 
-const API = (window as any).opbData?.apiUrl ?? '/wp-json/opb/v1'
-const nonce = (window as any).opbData?.nonce ?? ''
+const API = (window as any).OPB?.apiBase ?? '/wp-json/opb/v1'
+const nonce = (window as any).OPB?.nonce ?? ''
 
 const headers = { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce }
 

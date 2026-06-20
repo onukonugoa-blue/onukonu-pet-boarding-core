@@ -132,7 +132,7 @@ export default function Sidebar({ open, onClose }: Props) {
             </div>
           )}
 
-          <p className="text-xs text-blue-400">v{window.OPB?.version ?? '2.0.9'}</p>
+          <p className="text-xs text-blue-400">v{window.OPB?.version ?? '–'}</p>
         </div>
       </aside>
     </>

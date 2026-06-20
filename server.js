@@ -142,6 +142,7 @@ function renderPage(activeTab) {
   const rc1RepoState      = readFileSafe('docs/RC1-REPOSITORY-STATE.md') || '';
   const rc1RepoAudit      = readFileSafe('docs/RC1-REPOSITORY-AUDIT.md') || '';
   const rc1ValidationRpt  = readFileSafe('docs/RC1-VALIDATION-REPORT.md') || '';
+  const rc1VersionAudit   = readFileSafe('docs/RC1-VERSION-AUDIT.md') || '';
   const rc1Branding       = readFileSafe('docs/RC1-BRANDING-REPORT.md') || '';
   const rc1Arch           = readFileSafe('docs/RC1-ARCHITECTURE.md') || '';
   const rc1Build          = readFileSafe('docs/RC1-BUILD-AUDIT.md') || '';
@@ -297,6 +298,7 @@ function renderPage(activeTab) {
       { anchor: 'release-notes',    label: 'RC1 Release Notes',        md: rc1ReleaseNotes  },
       { anchor: 'deployment',       label: 'Deployment Instructions',   md: rc1Deployment    },
       { anchor: 'repo-audit',       label: 'Repository Audit',         md: rc1RepoAudit     },
+      { anchor: 'version-audit',    label: 'Version Audit',             md: rc1VersionAudit  },
       { anchor: 'validation',       label: 'Validation Report',         md: rc1ValidationRpt },
       { anchor: 'architecture',     label: 'Architecture Reference',    md: rc1Arch          },
       { anchor: 'roles',            label: 'Role & Scope Audit',        md: rc1Roles         },
