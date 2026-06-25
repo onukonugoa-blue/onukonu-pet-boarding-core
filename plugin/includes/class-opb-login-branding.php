@@ -8,6 +8,7 @@
  * OPB owns colour, shadow, typography and focus states only.
  *
  * Hooks used:
+ *   login_title            — override browser <title> tag (wp-login.php only)
  *   login_enqueue_scripts  — enqueue inline CSS
  *   login_headerurl        — link logo back to home
  *   login_headertext       — accessible logo alt text
@@ -21,14 +22,27 @@
 class OPB_Login_Branding {
 
     public static function register(): void {
-        add_action( 'login_enqueue_scripts', [ self::class, 'enqueue'      ] );
-        add_filter( 'login_headerurl',       [ self::class, 'header_url'   ] );
-        add_filter( 'login_headertext',      [ self::class, 'header_text'  ] );
-        add_filter( 'login_message',         [ self::class, 'login_title'  ] );
-        add_action( 'login_footer',          [ self::class, 'login_footer' ] );
+        add_filter( 'login_title',           [ self::class, 'document_title' ], 10, 2 );
+        add_action( 'login_enqueue_scripts', [ self::class, 'enqueue'        ] );
+        add_filter( 'login_headerurl',       [ self::class, 'header_url'     ] );
+        add_filter( 'login_headertext',      [ self::class, 'header_text'    ] );
+        add_filter( 'login_message',         [ self::class, 'login_title'    ] );
+        add_action( 'login_footer',          [ self::class, 'login_footer'   ] );
     }
 
     // ── Hooks ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Overrides the browser <title> tag on wp-login.php only.
+     * Replaces the default "Log In ‹ Site Name — WordPress" with OPB branding.
+     *
+     * @param string $login_title  The full formatted title WordPress generated.
+     * @param string $title        The action portion only (e.g. "Log In").
+     * @return string
+     */
+    public static function document_title( string $login_title, string $title ): string {
+        return 'Onukonu Pet Boarding \xe2\x80\x93 Staff Login';
+    }
 
     public static function enqueue(): void {
         $logo_url = OPB_PLUGIN_URL . 'assets/branding/login-logo.svg';
