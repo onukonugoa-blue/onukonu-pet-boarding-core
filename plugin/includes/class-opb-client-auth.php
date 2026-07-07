@@ -7,7 +7,7 @@
  *
  * OTP:     6-digit numeric, bcrypt-hashed, 10-minute TTL, max 5 attempts, single-use.
  * Session: 64-char hex token (32 random bytes), SHA-256 hashed in DB, 24-hour TTL.
- *          Read from: cookie opb_client_session  OR  Authorization: Bearer <token>.
+ *          Read from: cookie opb_client_session (HttpOnly) — cookie-only, no Bearer fallback.
  *
  * Security principles:
  *   - OTP never stored in plain text.
@@ -345,22 +345,17 @@ class OPB_Client_Auth {
     // ── Private helpers ───────────────────────────────────────────────────────
 
     /**
-     * Extract the raw session token from the request (cookie or Bearer header).
+     * Extract the raw session token from the HttpOnly cookie.
      * Returns null if not found or invalid format.
+     *
+     * Authentication is cookie-only for the client portal — no Bearer token
+     * fallback. Accepting a Bearer token would allow a token seen in a
+     * verify-otp response (or intercepted in transit) to authenticate from
+     * any browser or device, breaking per-browser session isolation.
      */
     private static function extract_token( WP_REST_Request $r ): ?string {
-        // 1. HttpOnly cookie
         if ( ! empty( $_COOKIE[ self::COOKIE_NAME ] ) ) {
             $t = sanitize_text_field( wp_unslash( $_COOKIE[ self::COOKIE_NAME ] ) );
-            if ( strlen( $t ) === 64 && ctype_xdigit( $t ) ) {
-                return $t;
-            }
-        }
-
-        // 2. Authorization: Bearer <token>
-        $auth = $r->get_header( 'authorization' );
-        if ( $auth && str_starts_with( $auth, 'Bearer ' ) ) {
-            $t = trim( substr( $auth, 7 ) );
             if ( strlen( $t ) === 64 && ctype_xdigit( $t ) ) {
                 return $t;
             }

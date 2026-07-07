@@ -41,6 +41,11 @@ class OPB_Client_Portal {
     // ── Page renderer ─────────────────────────────────────────────────────────
 
     public static function render(): void {
+        // Prevent the portal shell page from being cached by Hostinger's
+        // LiteSpeed/edge cache or any WP caching plugin. The page injects a
+        // WP nonce (preview mode) and must never be served stale.
+        nocache_headers();
+
         $facility = esc_html( OPB_Customizations::facility_name() );
         $api_base = esc_js( rest_url( 'opb/v1' ) );
 

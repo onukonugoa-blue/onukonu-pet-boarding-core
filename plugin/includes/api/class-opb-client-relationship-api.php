@@ -108,12 +108,14 @@ class OPB_Client_Relationship_API extends OPB_REST_Base {
             return $client_id;
         }
 
-        $token      = OPB_Client_Auth::create_session( $client_id, $ip, $ua );
-        $expires_at = gmdate( 'c', time() + OPB_Client_Auth::SESSION_TTL );
+        OPB_Client_Auth::create_session( $client_id, $ip, $ua );
 
+        // Session is established via HttpOnly cookie only.
+        // The plain token is intentionally not returned in the response body —
+        // doing so would allow it to be used as a Bearer token from any browser,
+        // breaking per-browser session isolation.
         return $this->success( [
-            'token'      => $token,
-            'expires_at' => $expires_at,
+            'message' => 'Signed in successfully.',
         ] );
     }
 
@@ -131,6 +133,13 @@ class OPB_Client_Relationship_API extends OPB_REST_Base {
     // ── GET /client/me ────────────────────────────────────────────────────────
 
     public function get_me( WP_REST_Request $r ): WP_REST_Response|WP_Error {
+        // Prevent any proxy, CDN, or server-side cache from storing or serving
+        // this response to another request. Authentication is per-browser-session;
+        // a cached 200 from an authenticated request must never be replayed to
+        // an unauthenticated browser.
+        header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
+        header( 'Pragma: no-cache' );
+
         $client_id = OPB_Client_Auth::get_session_client_id( $r );
         if ( ! $client_id ) {
             return $this->error( 'unauthorized', 'Please sign in to continue.', 401 );
