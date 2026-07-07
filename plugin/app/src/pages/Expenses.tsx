@@ -117,10 +117,19 @@ export default function Expenses() {
     e.preventDefault()
     setSaving(true)
     try {
-      await expensesApi.create({ ...form, branch_id: activeBranchId || form.branch_id })
+      const created = await expensesApi.create({ ...form, branch_id: activeBranchId || form.branch_id })
       setModal(false)
       setForm(EMPTY)
-      load(1); setPage(1)
+      // Derive the date window from the expense the server actually stored.
+      // This guarantees the new record is always visible — including backdated entries —
+      // regardless of whatever date filter the user had applied before opening the modal.
+      const expDate = (created?.expense_at ?? '').slice(0, 10) || new Date().toISOString().slice(0, 10)
+      const monthStart = expDate.slice(0, 7) + '-01'
+      setDateFrom(monthStart)
+      setDateTo(expDate)
+      setCategory('')
+      setPage(1)
+      load(1, monthStart, expDate, '')
       loadFilterCategories()
     } catch (e: any) { alert(e.message) }
     finally { setSaving(false) }
@@ -128,7 +137,12 @@ export default function Expenses() {
 
   const handleDelete = async (id: number) => {
     if (!confirm('Delete this expense?')) return
-    await expensesApi.delete(id)
+    try {
+      await expensesApi.delete(id)
+    } catch (err: any) {
+      alert(err.message || 'Delete failed.')
+    }
+    // Always refresh — whether delete succeeded or failed, reflect true DB state.
     load(page)
     loadFilterCategories()
   }
