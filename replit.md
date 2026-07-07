@@ -1,40 +1,30 @@
 # Onukonu Pet Boarding Core
 
-A documentation and project management viewer for the Onukonu Pet Boarding Core WordPress plugin — a custom-built management platform for a pet boarding business with three branches.
+Replacement platform for the discontinued boarding SaaS — implemented as a WordPress plugin targeting PHP 8.2, MySQL, and Hostinger shared hosting.
 
-## Project Overview
+## How to run
 
-This Replit project serves as the development environment and documentation hub for the WordPress plugin. The plugin itself (in `plugin/`) is a PHP 8.2 + React 18 + MySQL system deployed on Hostinger.
+The Node.js dev server (`server.js`) serves the project documentation site:
 
-The Replit environment runs a Node.js documentation server that displays:
-- Project overview and README
-- Architecture documentation
-- Analysis documents
-- Plugin changelog and REST API reference
-
-## Stack
-
-- **Runtime**: Node.js 20
-- **Dev server**: `server.js` — plain Node.js HTTP server, no framework
-- **Frontend viewer**: Server-side rendered HTML with inline CSS
-- **Port**: 5000 (mapped to external port 80)
-
-## Running the project
-
-```bash
+```
 node server.js
 ```
 
-The app starts on port 5000 and is available in the Replit preview pane.
+This is configured as the default workflow ("Start application"). Visit the preview to browse:
+- **Overview** — project summary and version badges
+- **Architecture** — system design and module breakdown
+- **Analysis** — financial forensics and data queries
+- **Plugin** — plugin file structure
+- **Changelog** — version history
+- **RC1 Audit**, **Permission Audit**, **Financial Forensics** — audit reports
 
-## Project structure
+The actual WordPress plugin source lives in the `plugin/` directory and is deployed to Hostinger separately.
 
-- `server.js` — documentation viewer server
-- `plugin/` — WordPress plugin source (PHP + React SPA)
-- `docs/` — Architecture and analysis documentation
-- `legacy-system/` — Legacy data files (CSV/XLSX) for migration
-- `README.md` — Project overview
+## Stack
+
+- **Documentation server**: Node.js (no framework), port 5000
+- **Plugin**: PHP 8.2, WordPress hooks/REST API, MySQL via `$wpdb`
+- **PDF generation**: mPDF (Composer, inside `plugin/vendor/`)
+- **Build tooling**: adm-zip (npm) for producing the plugin ZIP
 
 ## User preferences
-
-- Keep the documentation viewer simple and server-side rendered
