@@ -285,9 +285,11 @@ class OPB_Client_Auth {
     /**
      * Send the OTP verification email to the client.
      */
-    public static function send_otp_email( array $client, string $otp ): void {
-        $facility = OPB_Customizations::facility_name();
-        $subject  = "Your verification code — {$facility}";
+    public static function send_otp_email( array $client, string $otp ): bool {
+        $facility       = OPB_Customizations::facility_name();
+        $raw_email      = OPB_Customizations::get( 'facility_email' ) ?: get_bloginfo( 'admin_email' );
+        $facility_email = is_email( sanitize_email( $raw_email ) ) ? sanitize_email( $raw_email ) : '';
+        $subject        = "Your verification code — {$facility}";
 
         $body = self::email_wrap(
             $subject,
@@ -310,12 +312,18 @@ class OPB_Client_Auth {
             . '<p style="color:#6b7280;font-size:13px;margin:0">If you did not request this code, you can safely ignore this email.</p>'
         );
 
-        wp_mail(
-            $client['email'],
-            $subject,
-            $body,
-            [ 'Content-Type: text/html; charset=UTF-8' ]
-        );
+        $headers = [ 'Content-Type: text/html; charset=UTF-8' ];
+        if ( $facility_email ) {
+            $headers[] = 'From: ' . $facility . ' <' . $facility_email . '>';
+        }
+
+        $sent = wp_mail( $client['email'], $subject, $body, $headers );
+
+        if ( ! $sent ) {
+            error_log( '[OPB Client Auth] OTP email failed to send to ' . $client['email'] . ' — wp_mail() returned false. Check SMTP configuration.' );
+        }
+
+        return $sent;
     }
 
     // ── Audit log ─────────────────────────────────────────────────────────────

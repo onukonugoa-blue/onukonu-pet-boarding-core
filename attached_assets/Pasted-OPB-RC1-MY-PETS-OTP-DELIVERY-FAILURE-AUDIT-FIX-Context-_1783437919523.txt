@@ -1,0 +1,354 @@
+OPB RC1 – MY PETS OTP DELIVERY FAILURE AUDIT & FIX
+
+Context
+
+Repository baseline:
+
+Fresh Replit instance cloned from GitHub.
+
+Production issue observed after deployment on Hostinger.
+
+Issue:
+
+Client Portal ("My Pets") OTP emails are not being received.
+
+However:
+
+✓ Expense notification emails are being delivered
+
+✓ SAL emails are being delivered
+
+✓ OPSMAIL emails are being delivered
+
+✓ SMTP infrastructure appears operational
+
+This strongly suggests that outbound email is functioning and the fault is likely within the OTP workflow itself.
+
+Do not assume previous reports are correct.
+
+Audit directly from source.
+
+---
+
+CRITICAL REQUIREMENT
+
+ZERO REGRESSION.
+
+Do NOT modify:
+
+OPSMAIL
+
+SAL
+
+Expense notifications
+
+Telegram integration
+
+Gemini integration
+
+Booking workflows
+
+Invoice workflows
+
+Client Portal functionality
+
+Authentication logic
+
+Database schema
+
+Only investigate and fix the OTP delivery failure.
+
+---
+
+PHASE 1 – OTP ARCHITECTURE AUDIT
+
+Trace the complete OTP flow.
+
+Starting from:
+
+Client enters email
+↓
+OTP generated
+↓
+OTP stored
+↓
+OTP email sent
+↓
+OTP verified
+
+Identify:
+
+Files
+
+Functions
+
+REST endpoints
+
+Database tables
+
+Email transport path
+
+Provide a complete execution trace.
+
+---
+
+PHASE 2 – EMAIL DELIVERY AUDIT
+
+Determine exactly how OTP emails are sent.
+
+Verify:
+
+Uses wp_mail()
+
+Uses PHPMailer directly
+
+Uses custom helper
+
+Uses OPSMAIL
+
+Uses SAL infrastructure
+
+Uses SMTP plugin integration
+
+For OTP emails document:
+
+Sender
+
+Recipient
+
+Subject
+
+Headers
+
+Transport mechanism
+
+Error handling
+
+Compare with:
+
+Expense email delivery path
+
+Identify differences.
+
+---
+
+PHASE 3 – HOSTINGER COMPATIBILITY AUDIT
+
+Determine whether OTP delivery depends on:
+
+GoSMTP
+
+WP Mail SMTP
+
+PHPMailer configuration
+
+Custom SMTP credentials
+
+Direct mail()
+
+Any plugin dependency
+
+Verify whether OTP should still work when GoSMTP is absent.
+
+If not, identify why.
+
+---
+
+PHASE 4 – FAILURE HANDLING AUDIT
+
+Search for:
+
+try/catch
+
+wp_mail return value checks
+
+error_log
+
+WP_Error
+
+silent failure patterns
+
+Determine:
+
+If OTP send fails, does the UI know?
+
+Is the error surfaced?
+
+Is it swallowed?
+
+Is the OTP still written to the database?
+
+Document findings.
+
+---
+
+PHASE 5 – DATABASE AUDIT
+
+Verify:
+
+OTP creation
+
+OTP storage
+
+OTP expiry
+
+OTP verification
+
+Determine whether:
+
+OTP row is being created
+
+OTP row is being updated
+
+OTP verification logic is functioning
+
+Provide evidence from code.
+
+---
+
+PHASE 6 – ROOT CAUSE ANALYSIS
+
+Determine which of the following is true:
+
+A.
+OTP email never sent
+
+B.
+OTP email sent using different transport
+
+C.
+OTP email rejected by provider
+
+D.
+OTP email sent but delivery failure hidden
+
+E.
+OTP email generation bug
+
+F.
+OTP email template bug
+
+G.
+Other
+
+Provide exact evidence.
+
+---
+
+PHASE 7 – IMPLEMENTATION
+
+Only after root cause is proven.
+
+Fix the issue with the smallest possible change.
+
+Preferred approach:
+
+Reuse the same proven email transport already used successfully by:
+
+Expense notifications
+
+SAL
+
+OPSMAIL
+
+Do NOT introduce new dependencies.
+
+Do NOT require additional plugins.
+
+Do NOT require GoSMTP.
+
+Do NOT redesign authentication.
+
+---
+
+PHASE 8 – VALIDATION
+
+Verify:
+
+✓ OTP generated
+
+✓ OTP stored
+
+✓ OTP email dispatched
+
+✓ OTP email uses working transport
+
+✓ OTP received successfully
+
+✓ OTP verification succeeds
+
+✓ Existing portal login still works
+
+✓ Expense emails still work
+
+✓ SAL emails still work
+
+✓ OPSMAIL emails still work
+
+---
+
+PHASE 9 – TECHNICAL VALIDATION
+
+Run:
+
+PHP syntax validation
+
+TypeScript validation (if frontend touched)
+
+Verify:
+
+No fatal errors
+
+No warnings
+
+No notices
+
+No regressions
+
+---
+
+PHASE 10 – BUILD
+
+If files were modified:
+
+Generate clean production ZIP.
+
+---
+
+OUTPUT REQUIRED
+
+Provide:
+
+OTP execution trace
+
+Email transport comparison
+
+Root cause
+
+Files audited
+
+Files modified
+
+Validation results
+
+Commit hash
+
+Production ZIP filename
+
+Final confirmation that OTP delivery works without GoSMTP.
+
+---
+
+SUCCESS CRITERIA
+
+✓ OTP emails deliver successfully
+
+✓ Same working mail transport used
+
+✓ No dependency on GoSMTP
+
+✓ Client Portal unchanged
+
+✓ No regression
+
+✓ Production ZIP generated
