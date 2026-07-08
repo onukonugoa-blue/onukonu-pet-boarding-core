@@ -49,7 +49,7 @@ export default function BookingList() {
           <input className="form-input w-44" placeholder="Search client/pet…" value={search} onChange={(e) => setSearch(e.target.value)} />
           <select className="form-select w-36" value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">All Statuses</option>
-            {['Upcoming','Active','Completed','No show'].map((s) => <option key={s}>{s}</option>)}
+            {['Upcoming','Active','Completed','No show','Cancelled'].map((s) => <option key={s}>{s}</option>)}
           </select>
           <input className="form-input w-36" type="date" placeholder="From" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
           <input className="form-input w-36" type="date" placeholder="To" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
@@ -77,7 +77,7 @@ export default function BookingList() {
                     <span className="shrink-0 text-xs font-medium text-blue-600">#{b.id}</span>
                   </div>
                   <div className="mobile-card-meta">
-                    {b.stay_status && <StatusBadge value={b.stay_status} type="stay" />}
+                    {<StatusBadge value={b.status === 'Cancelled' ? 'Cancelled' : (b.stay_status ?? '—')} type="stay" />}
                     <StatusBadge value={b.payment_status} type="payment" />
                     {b.branch_code && (
                       <span className="text-xs text-gray-500 bg-gray-100 rounded px-1.5 py-0.5">{b.branch_code}</span>
@@ -120,7 +120,7 @@ export default function BookingList() {
                     <td className="whitespace-nowrap">{b.branch_code}</td>
                     <td className="whitespace-nowrap">{fmt.date(b.check_in_date ?? null)}</td>
                     <td className="whitespace-nowrap">{fmt.date(b.check_out_date ?? null)}</td>
-                    <td>{b.stay_status ? <StatusBadge value={b.stay_status} type="stay" /> : '—'}</td>
+                    <td><StatusBadge value={b.status === 'Cancelled' ? 'Cancelled' : (b.stay_status ?? '—')} type="stay" /></td>
                     <td><StatusBadge value={b.payment_status} type="payment" /></td>
                     <td className="whitespace-nowrap">{fmt.inr(b.total_billing_amount)}</td>
                     <td><Link to={`/bookings/${b.id}`} className="text-blue-600 hover:underline text-xs">View</Link></td>

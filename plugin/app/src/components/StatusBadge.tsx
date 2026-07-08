@@ -12,6 +12,7 @@ const STAY: Record<string, string> = {
   'Upcoming':  'badge-blue',
   'Completed': 'badge-gray',
   'No show':   'badge-red',
+  'Cancelled': 'badge-gray',
 }
 const TASK: Record<string, string> = {
   'Open':        'badge-blue',

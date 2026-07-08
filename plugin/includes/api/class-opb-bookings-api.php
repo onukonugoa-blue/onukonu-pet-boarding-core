@@ -54,8 +54,14 @@ class OPB_Bookings_API extends OPB_REST_Base {
             $args=array_merge($args,[$like,$like,$like]);
         }
         if($status){
-            $where[]='EXISTS(SELECT 1 FROM '.$wpdb->prefix.'opb_booking_stays bs2 WHERE bs2.booking_id=bk.id AND bs2.status=%s)';
-            $args[]=$status;
+            if($status==='Cancelled'){
+                // Filter by booking-level cancellation status
+                $where[]="bk.status='Cancelled'";
+            } else {
+                // Filter by stay-level operational status
+                $where[]='EXISTS(SELECT 1 FROM '.$wpdb->prefix.'opb_booking_stays bs2 WHERE bs2.booking_id=bk.id AND bs2.status=%s)';
+                $args[]=$status;
+            }
         }
 
         $join  = "JOIN {$wpdb->prefix}opb_clients c ON c.id=bk.client_id";
