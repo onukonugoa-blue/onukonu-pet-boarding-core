@@ -28,9 +28,18 @@ class OPB_Login_Branding {
         add_filter( 'login_headertext',      [ self::class, 'header_text'    ] );
         add_filter( 'login_message',         [ self::class, 'login_title'    ] );
         add_action( 'login_footer',          [ self::class, 'login_footer'   ] );
+        add_action( 'login_head',            [ self::class, 'og_meta'        ] );
     }
 
     // ── Hooks ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Single authoritative source for the login page title string.
+     * Used by both document_title() (browser <title>) and og_meta() (OG tag).
+     */
+    private static function page_title(): string {
+        return 'Onukonu Pet Boarding \xe2\x80\x93 Staff Login';
+    }
 
     /**
      * Overrides the browser <title> tag on wp-login.php only.
@@ -41,7 +50,23 @@ class OPB_Login_Branding {
      * @return string
      */
     public static function document_title( string $login_title, string $title ): string {
-        return 'Onukonu Pet Boarding \xe2\x80\x93 Staff Login';
+        return self::page_title();
+    }
+
+    /**
+     * Outputs Open Graph meta tags into <head> on wp-login.php.
+     * Title is sourced from page_title() — single authoritative string.
+     * Image uses the existing icon-512.png asset; no new assets required.
+     */
+    public static function og_meta(): void {
+        $url   = esc_url( wp_login_url() );
+        $title = esc_attr( self::page_title() );
+        $image = esc_url( OPB_PLUGIN_URL . 'assets/icons/icon-512.png' );
+        echo '<meta property="og:type"        content="website">' . "\n";
+        echo '<meta property="og:url"         content="' . $url   . '">' . "\n";
+        echo '<meta property="og:title"       content="' . $title . '">' . "\n";
+        echo '<meta property="og:description" content="Onukonu Operations Login">' . "\n";
+        echo '<meta property="og:image"       content="' . $image . '">' . "\n";
     }
 
     public static function enqueue(): void {
