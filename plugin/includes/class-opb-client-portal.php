@@ -67,14 +67,27 @@ class OPB_Client_Portal {
         $preview_client_id_js = esc_js( (string) $preview_client_id );
         $preview_nonce_js     = esc_js( $preview_nonce );
 
+        // ── OG meta — single authoritative title source ────────────────────────
+        // $page_title is the canonical page title string used by both <title>
+        // and og:title so the two never drift.
+        $page_title = "My Pets \u{2014} {$facility}";
+        $og_url     = esc_url( home_url( '/my-pets/' ) );
+        $og_image   = esc_url( OPB_PLUGIN_URL . 'assets/icons/icon-512.png' );
+        $og_title   = esc_attr( $page_title );
+
         echo <<<HTML
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>My Pets — {$facility}</title>
+<title>{$page_title}</title>
 <meta name="robots" content="noindex,nofollow">
+<meta property="og:type"        content="website">
+<meta property="og:url"         content="{$og_url}">
+<meta property="og:title"       content="{$og_title}">
+<meta property="og:description" content="View your pets, bookings and invoices.">
+<meta property="og:image"       content="{$og_image}">
 <style>
 /* ── Reset & Base ──────────────────────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
