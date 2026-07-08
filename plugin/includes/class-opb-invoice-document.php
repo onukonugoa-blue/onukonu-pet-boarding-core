@@ -264,7 +264,7 @@ class OPB_Invoice_Document {
                         ?: OPB_Customizations::render( 'invoice_footer_note', [ 'FACILITY_NAME' => $facility ] );
         $thank_you    = OPB_Customizations::render( 'invoice_thank_you_message', [ 'FACILITY_NAME' => $facility ] );
         $terms_raw    = OPB_Customizations::get( 'invoice_terms_text' );
-        $payment_note = OPB_Customizations::get( 'invoice_payment_note' );
+        $payment_note = OPB_Customizations::render( 'invoice_payment_note', [ 'FACILITY_NAME' => $facility ] );
 
         // Financial
         $base    = (float) $inv['base_amount'];
