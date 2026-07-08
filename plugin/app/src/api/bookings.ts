@@ -54,6 +54,8 @@ export interface Booking {
   client_phone?: string
   client_email?: string
   booking_date: string
+  /** Booking-level lifecycle status: Active (default) or Cancelled. */
+  status?: 'Active' | 'Cancelled'
   payment_status: string
   total_billing_amount: number
   notes?: string
@@ -142,4 +144,10 @@ export const bookingsApi = {
       `/stays/${stayId}/assign-kennel`,
       { kennel_id: kennelId }
     ),
+  /** Cancel a booking — sets bk.status = 'Cancelled'. Requires opb_manage_bookings or higher. */
+  cancel:  (id: number) =>
+    api.put<{ id: number; status: string }>(`/admin/bookings/${id}/cancel`, {}),
+  /** Restore a cancelled booking to Active. Requires opb_manage_bookings or higher. */
+  restore: (id: number) =>
+    api.put<{ id: number; status: string }>(`/admin/bookings/${id}/restore`, {}),
 }

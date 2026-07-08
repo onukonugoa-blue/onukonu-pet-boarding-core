@@ -116,7 +116,7 @@ class OPB_Reports_API extends OPB_REST_Base {
                     COUNT(*) as nights
              FROM {$wpdb->prefix}opb_booking_stays bs
              JOIN {$wpdb->prefix}opb_bookings bk ON bk.id=bs.booking_id
-             WHERE bs.check_in_date >= %s AND bs.check_in_date <= %s $bk_w
+             WHERE bs.check_in_date >= %s AND bs.check_in_date <= %s AND bk.status != 'Cancelled' $bk_w
              GROUP BY yw
              ORDER BY yw ASC",
             $from, $to

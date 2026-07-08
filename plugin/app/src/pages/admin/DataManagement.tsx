@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   dataManagementApi,
   type DmClient,
@@ -160,6 +160,58 @@ function ErrMsg({ msg }: { msg: string }) {
   )
 }
 
+// ── Future-bookings warning modal ─────────────────────────────────────────────
+
+function FutureBookingsWarningModal({
+  client,
+  count,
+  onContinue,
+  onClose,
+}: {
+  client: DmClient
+  count: number
+  onContinue: () => void
+  onClose: () => void
+}) {
+  const navigate = useNavigate()
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
+        <h3 className="text-base font-semibold text-gray-800 mb-1">Future Bookings Exist</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          <strong>{client.name}</strong> has{' '}
+          <strong>{count} future active {count === 1 ? 'booking' : 'bookings'}</strong>.
+          Future bookings will continue to occupy kennel capacity and appear in operational
+          schedules until they are individually cancelled.
+        </p>
+        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-5">
+          Please cancel future bookings before archiving to keep operational views accurate.
+        </p>
+        <div className="flex flex-wrap justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 rounded text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => { onClose(); navigate(`/bookings?search=${encodeURIComponent(client.name)}`) }}
+            className="px-4 py-2 border border-blue-300 rounded text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100"
+          >
+            View Bookings
+          </button>
+          <button
+            onClick={onContinue}
+            className="px-4 py-2 rounded text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700"
+          >
+            Continue Archive
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Archive-client modal ──────────────────────────────────────────────────────
 
 function ArchiveClientModal({
@@ -220,7 +272,8 @@ function ClientsTab() {
   const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
-  const [archiveTarget, setArchiveTarget] = useState<DmClient | null>(null)
+  const [archiveTarget, setArchiveTarget]   = useState<DmClient | null>(null)
+  const [archiveWarning, setArchiveWarning] = useState<{ client: DmClient; count: number } | null>(null)
   const [acting, setActing] = useState<number | null>(null)
   const debounce = useRef<number | undefined>()
 
@@ -247,6 +300,25 @@ function ClientsTab() {
     debounce.current = window.setTimeout(load, search ? 300 : 0)
     return () => clearTimeout(debounce.current)
   }, [load])
+
+  /**
+   * Check for future active bookings before showing the archive modal.
+   * If any exist, show a warning first; the operator can still proceed.
+   */
+  const initiateArchive = async (c: DmClient) => {
+    try {
+      const today = new Date().toISOString().slice(0, 10)
+      const res   = await dataManagementApi.listBookings({ view: 'active', client_id: c.id, per_page: 100 })
+      const futureCount = res.data.filter((b) => (b.check_out_date ?? '') >= today).length
+      if (futureCount > 0) {
+        setArchiveWarning({ client: c, count: futureCount })
+        return
+      }
+    } catch {
+      // If the pre-check fails, proceed to archive modal as normal
+    }
+    setArchiveTarget(c)
+  }
 
   const doArchive = async (reason: string) => {
     if (!archiveTarget) return
@@ -328,7 +400,7 @@ function ClientsTab() {
                       label="Archive"
                       variant="archive"
                       disabled={acting === c.id}
-                      onClick={() => setArchiveTarget(c)}
+                      onClick={() => initiateArchive(c)}
                     />
                   ) : (
                     <ActionBtn
@@ -347,6 +419,14 @@ function ClientsTab() {
 
       <Pagination page={page} totalPages={totalPages} total={total} onPage={setPage} />
 
+      {archiveWarning && (
+        <FutureBookingsWarningModal
+          client={archiveWarning.client}
+          count={archiveWarning.count}
+          onContinue={() => { setArchiveTarget(archiveWarning.client); setArchiveWarning(null) }}
+          onClose={() => setArchiveWarning(null)}
+        />
+      )}
       {archiveTarget && (
         <ArchiveClientModal
           client={archiveTarget}

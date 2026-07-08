@@ -224,6 +224,7 @@ class OPB_Client_Relationship_API extends OPB_REST_Base {
         // ── Bookings (upcoming + past) ────────────────────────────────────────
         $bookings_raw = $wpdb->get_results( $wpdb->prepare(
             "SELECT bk.id, bk.booking_date, bk.payment_status, bk.service_types,
+                    bk.status AS bk_status,
                     b.name AS branch_name,
                     GROUP_CONCAT(DISTINCT p.name ORDER BY p.name SEPARATOR ', ') AS pet_names,
                     MIN(bs.check_in_date)  AS check_in_date,
@@ -246,7 +247,9 @@ class OPB_Client_Relationship_API extends OPB_REST_Base {
 
         foreach ( $bookings_raw as $bk ) {
             $out = $bk['check_out_date'] ?? $bk['booking_date'];
-            if ( $out >= $today ) {
+            // Cancelled bookings are never shown as upcoming — they fall into past
+            // history regardless of checkout date, preserving the audit trail.
+            if ( $out >= $today && $bk['bk_status'] !== 'Cancelled' ) {
                 $upcoming[] = $bk;
             } else {
                 $past[] = $bk;
@@ -385,6 +388,7 @@ class OPB_Client_Relationship_API extends OPB_REST_Base {
         // ── Bookings ──────────────────────────────────────────────────────────
         $bookings_raw = $wpdb->get_results( $wpdb->prepare(
             "SELECT bk.id, bk.booking_date, bk.payment_status, bk.service_types,
+                    bk.status AS bk_status,
                     b.name AS branch_name,
                     GROUP_CONCAT(DISTINCT p.name ORDER BY p.name SEPARATOR ', ') AS pet_names,
                     MIN(bs.check_in_date)  AS check_in_date,
@@ -406,7 +410,13 @@ class OPB_Client_Relationship_API extends OPB_REST_Base {
         $past     = [];
         foreach ( $bookings_raw as $bk ) {
             $out = $bk['check_out_date'] ?? $bk['booking_date'];
-            if ( $out >= $today ) { $upcoming[] = $bk; } else { $past[] = $bk; }
+            // Cancelled bookings are never shown as upcoming — they fall into past
+            // history regardless of checkout date, preserving the audit trail.
+            if ( $out >= $today && $bk['bk_status'] !== 'Cancelled' ) {
+                $upcoming[] = $bk;
+            } else {
+                $past[] = $bk;
+            }
         }
 
         // ── Invoices ──────────────────────────────────────────────────────────

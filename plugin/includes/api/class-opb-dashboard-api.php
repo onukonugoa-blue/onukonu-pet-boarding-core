@@ -31,17 +31,27 @@ class OPB_Dashboard_API extends OPB_REST_Base {
 
         // ── KPIs ─────────────────────────────────────────────────────────────
 
-        // Active stays — current operational status, no date-range filter needed
+        // Active stays — current operational status, no date-range filter needed.
+        // JOIN opb_bookings to exclude stays belonging to cancelled bookings.
         $active_stays = (int)$wpdb->get_var(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}opb_booking_stays bs WHERE bs.status='Active'$bs_where"
+            "SELECT COUNT(*) FROM {$wpdb->prefix}opb_booking_stays bs
+             JOIN {$wpdb->prefix}opb_bookings bk ON bk.id=bs.booking_id
+             WHERE bs.status='Active' AND bk.status != 'Cancelled'$b_where"
         );
 
         // Today's check-ins/outs — today-only, unaffected by op_start
+        // JOIN opb_bookings to exclude cancelled bookings from operational KPIs.
         $checkins_today = (int)$wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}opb_booking_stays bs WHERE bs.check_in_date=%s AND bs.status IN ('Upcoming','Active')$bs_where",$today
+            "SELECT COUNT(*) FROM {$wpdb->prefix}opb_booking_stays bs
+             JOIN {$wpdb->prefix}opb_bookings bk ON bk.id=bs.booking_id
+             WHERE bs.check_in_date=%s AND bs.status IN ('Upcoming','Active') AND bk.status != 'Cancelled'$b_where",
+            $today
         ));
         $checkouts_today = (int)$wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}opb_booking_stays bs WHERE bs.check_out_date=%s AND bs.status IN ('Active','Completed')$bs_where",$today
+            "SELECT COUNT(*) FROM {$wpdb->prefix}opb_booking_stays bs
+             JOIN {$wpdb->prefix}opb_bookings bk ON bk.id=bs.booking_id
+             WHERE bs.check_out_date=%s AND bs.status IN ('Active','Completed') AND bk.status != 'Cancelled'$b_where",
+            $today
         ));
 
         // Revenue this month — bounded by op_start if set and op_start is within this month
@@ -84,7 +94,7 @@ class OPB_Dashboard_API extends OPB_REST_Base {
              JOIN {$wpdb->prefix}opb_bookings bk ON bk.id=bs.booking_id
              JOIN {$wpdb->prefix}opb_pets p ON p.id=bs.pet_id
              JOIN {$wpdb->prefix}opb_clients c ON c.id=bk.client_id
-             WHERE bs.check_in_date=%s AND bs.status IN ('Upcoming','Active')$b_where
+             WHERE bs.check_in_date=%s AND bs.status IN ('Upcoming','Active') AND bk.status != 'Cancelled'$b_where
              ORDER BY bs.check_in_slot,bk.id",$today
         ),ARRAY_A);
 
@@ -99,7 +109,7 @@ class OPB_Dashboard_API extends OPB_REST_Base {
              JOIN {$wpdb->prefix}opb_pets p ON p.id=bs.pet_id
              JOIN {$wpdb->prefix}opb_clients c ON c.id=bk.client_id
              LEFT JOIN {$wpdb->prefix}opb_invoices i ON i.booking_id=bk.id
-             WHERE bs.check_out_date=%s AND bs.status IN ('Active','Completed')$b_where
+             WHERE bs.check_out_date=%s AND bs.status IN ('Active','Completed') AND bk.status != 'Cancelled'$b_where
              ORDER BY bs.check_out_slot,bk.id",$today
         ),ARRAY_A);
 

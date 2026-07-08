@@ -429,6 +429,7 @@ class OPB_Bookings_API extends OPB_REST_Base {
              WHERE bs.check_in_date <= %s
                AND bs.check_out_date >= %s
                AND bs.status NOT IN ('No show')
+               AND bk.status != 'Cancelled'
                $b_sql
              ORDER BY bs.kennel, bs.check_in_date",
             ...$args

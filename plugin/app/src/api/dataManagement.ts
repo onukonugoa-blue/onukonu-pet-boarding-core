@@ -41,6 +41,8 @@ export interface DmBooking {
   client_phone: string
   branch_name: string | null
   pet_names: string | null
+  /** Latest check-out date across all stays — used to detect future active bookings. */
+  check_out_date?: string | null
 }
 
 export interface DmInquiry {

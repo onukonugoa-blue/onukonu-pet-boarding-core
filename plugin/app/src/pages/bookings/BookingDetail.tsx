@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { bookingsApi } from '../../api/bookings'
 import type { Booking } from '../../api/bookings'
-import { fmt } from '../../api/client'
+import { fmt, ApiError } from '../../api/client'
 import StatusBadge from '../../components/StatusBadge'
 import WhatsAppButton from '../../components/WhatsAppButton'
 import { useWhatsApp } from '../../hooks/useWhatsApp'
@@ -11,9 +11,12 @@ export default function BookingDetail() {
   const { id } = useParams<{ id: string }>()
   const [booking, setBooking] = useState<Booking | null>(null)
   const [loading, setLoading] = useState(true)
+  const [acting, setActing]   = useState(false)
+  const [err, setErr]         = useState('')
   const { invoiceMessage } = useWhatsApp()
 
   const load = () => {
+    setLoading(true)
     bookingsApi.get(Number(id))
       .then(setBooking)
       .catch(() => {})
@@ -24,25 +27,67 @@ export default function BookingDetail() {
   if (loading) return <div className="flex items-center justify-center py-20 text-gray-400">Loading…</div>
   if (!booking) return <div className="alert-error">Booking not found</div>
 
-  const inv = booking.invoice
-  const pets = booking.stays?.map((s) => ({ name: s.pet_name ?? '', breed: s.breed })) ?? []
-  const canCheckin = booking.stays?.some((s) => s.status === 'Upcoming')
-  const canCheckout = booking.stays?.some((s) => s.status === 'Active')
+  const inv          = booking.invoice
+  const pets         = booking.stays?.map((s) => ({ name: s.pet_name ?? '', breed: s.breed })) ?? []
+  const isCancelled  = booking.status === 'Cancelled'
+  const canCheckin   = !isCancelled && booking.stays?.some((s) => s.status === 'Upcoming')
+  const canCheckout  = !isCancelled && booking.stays?.some((s) => s.status === 'Active')
+
+  const handleCancel = async () => {
+    if (!confirm(
+      'Cancel this booking?\n\n' +
+      'Cancelled bookings are removed from operational schedules and occupancy calculations. ' +
+      'All stay, invoice, and payment records are preserved. This action can be reversed.'
+    )) return
+    setActing(true)
+    setErr('')
+    try {
+      await bookingsApi.cancel(Number(id))
+      load()
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'Cancel failed. Please try again.')
+    } finally {
+      setActing(false)
+    }
+  }
+
+  const handleRestore = async () => {
+    if (!confirm('Restore this booking to Active?\n\nIt will return to all operational schedules and occupancy views.')) return
+    setActing(true)
+    setErr('')
+    try {
+      await bookingsApi.restore(Number(id))
+      load()
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'Restore failed. Please try again.')
+    } finally {
+      setActing(false)
+    }
+  }
 
   return (
     <div className="space-y-4">
+      {err && <div className="alert-error">{err}</div>}
+
       <div className="page-header">
         <div>
-          <h1 className="page-title">Booking #{booking.id}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="page-title">Booking #{booking.id}</h1>
+            {isCancelled && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                Cancelled
+              </span>
+            )}
+          </div>
           <p className="text-sm text-gray-500">
             <Link to={`/clients/${booking.client_id}`} className="text-blue-600 hover:underline">{booking.client_name}</Link>
             {' · '}{booking.branch_name}{' · '}{fmt.date(booking.booking_date)}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {canCheckin && <Link to={`/bookings/${id}/checkin`} className="btn-primary">Check In</Link>}
+          {canCheckin  && <Link to={`/bookings/${id}/checkin`}  className="btn-primary">Check In</Link>}
           {canCheckout && <Link to={`/bookings/${id}/checkout`} className="btn-primary">Check Out</Link>}
-          {inv && booking.client_phone && (
+          {inv && booking.client_phone && !isCancelled && (
             <WhatsAppButton
               phone={booking.client_phone}
               message={invoiceMessage(
@@ -55,12 +100,35 @@ export default function BookingDetail() {
               size="sm"
             />
           )}
+          {!isCancelled && (
+            <button
+              onClick={handleCancel}
+              disabled={acting}
+              className="px-3 py-1.5 text-sm font-medium rounded border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 disabled:opacity-50"
+            >
+              {acting ? 'Cancelling…' : 'Cancel Booking'}
+            </button>
+          )}
+          {isCancelled && (
+            <button
+              onClick={handleRestore}
+              disabled={acting}
+              className="px-3 py-1.5 text-sm font-medium rounded border border-green-300 text-green-700 bg-green-50 hover:bg-green-100 disabled:opacity-50"
+            >
+              {acting ? 'Restoring…' : 'Restore Booking'}
+            </button>
+          )}
         </div>
       </div>
 
       {/* Stays */}
       <div className="card">
         <h2 className="font-semibold mb-3 border-b pb-2">Stays</h2>
+        {isCancelled && (
+          <p className="text-sm text-gray-500 mb-3 italic">
+            This booking is cancelled. Stays are preserved for historical reference.
+          </p>
+        )}
         <div className="table-container">
           <table className="data-table">
             <thead>

@@ -58,10 +58,10 @@ class OPB_Data_Management_API extends OPB_REST_Base {
             [ 'methods' => 'GET', 'callback' => [ $this, 'list_bookings' ], 'permission_callback' => $sa ],
         ]);
         register_rest_route( $ns, '/admin/bookings/(?P<id>\d+)/cancel', [
-            [ 'methods' => 'PUT', 'callback' => [ $this, 'cancel_booking' ], 'permission_callback' => $sa ],
+            [ 'methods' => 'PUT', 'callback' => [ $this, 'cancel_booking' ], 'permission_callback' => [ $this, 'permission_booking_manager' ] ],
         ]);
         register_rest_route( $ns, '/admin/bookings/(?P<id>\d+)/restore', [
-            [ 'methods' => 'PUT', 'callback' => [ $this, 'restore_booking' ], 'permission_callback' => $sa ],
+            [ 'methods' => 'PUT', 'callback' => [ $this, 'restore_booking' ], 'permission_callback' => [ $this, 'permission_booking_manager' ] ],
         ]);
 
         // ── Inquiries ─────────────────────────────────────────────────────────
@@ -76,7 +76,7 @@ class OPB_Data_Management_API extends OPB_REST_Base {
         ]);
     }
 
-    // ── Permission gate ───────────────────────────────────────────────────────
+    // ── Permission gates ──────────────────────────────────────────────────────
 
     public function permission_super_admin( WP_REST_Request $r ): bool|WP_Error {
         if ( ! is_user_logged_in() ) {
@@ -86,6 +86,26 @@ class OPB_Data_Management_API extends OPB_REST_Base {
             return new WP_Error( 'rest_forbidden', 'Super Administrator access required.', [ 'status' => 403 ] );
         }
         return true;
+    }
+
+    /**
+     * Permission gate for booking cancel / restore.
+     * Accessible to super admins (opb_manage_settings / manage_options) and
+     * regular booking managers (opb_manage_bookings).  No other capabilities
+     * are widened — client / pet / inquiry archive routes remain super-admin-only.
+     */
+    public function permission_booking_manager( WP_REST_Request $r ): bool|WP_Error {
+        if ( ! is_user_logged_in() ) {
+            return new WP_Error( 'rest_forbidden', 'Authentication required.', [ 'status' => 401 ] );
+        }
+        if (
+            current_user_can( 'opb_manage_settings' ) ||
+            current_user_can( 'manage_options' )       ||
+            current_user_can( 'opb_manage_bookings' )
+        ) {
+            return true;
+        }
+        return new WP_Error( 'rest_forbidden', 'Booking management access required.', [ 'status' => 403 ] );
     }
 
     // ── Clients ───────────────────────────────────────────────────────────────
@@ -257,16 +277,22 @@ class OPB_Data_Management_API extends OPB_REST_Base {
 
     public function list_bookings( WP_REST_Request $r ): WP_REST_Response|WP_Error {
         global $wpdb;
-        $view     = sanitize_text_field( $r->get_param('view') ?? 'active' );
-        $search   = sanitize_text_field( $r->get_param('search') ?? '' );
-        $page     = max(1,(int)($r->get_param('page')??1));
-        $per_page = min(100,(int)($r->get_param('per_page')??50));
-        $offset   = ($page-1)*$per_page;
+        $view      = sanitize_text_field( $r->get_param('view') ?? 'active' );
+        $search    = sanitize_text_field( $r->get_param('search') ?? '' );
+        $client_id = (int)( $r->get_param('client_id') ?? 0 );
+        $page      = max(1,(int)($r->get_param('page')??1));
+        $per_page  = min(100,(int)($r->get_param('per_page')??50));
+        $offset    = ($page-1)*$per_page;
 
         $where = ['1=1']; $args = [];
 
         if ( $view === 'active' )        { $where[] = "bk.status = 'Active'"; }
         elseif ( $view === 'cancelled' ) { $where[] = "bk.status = 'Cancelled'"; }
+
+        if ( $client_id ) {
+            $where[] = 'bk.client_id=%d';
+            $args[]  = $client_id;
+        }
 
         if ( $search ) {
             $like    = '%' . esc_sql($search) . '%';
@@ -289,7 +315,8 @@ class OPB_Data_Management_API extends OPB_REST_Base {
                     bk.total_billing_amount, bk.service_types, bk.client_id,
                     c.name AS client_name, c.phone AS client_phone,
                     b.name AS branch_name,
-                    GROUP_CONCAT(DISTINCT p.name ORDER BY p.name SEPARATOR ', ') AS pet_names
+                    GROUP_CONCAT(DISTINCT p.name ORDER BY p.name SEPARATOR ', ') AS pet_names,
+                    MAX(bs.check_out_date) AS check_out_date
              FROM {$wpdb->prefix}opb_bookings bk
              JOIN {$wpdb->prefix}opb_clients c ON c.id=bk.client_id
              LEFT JOIN {$wpdb->prefix}opb_branches b ON b.id=bk.branch_id
