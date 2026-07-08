@@ -260,8 +260,8 @@ class OPB_Invoice_Document {
         $upi_id       = OPB_Customizations::get( 'invoice_upi_id' );
         $bank_details = OPB_Customizations::get( 'invoice_bank_details' );
         $pay_instr    = OPB_Customizations::get( 'invoice_payment_instructions' );
-        $footer_text  = OPB_Customizations::get( 'invoice_footer_text' )
-                        ?: OPB_Customizations::get( 'invoice_footer_note' );
+        $footer_text  = OPB_Customizations::render( 'invoice_footer_text',  [ 'FACILITY_NAME' => $facility ] )
+                        ?: OPB_Customizations::render( 'invoice_footer_note', [ 'FACILITY_NAME' => $facility ] );
         $thank_you    = OPB_Customizations::render( 'invoice_thank_you_message', [ 'FACILITY_NAME' => $facility ] );
         $terms_raw    = OPB_Customizations::get( 'invoice_terms_text' );
         $payment_note = OPB_Customizations::get( 'invoice_payment_note' );
