@@ -2,6 +2,34 @@
 
 ---
 
+## v3.5.2 — Branding Refresh — 2026-07-12
+
+### Overview
+Branding-only release. No new features, no business logic changes. Replaces all PWA icons and the admin login logo with the updated OPB brand assets. Service worker cache invalidated to ensure all installed PWA clients pick up the new icons on next activation.
+
+### Changed
+- `plugin/assets/icons/icon-192.png` — updated brand icon (192 × 192)
+- `plugin/assets/icons/icon-512.png` — updated brand icon (512 × 512)
+- `plugin/assets/icons/icon-maskable.png` — updated maskable icon for Android home screen
+- `plugin/assets/icons/icon-192.svg` — updated SVG source (192)
+- `plugin/assets/icons/icon-512.svg` — updated SVG source (512)
+- `plugin/assets/icons/icon-maskable.svg` — updated maskable SVG source
+- `plugin/assets/branding/login-logo.svg` — updated WordPress admin login logo
+- `plugin/assets/branding/login-logo.png` — updated login logo raster fallback
+
+### Service Worker
+- `plugin/assets/sw.js`: `CACHE_VERSION` bumped `opb-2.0.5` → `opb-2.0.6`
+- All previously cached PWA assets are purged on next service worker activation
+
+### Build
+- React + Vite build clean — 114 modules transformed, no warnings
+- `onukonu-pet-boarding-core-v3.5.2.zip` — 751 files, production-ready
+
+### Source base
+`plugin/onukonu-pet-boarding-core.php` version `3.5.1` (no PHP changes in this release)
+
+---
+
 ## RC1 — Release Candidate 1 — 2026-06-19
 
 ### Overview
