@@ -12,7 +12,7 @@
  * activated. The event listeners are stubs ready for future use.
  */
 
-const CACHE_VERSION  = 'opb-2.0.5';
+const CACHE_VERSION  = 'opb-2.0.6';
 const ASSET_ORIGIN   = self.location.origin;
 const ASSET_PATTERNS = [
     /\/wp-content\/plugins\/onukonu-pet-boarding-core\/assets\//,
