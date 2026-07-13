@@ -93,24 +93,29 @@ export default function BookingDetail() {
             {' · '}{booking.branch_name}{' · '}{fmt.date(booking.booking_date)}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="action-grid">
           {canEdit && (
-            <Link to={`/bookings/${id}/edit`} className="btn-secondary">Edit Booking</Link>
+            <Link to={`/bookings/${id}/edit`} className="btn-secondary w-full justify-center sm:w-auto">Edit Booking</Link>
           )}
           {canCheckin && checkinReady && (
-            <Link to={`/bookings/${id}/checkin`} className="btn-primary">Check In</Link>
+            <Link to={`/bookings/${id}/checkin`} className="btn-primary w-full justify-center sm:w-auto">Check In</Link>
           )}
           {canCheckin && !checkinReady && (
-            <button
-              disabled
-              className="btn-primary opacity-50 cursor-not-allowed"
-              title={`Check-in available from ${fmt.date(earliestArrival)}`}
-            >
-              Check In
-            </button>
+            <div className="flex flex-col gap-0.5">
+              <button
+                disabled
+                className="btn-primary opacity-50 cursor-not-allowed w-full justify-center sm:w-auto"
+                title={`Check-in available from ${fmt.date(earliestArrival)}`}
+              >
+                Check In
+              </button>
+              <p className="text-xs text-gray-400 text-center leading-tight">
+                from {fmt.date(earliestArrival)}
+              </p>
+            </div>
           )}
           {canCheckout && (
-            <Link to={`/bookings/${id}/checkout`} className="btn-primary">Check Out</Link>
+            <Link to={`/bookings/${id}/checkout`} className="btn-primary w-full justify-center sm:w-auto">Check Out</Link>
           )}
           {inv && booking.client_phone && !isCancelled && (
             <WhatsAppButton
@@ -122,14 +127,14 @@ export default function BookingDetail() {
                 booking.stays?.[0] ? { check_in_date: booking.stays[0].check_in_date, check_out_date: booking.stays[0].check_out_date } : undefined
               )}
               label="Send Invoice"
-              size="sm"
+              className="w-full justify-center sm:w-auto"
             />
           )}
           {!isCancelled && (
             <button
               onClick={handleCancel}
               disabled={acting}
-              className="btn-danger-soft disabled:opacity-50"
+              className="btn-danger-soft disabled:opacity-50 w-full justify-center sm:w-auto"
             >
               {acting ? 'Cancelling…' : 'Cancel Booking'}
             </button>
@@ -138,7 +143,7 @@ export default function BookingDetail() {
             <button
               onClick={handleRestore}
               disabled={acting}
-              className="btn-secondary disabled:opacity-50"
+              className="btn-secondary disabled:opacity-50 w-full justify-center sm:w-auto"
             >
               {acting ? 'Restoring…' : 'Restore Booking'}
             </button>

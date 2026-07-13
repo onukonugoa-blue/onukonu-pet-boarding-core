@@ -51,6 +51,13 @@
 
   /* flex-wrap lets the button group drop below the title on narrow screens */
   #opb-root .page-header { @apply flex flex-wrap items-center justify-between gap-3 mb-5; }
+
+  /* Booking action bar — 2-col grid on mobile so buttons never orphan on a single row.
+     Switches to a flex row on sm+ to preserve desktop behaviour.
+     :last-child:nth-child(odd) catches the lone-button case in the 2-col grid
+     and spans it full-width; grid-column has no effect on the sm+ flex layout. */
+  #opb-root .action-grid { @apply grid grid-cols-2 items-start gap-2 w-full sm:flex sm:flex-wrap sm:items-center sm:w-auto; }
+  #opb-root .action-grid > *:last-child:nth-child(odd) { grid-column: span 2 / span 2; }
   #opb-root .page-title  { @apply text-xl font-bold text-gray-900; }
 
   #opb-root .tab         { @apply px-4 py-2 text-sm font-medium border-b-2 cursor-pointer; }
