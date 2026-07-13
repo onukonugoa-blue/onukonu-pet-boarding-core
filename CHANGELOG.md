@@ -2,6 +2,73 @@
 
 ---
 
+## v3.6.0 — SAL Telegram HTML Normalization + Production Message Polish — 2026-07-13
+
+### Overview
+Resolves Telegram delivery failures caused by unsupported HTML tags (`<ul>`, `<li>`, `<ol>`) in Gemini-generated Accounts briefings. Implements a server-side normalization layer that converts all Gemini output to Telegram's supported HTML subset before delivery, regardless of what the model produces. Adds a defensive 4096-character length guard. Updates all three SAL default prompts to explicitly prohibit unsupported tags, and introduces a dedicated management-focused Accounts Snapshot prompt structure.
+
+### Fixed
+- **Telegram 400 Bad Request on Accounts Snapshot** — Gemini was producing `<ul>`/`<li>` HTML list markup, which Telegram's HTML parse mode rejects entirely. The entire message was silently dropped.
+- **Silent error masking in `send_telegram_to()`** — The error logger was logging only the HTTP status code, not Telegram's `description` field. The root-cause tag name was invisible in logs. Now logs the Telegram API `description` string directly.
+
+### Added — `class-opb-sal-formatter.php`
+
+**`normalize_for_telegram( string $text ): string`** (private static)
+- Converts `<li>…</li>` blocks to `• bullet` lines
+- Removes `<ul>`, `<ol>` wrapper tags
+- Converts `<br>` to newline
+- Strips `<p>` tags while preserving content
+- Calls `strip_tags()` keeping only the Telegram HTML subset: `<b>`, `<strong>`, `<i>`, `<em>`, `<u>`, `<s>`, `<code>`, `<pre>`, `<a>`
+- Collapses 3+ consecutive newlines to 2
+- Applied automatically inside `clean_gemini_output()` — all Gemini paths go through it
+
+**`safe_truncate( string $text, int $limit = 4096 ): string`** (private static)
+- Guards all three format() return paths (Gemini success, Gemini fallback, exception fallback)
+- Truncates at the nearest line boundary below the 4096-character limit
+- Never cuts mid-sentence, mid-tag, or mid-bullet
+- Appends `⚠️ Brief truncated — see OPB dashboard for full detail.` when shortened
+- Logs original vs. truncated character count to WordPress error log
+
+**`get_accounts_prompt()` (new private static) + `get_default_prompt( string $brief_type )` (updated)**
+- `get_default_prompt()` now accepts a `$brief_type` parameter (default: `'morning'`)
+- For `'accounts'` brief type, dispatches to the new dedicated accounts prompt
+- Accounts prompt enforces: management-friendly structure, `•` bullets, no per-invoice listing, ₹ lakh notation, branch-total focus
+- Morning/Evening prompt updated: explicit HTML tag prohibition block added (`<ul>/<li>/<ol>/<p>/<br>/<h1–h3>` banned); `•` bullet character instruction added
+- `build_prompt()` now passes `$brief_type` to `get_default_prompt()`
+
+**Accounts Snapshot output structure:**
+```
+🐾 OPB Accounts Snapshot
+[date]
+
+SUMMARY
+[2 sentences: total outstanding, payments today, expenses, overdue count]
+
+ATTENTION REQUIRED
+• BranchName: N overdue invoices · ₹X outstanding (largest: ClientName ₹X)
+
+ACCOUNTS
+[Per-branch compact block: payments, unpaid, overdue >7d, expenses]
+
+⚙️ OPB SAL · [date]
+```
+
+### Changed — `class-opb-telegram-consumer.php`
+- `send_telegram_to()`: non-200 error log now extracts and logs Telegram's `description` field from the JSON body, making HTML parse errors immediately identifiable in WordPress error log.
+
+### Regression scope
+- Morning Brief, Evening Brief, Accounts Snapshot: all pass through `normalize_for_telegram()` + `safe_truncate()`
+- Deterministic fallback path also guarded by `safe_truncate()`
+- OPSMAIL queue, mailbox processor, diagnostics: unaffected
+- Gemini integration: unchanged (prompts updated, not the API call layer)
+- Telegram integration: delivery layer unchanged; normalization is pre-delivery
+
+### Build
+- No React/Vite rebuild required (PHP-only changes)
+- `onukonu-pet-boarding-core-v3.6.0.zip` — production-ready
+
+---
+
 ## v3.5.3 — Gemini Thinking Token Fix — 2026-07-12
 
 ### Overview

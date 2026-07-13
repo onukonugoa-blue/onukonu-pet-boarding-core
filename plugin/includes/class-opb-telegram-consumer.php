@@ -412,13 +412,17 @@ class OPB_Telegram_Consumer {
                 return false;
             }
 
-            $code = (int) wp_remote_retrieve_response_code( $response );
+            $code     = (int) wp_remote_retrieve_response_code( $response );
+            $raw_body = wp_remote_retrieve_body( $response );
+
             if ( $code !== 200 ) {
-                error_log( '[OPB TELEGRAM] send_telegram_to API returned HTTP ' . $code . ': ' . wp_remote_retrieve_body( $response ) );
+                $tg = json_decode( $raw_body, true );
+                $desc = $tg['description'] ?? $raw_body;
+                error_log( '[OPB TELEGRAM] send_telegram_to HTTP ' . $code . ': ' . $desc );
                 return false;
             }
 
-            $body = json_decode( wp_remote_retrieve_body( $response ), true );
+            $body = json_decode( $raw_body, true );
             return ! empty( $body['ok'] );
 
         } catch ( \Throwable $e ) {

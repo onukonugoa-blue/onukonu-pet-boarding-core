@@ -46,7 +46,7 @@ class OPB_SAL_Formatter {
             $timing_ms     = (int) round( ( microtime( true ) - $start ) * 1000 );
 
             if ( $gemini_output ) {
-                $telegram_message = self::clean_gemini_output( $gemini_output );
+                $telegram_message = self::safe_truncate( self::clean_gemini_output( $gemini_output ) );
                 return [
                     'ok'              => true,
                     'prompt'          => $prompt,
@@ -58,7 +58,7 @@ class OPB_SAL_Formatter {
             }
 
             // Gemini failed — use deterministic fallback
-            $fallback = self::deterministic_fallback( $snapshot );
+            $fallback = self::safe_truncate( self::deterministic_fallback( $snapshot ) );
             return [
                 'ok'              => true,
                 'prompt'          => $prompt,
@@ -70,7 +70,7 @@ class OPB_SAL_Formatter {
 
         } catch ( \Throwable $e ) {
             error_log( '[OPB SAL] format() error: ' . $e->getMessage() );
-            $fallback = self::deterministic_fallback( $snapshot );
+            $fallback = self::safe_truncate( self::deterministic_fallback( $snapshot ) );
             return [
                 'ok'              => true,
                 'prompt'          => '',
@@ -149,7 +149,10 @@ class OPB_SAL_Formatter {
      * The hardcoded default prompt instructions.
      * Returned by get_default_prompt() and used as fallback when no custom prompt is stored.
      */
-    public static function get_default_prompt(): string {
+    public static function get_default_prompt( string $brief_type = 'morning' ): string {
+        if ( $brief_type === 'accounts' ) {
+            return self::get_accounts_prompt();
+        }
         return <<<'DEFAULT'
 You are an operations reporting assistant for a pet boarding facility.
 
@@ -158,17 +161,22 @@ You will receive structured operational data extracted from the OPB database.
 Your responsibilities:
 - Summarise facts already present in the data.
 - Group related information logically.
-- Highlight items that require attention (overstays, overdue tasks, unvaccinated pets, unpaid invoices, etc.).
+- Highlight items that require attention (overstays, overdue tasks, unvaccinated pets).
 
 You must NOT:
 - Forecast or predict future events.
 - Recommend business strategy.
 - Assess performance or compare to targets.
-- Interpret revenue trends.
 - Infer facts not present in the data.
 - Invent information.
 
-Output format — use EXACTLY this structure with Telegram HTML formatting:
+TELEGRAM HTML RULES — follow exactly or message delivery will fail:
+- Allowed tags ONLY: <b>, <i>, <code>. No other HTML tags at all.
+- NO <ul>, <li>, <ol>, <p>, <br>, <h1>, <h2>, <h3>, <span>, <div> or any other tags.
+- For bullet lists use the • character followed by a space. Never use HTML list tags.
+- NO markdown (no **, no __, no ##, no ---).
+
+Output format — use EXACTLY this structure:
 🐾 <b>OPB {brief_label}</b>
 <i>{date}</i>
 
@@ -176,31 +184,69 @@ Output format — use EXACTLY this structure with Telegram HTML formatting:
 [2–3 sentences summarising the overall operational state for the day]
 
 <b>ATTENTION REQUIRED</b>
-[List only items that need human action: overstays, overdue tasks, unvaccinated boarding pets, overdue invoices. Use bullet points. If nothing requires attention, write "None."]
-
-[Include only sections relevant to this brief type]
+[Items needing human action: overstays, overdue tasks, unvaccinated boarding pets. One • bullet per item. If nothing requires attention, write "None."]
 
 <b>BOARDING</b>
-[Per-branch occupancy, arrivals, departures. Keep concise.]
+[Per-branch: active count, arrivals, departures. One line per branch. Keep concise.]
 
 <b>TASKS</b>
-[Open, overdue, unassigned counts per branch. List overdue task titles if any.]
+[Open, overdue, unassigned counts per branch. Overdue task titles using •.]
 
 <b>MEDICATION & SPECIAL CARE</b>
-[List pets currently boarded with ongoing medication or special care needs. If none, write "None."]
+[Pets currently boarded with ongoing medication or special care. One • per pet. If none, write "None."]
 
 <b>OPERATIONAL EXCEPTIONS</b>
-[Unvaccinated pets, no-shows, missing records. If none, write "None."]
-
-[For accounts brief only]
-<b>ACCOUNTS</b>
-[Payments received today, unpaid/overdue invoices, expenses recorded. Numbers only — no interpretation.]
+[Unvaccinated pets, no-shows, missing records. One • per item. If none, write "None."]
 
 Important:
 - Maximum 300 words total.
-- Use Telegram HTML only: <b>, <i>, <code>. No markdown.
 - Every fact must come from the data block below. Do not add context not present in the data.
 DEFAULT;
+    }
+
+    private static function get_accounts_prompt(): string {
+        return <<<'ACCOUNTS'
+You are an operational reporting assistant for a pet boarding facility.
+
+You receive structured accounts data. Produce a concise, management-ready Telegram briefing.
+
+TELEGRAM HTML RULES — follow exactly or message delivery will fail:
+- Allowed tags ONLY: <b>, <i>, <code>. No other HTML tags at all.
+- NO <ul>, <li>, <ol>, <p>, <br>, <h1>, <h2>, <h3>, <span>, <div> or any other tags.
+- For bullet items use the • character followed by a space. Never use HTML list tags.
+- NO markdown (no **, no __, no ##, no ---).
+
+CONTENT RULES:
+- Maximum 350 words. Be concise and management-friendly.
+- Every figure must come from the data block. Do not invent or infer.
+- Express amounts ≥ ₹1 lakh as ₹X.XX lakh (e.g. ₹2.34 lakh).
+- Do not list individual invoices. Do not list client names except one notable overdue balance per branch.
+- Do not restate counts already summarised.
+
+OUTPUT STRUCTURE — follow exactly, in this order:
+
+🐾 <b>OPB {brief_label}</b>
+<i>{date}</i>
+
+<b>SUMMARY</b>
+[2 sentences: total outstanding across all branches, payments received today, expenses today, total overdue invoice count across all branches.]
+
+<b>ATTENTION REQUIRED</b>
+[One • bullet per branch that has overdue invoices. Format strictly:
+• BranchName: N overdue invoices · ₹X outstanding
+If one client has a notably large individual balance (top overdue item), append: (largest: ClientName ₹X)
+If no overdue invoices anywhere, write: None.]
+
+<b>ACCOUNTS</b>
+[One compact block per branch, separated by a blank line. For each branch:
+<b>BranchName</b>
+• Payments today: ₹X (N received)
+• Unpaid: N invoices · ₹X outstanding
+• Overdue >7d: N
+• Expenses today: ₹X]
+
+<i>⚙️ OPB SAL · {date}</i>
+ACCOUNTS;
     }
 
     private static function build_prompt( array $snapshot ): string {
@@ -231,7 +277,7 @@ DEFAULT;
             $instructions = str_replace(
                 [ '{brief_label}', '{date}' ],
                 [ $brief_label,   $date    ],
-                self::get_default_prompt()
+                self::get_default_prompt( $brief_type )
             );
         }
 
@@ -565,11 +611,94 @@ DEFAULT;
     // ── Utility ────────────────────────────────────────────────────────────────
 
     /**
-     * Strip any markdown code fences Gemini might add despite no responseMimeType constraint.
+     * Strip markdown code fences then run the Telegram normalization layer.
      */
     private static function clean_gemini_output( string $text ): string {
         $text = preg_replace( '/^```(?:html)?\s*/i', '', trim( $text ) ) ?? $text;
         $text = preg_replace( '/\s*```$/i', '', $text ) ?? $text;
+        return self::normalize_for_telegram( trim( $text ) );
+    }
+
+    // ── Telegram HTML normalization ─────────────────────────────────────────────
+
+    /**
+     * Converts Gemini output to the Telegram HTML subset.
+     *
+     * Telegram HTML parse_mode accepts ONLY: <b>, <strong>, <i>, <em>, <u>,
+     * <s>, <code>, <pre>, <a>. Everything else causes a 400 Bad Request.
+     *
+     * Steps:
+     *  1. Convert <li>…</li> → • bullet
+     *  2. Remove <ul>, <ol> wrapper tags
+     *  3. Convert <br> → newline
+     *  4. Strip <p> tags, preserve their content
+     *  5. strip_tags() keeping only Telegram-safe tags
+     *  6. Collapse 3+ consecutive newlines → 2
+     */
+    private static function normalize_for_telegram( string $text ): string {
+        // 1. Convert list items to bullet points (handle multiline content).
+        $text = preg_replace_callback(
+            '/<li[^>]*>(.*?)<\/li>/is',
+            static function ( array $m ): string {
+                $content = trim( strip_tags( $m[1], '<b><strong><i><em><u><s><code><pre><a>' ) );
+                return "\n• " . $content;
+            },
+            $text
+        ) ?? $text;
+
+        // 2. Remove list wrapper tags (content is already extracted above).
+        $text = preg_replace( '/<\/?(ul|ol)[^>]*>/i', '', $text ) ?? $text;
+
+        // 3. Convert <br> to newline.
+        $text = preg_replace( '/<br\s*\/?>/i', "\n", $text ) ?? $text;
+
+        // 4. Strip <p> tags but keep their text content.
+        $text = preg_replace( '/<\/p>/i', "\n", $text ) ?? $text;
+        $text = preg_replace( '/<p[^>]*>/i', '', $text ) ?? $text;
+
+        // 5. Strip all remaining unsupported HTML — keep only Telegram subset.
+        $text = strip_tags( $text, '<b><strong><i><em><u><s><strike><del><code><pre><a>' );
+
+        // 6. Collapse 3+ consecutive blank lines → 2.
+        $text = preg_replace( '/\n{3,}/', "\n\n", $text ) ?? $text;
+
         return trim( $text );
+    }
+
+    // ── Length safeguard ───────────────────────────────────────────────────────
+
+    /**
+     * Ensure the message fits within Telegram's 4096-character limit.
+     *
+     * Truncates at a line boundary — never mid-sentence, never mid-tag.
+     * Lower-priority trailing lines are removed first; a one-line notice
+     * is appended so the reader knows the brief was shortened.
+     *
+     * @param  string $text  Message to guard.
+     * @param  int    $limit Character budget (default 4096).
+     * @return string
+     */
+    private static function safe_truncate( string $text, int $limit = 4096 ): string {
+        if ( mb_strlen( $text ) <= $limit ) {
+            return $text;
+        }
+
+        $notice = "\n<i>⚠️ Brief truncated — see OPB dashboard for full detail.</i>";
+        $budget = $limit - mb_strlen( $notice );
+
+        $lines = explode( "\n", $text );
+        $out   = '';
+
+        foreach ( $lines as $line ) {
+            $candidate = $out === '' ? $line : $out . "\n" . $line;
+            if ( mb_strlen( $candidate ) > $budget ) {
+                break;
+            }
+            $out = $candidate;
+        }
+
+        error_log( '[OPB SAL] safe_truncate: message shortened from ' . mb_strlen( $text ) . ' to ' . mb_strlen( $out . $notice ) . ' chars.' );
+
+        return $out . $notice;
     }
 }
