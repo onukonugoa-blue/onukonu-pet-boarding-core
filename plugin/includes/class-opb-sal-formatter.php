@@ -108,7 +108,8 @@ class OPB_SAL_Formatter {
                     ] ],
                     'generationConfig' => [
                         'temperature'     => 0.1,
-                        'maxOutputTokens' => 900,
+                        'maxOutputTokens' => 2048,
+                        'thinkingConfig'  => [ 'thinkingBudget' => 0 ],
                     ],
                 ] ),
             ] );
@@ -124,8 +125,15 @@ class OPB_SAL_Formatter {
                 return null;
             }
 
-            $api_body = json_decode( wp_remote_retrieve_body( $response ), true );
-            $text     = $api_body['candidates'][0]['content']['parts'][0]['text'] ?? '';
+            $api_body     = json_decode( wp_remote_retrieve_body( $response ), true );
+            $finish_reason = $api_body['candidates'][0]['finishReason'] ?? 'UNKNOWN';
+
+            if ( $finish_reason !== 'STOP' ) {
+                error_log( '[OPB SAL] Gemini finishReason=' . $finish_reason . ' — output incomplete, using fallback.' );
+                return null;
+            }
+
+            $text = $api_body['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
             return $text ?: null;
 
