@@ -1,0 +1,127 @@
+OPB RC1 — UI POLISH PASS (ZERO REGRESSION)
+
+Objective
+
+Perform a visual polish pass on the OPB React frontend.
+
+The application is functionally stable and approaching RC1.
+
+This is NOT a feature task.
+This is NOT a refactor task.
+This is NOT an architecture task.
+
+The goal is to improve visual quality, consistency, responsiveness and perceived professionalism while preserving all existing behaviour.
+
+==================================================
+CRITICAL REQUIREMENT
+ZERO FUNCTIONAL REGRESSION
+==================================================
+
+No regression is acceptable.
+
+Do NOT modify:
+
+- Business logic
+- API endpoints
+- REST payloads
+- Database logic
+- Zustand stores
+- Routing behaviour
+- Permissions
+- Booking workflows
+- Check-in workflows
+- Check-out workflows
+- Booking edit workflows
+- Invoice generation
+- Invoice recalculation
+- Occupancy calculations
+- Timeline calculations
+- SAL functionality
+- State transitions
+
+This is a presentation-layer task only.
+
+==================================================
+PROBLEM OBSERVED
+==================================================
+
+The Booking Detail screen currently displays:
+
+- Edit Booking
+- Check In
+- Send Invoice
+- Cancel Booking
+
+These buttons appear visually inconsistent.
+
+Symptoms:
+
+- Different heights
+- Different padding
+- Different border radius
+- Different font sizing
+- Different visual weight
+- Poor mobile responsiveness
+- Crowded action area
+- Mixed visual styles
+
+The functionality is correct.
+The presentation is not production quality.
+
+==================================================
+IMPLEMENTATION APPROACH
+==================================================
+
+Before changing anything:
+
+1. Audit existing OPB UI components.
+2. Identify existing button patterns.
+3. Identify existing spacing system.
+4. Identify existing typography system.
+5. Reuse existing design language.
+
+Do NOT introduce a new design system.
+
+Do NOT introduce a new component framework.
+
+Do NOT redesign the application.
+
+Use the visual language already present elsewhere in OPB.
+
+==================================================
+BUTTON STANDARDIZATION
+==================================================
+
+All action buttons should use a common visual system.
+
+Requirements:
+
+- Consistent height
+- Consistent padding
+- Consistent border radius
+- Consistent typography
+- Consistent spacing
+- Consistent icon alignment
+- Consistent disabled state styling
+- Consistent hover state styling
+
+==================================================
+ACTION HIERARCHY
+==================================================
+
+Primary Action
+
+Check In
+
+Style:
+- Primary brand colour
+- Highest emphasis
+
+Secondary Actions
+
+Edit Booking
+Send Invoice
+
+Style:
+- Consistent secondary appearance
+-

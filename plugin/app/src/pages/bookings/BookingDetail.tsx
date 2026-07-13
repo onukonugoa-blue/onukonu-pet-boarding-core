@@ -93,7 +93,7 @@ export default function BookingDetail() {
             {' · '}{booking.branch_name}{' · '}{fmt.date(booking.booking_date)}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {canEdit && (
             <Link to={`/bookings/${id}/edit`} className="btn-secondary">Edit Booking</Link>
           )}
@@ -104,10 +104,9 @@ export default function BookingDetail() {
             <button
               disabled
               className="btn-primary opacity-50 cursor-not-allowed"
-              title={`Arrival date: ${fmt.date(earliestArrival)}`}
+              title={`Check-in available from ${fmt.date(earliestArrival)}`}
             >
               Check In
-              <span className="block text-xs font-normal leading-tight">from {fmt.date(earliestArrival)}</span>
             </button>
           )}
           {canCheckout && (
@@ -130,7 +129,7 @@ export default function BookingDetail() {
             <button
               onClick={handleCancel}
               disabled={acting}
-              className="px-3 py-1.5 text-sm font-medium rounded border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 disabled:opacity-50"
+              className="btn-danger-soft disabled:opacity-50"
             >
               {acting ? 'Cancelling…' : 'Cancel Booking'}
             </button>
@@ -139,7 +138,7 @@ export default function BookingDetail() {
             <button
               onClick={handleRestore}
               disabled={acting}
-              className="px-3 py-1.5 text-sm font-medium rounded border border-green-300 text-green-700 bg-green-50 hover:bg-green-100 disabled:opacity-50"
+              className="btn-secondary disabled:opacity-50"
             >
               {acting ? 'Restoring…' : 'Restore Booking'}
             </button>

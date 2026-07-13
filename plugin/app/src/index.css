@@ -11,13 +11,18 @@
    compound selectors (.wp-admin a, #wpcontent svg, etc.) cannot override
    them. This gives specificity 1,1,0 (ID + class) vs WP's max 0,1,1. */
 @layer components {
-  #opb-root .btn         { @apply inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1; }
-  #opb-root .btn-primary { @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500; }
-  #opb-root .btn-secondary { @apply bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-gray-300; }
-  #opb-root .btn-danger  { @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500; }
-  #opb-root .btn-green   { @apply text-white focus:ring-green-500; background-color: #25D366; }
+  /* Base class (kept for explicit opt-in). All variants are self-contained so
+     the codebase can use btn-primary / btn-secondary without also adding btn. */
+  #opb-root .btn           { @apply inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1; }
+  #opb-root .btn-primary   { @apply inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500; }
+  #opb-root .btn-secondary { @apply inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-gray-300; }
+  #opb-root .btn-danger    { @apply inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 bg-red-600 text-white hover:bg-red-700 focus:ring-red-500; }
+  /* Soft danger — restrained destructive action (e.g. Cancel Booking) */
+  #opb-root .btn-danger-soft { @apply inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 focus:ring-red-300; }
+  #opb-root .btn-green     { @apply inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 text-white focus:ring-green-500; background-color: #25D366; }
   #opb-root .btn-green:hover { background-color: #1da851; }
-  #opb-root .btn-sm      { @apply px-2.5 py-1 text-xs; }
+  /* btn-sm overrides padding/size — works with any variant because it appears last */
+  #opb-root .btn-sm        { @apply px-2.5 py-1 text-xs; }
 
   #opb-root .card        { @apply bg-white rounded-lg shadow-sm border border-gray-200 p-4; }
   #opb-root .card-header { @apply border-b border-gray-200 pb-3 mb-4; }
@@ -44,7 +49,8 @@
   #opb-root .data-table tbody tr { @apply hover:bg-gray-50 transition-colors; }
   #opb-root .data-table tbody tr:not(:last-child) { @apply border-b border-gray-100; }
 
-  #opb-root .page-header { @apply flex items-center justify-between mb-5; }
+  /* flex-wrap lets the button group drop below the title on narrow screens */
+  #opb-root .page-header { @apply flex flex-wrap items-center justify-between gap-3 mb-5; }
   #opb-root .page-title  { @apply text-xl font-bold text-gray-900; }
 
   #opb-root .tab         { @apply px-4 py-2 text-sm font-medium border-b-2 cursor-pointer; }
