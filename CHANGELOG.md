@@ -2,6 +2,37 @@
 
 ---
 
+## v3.5.3 — Gemini Thinking Token Fix — 2026-07-12
+
+### Overview
+Hotfix for all three Gemini API call sites across SAL and OPSMAIL. Gemini 2.5 Flash consumes thinking tokens from the same `maxOutputTokens` budget as visible output. With the previous low caps (300–900 tokens), thinking exhausted the budget before the response was complete, producing hard mid-sentence truncations. This release disables thinking on all formatter/classifier calls and raises output caps to correct values.
+
+### Fixed
+- `plugin/includes/class-opb-sal-formatter.php` — `call_gemini()`
+  - `maxOutputTokens` raised `900 → 2048`
+  - `thinkingConfig: { thinkingBudget: 0 }` added — disables Gemini 2.5 Flash thinking pass
+  - `finishReason` guard added — non-STOP responses return `null` and trigger the deterministic fallback instead of delivering truncated text to Telegram
+- `plugin/includes/class-opb-mailbox-processor.php` — `classify()`
+  - `maxOutputTokens` raised `300 → 512`
+  - `thinkingConfig: { thinkingBudget: 0 }` added
+  - `finishReason` guard added — non-STOP responses return `null`
+- `plugin/includes/class-opb-mailbox-processor.php` — `process_text()`
+  - `maxOutputTokens` raised `400 → 512`
+  - `thinkingConfig: { thinkingBudget: 0 }` added
+  - `finishReason` guard added — non-STOP responses return structured error array
+
+### Root cause
+Gemini 2.5 Flash uses an internal reasoning pass before emitting visible text. These thinking tokens are drawn from the same `maxOutputTokens` budget. At 900 tokens, the model consumed ~860–880 tokens on reasoning, leaving ~20–40 tokens for visible output — exactly the observed truncation depth.
+
+### Build
+- React + Vite build clean — 114 modules, no warnings
+- `onukonu-pet-boarding-core-v3.5.3.zip` — 751 files, production-ready
+
+### Source base
+`plugin/onukonu-pet-boarding-core.php` version `3.5.1` (no PHP entry-point changes in this release)
+
+---
+
 ## v3.5.2 — Branding Refresh — 2026-07-12
 
 ### Overview

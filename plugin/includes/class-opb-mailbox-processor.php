@@ -483,9 +483,10 @@ class OPB_Mailbox_Processor {
                         'parts' => [ [ 'text' => $prompt ] ],
                     ] ],
                     'generationConfig' => [
-                        'temperature'     => 0.1,
-                        'maxOutputTokens' => 300,
+                        'temperature'      => 0.1,
+                        'maxOutputTokens'  => 512,
                         'responseMimeType' => 'application/json',
+                        'thinkingConfig'   => [ 'thinkingBudget' => 0 ],
                     ],
                 ] ),
             ] );
@@ -501,8 +502,15 @@ class OPB_Mailbox_Processor {
                 return null;
             }
 
-            $api_body = json_decode( wp_remote_retrieve_body( $response ), true );
-            $text     = $api_body['candidates'][0]['content']['parts'][0]['text'] ?? '';
+            $api_body      = json_decode( wp_remote_retrieve_body( $response ), true );
+            $finish_reason = $api_body['candidates'][0]['finishReason'] ?? 'UNKNOWN';
+
+            if ( $finish_reason !== 'STOP' ) {
+                error_log( '[OPB MAILBOX] classify() Gemini finishReason=' . $finish_reason . ' — response incomplete, skipping.' );
+                return null;
+            }
+
+            $text = $api_body['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
             if ( ! $text ) {
                 error_log( '[OPB MAILBOX] Gemini returned empty response body' );
@@ -602,8 +610,9 @@ PROMPT;
                     ] ],
                     'generationConfig' => [
                         'temperature'      => 0.2,
-                        'maxOutputTokens'  => 400,
+                        'maxOutputTokens'  => 512,
                         'responseMimeType' => 'application/json',
+                        'thinkingConfig'   => [ 'thinkingBudget' => 0 ],
                     ],
                 ] ),
             ] );
@@ -633,7 +642,18 @@ PROMPT;
                 ];
             }
 
-            $api_body = json_decode( $body_raw, true );
+            $api_body      = json_decode( $body_raw, true );
+            $finish_reason = $api_body['candidates'][0]['finishReason'] ?? 'UNKNOWN';
+
+            if ( $finish_reason !== 'STOP' ) {
+                return [
+                    'ok'        => false,
+                    'error'     => 'Gemini finishReason=' . $finish_reason . ' — response incomplete.',
+                    'timing_ms' => $timing_ms,
+                    'prompt'    => $prompt,
+                ];
+            }
+
             $text_out = $api_body['candidates'][0]['content']['parts'][0]['text'] ?? '';
             $usage    = $api_body['usageMetadata'] ?? null;
 
