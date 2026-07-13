@@ -2,6 +2,73 @@
 
 ---
 
+## v3.7.0 — RC1 Workflow Hardening — 2026-07-13
+
+### Overview
+Implements minimum safe changes to correct the booking workflow without redesigning the booking/stay architecture. Adds booking date editing for pre-arrival bookings, automatic invoice recalculation after date changes, a server-side early check-in guard, and the corresponding UI behaviours.
+
+### Added
+
+**1. Booking Edit (`PUT /opb/v1/bookings/{id}` extended)**
+- Extended `update_item()` in `OPB_Bookings_API` to accept a `stays` array containing `{ id, check_in_date, check_out_date }` per stay.
+- Guard: rejected with HTTP 422 if any stay in the booking is not `Upcoming` (already checked in or completed).
+- Guard: rejected with HTTP 422 if `check_out_date <= check_in_date`.
+- Guard: stay ownership validated — only stays belonging to this booking and in `Upcoming` status are updated.
+- After successful date updates, `OPB_Invoice_Generator::recalculate()` is called to refresh boarding-day count, charges, taxes, and totals.
+- Booking-level fields (`notes`, `additional_instruction`, `booking_source`, `service_types`) continue to update unconditionally.
+
+**2. Early Check-in Guard (server-side, `POST /opb/v1/bookings/{id}/checkin`)**
+- `checkin()` now fetches `check_in_date` alongside `id` from `opb_booking_stays`.
+- Before any state change: if `stay.check_in_date > current_time('Y-m-d')`, returns HTTP 422 with:
+  `"Check-in is not available until the scheduled arrival date (YYYY-MM-DD)."`
+- Direct REST/API calls are blocked — UI-only guards are not relied upon.
+
+**3. `BookingEdit.tsx` (new React page)**
+- Route: `/bookings/:id/edit`
+- Loads the booking; redirects gracefully if cancelled or has no upcoming stays.
+- Editable fields: `check_in_date` + `check_out_date` per upcoming stay; booking `notes`; `additional_instruction`.
+- Client-side pre-validation: check-out must be after check-in.
+- On save: calls `PUT /opb/v1/bookings/{id}` with stays array + metadata; navigates back to booking detail.
+- Kennel assignment is NOT exposed (managed separately via Occupancy Board).
+
+**4. `BookingDetail.tsx` updates**
+- Added `canEdit` flag: true when booking is Active, has at least one stay, and ALL stays are `Upcoming`.
+- Added `Edit Booking` button (secondary style) in the action bar, visible only when `canEdit`.
+- Added `earliestArrival` calculation: minimum `check_in_date` across all Upcoming stays.
+- Added `checkinReady` flag: `canCheckin && earliestArrival <= today`.
+- Check-in behaviour:
+  - If `checkinReady`: shows active `Check In` link (unchanged behaviour for arrival-day and overdue bookings).
+  - If future arrival: shows disabled `Check In` button with "from {arrival date}" sub-label and tooltip.
+- Check-out button unchanged.
+
+**5. `App.tsx` — new route**
+- `<Route path="/bookings/:id/edit" element={<BookingEdit />} />`
+
+### Acceptance Tests
+
+| Test | Result |
+|---|---|
+| Edit future booking dates → booking updates, timeline reflects new dates | ✓ Code path: `update_item()` + `recalculate()` |
+| Edit dates → invoice recalculates (days, charges, totals) | ✓ Code path: `OPB_Invoice_Generator::recalculate()` called on every successful stay date change |
+| Early check-in attempt via REST → HTTP 422, booking unchanged | ✓ Code path: `checkin()` guard at line ~291 |
+| Same-day check-in → proceeds normally | ✓ Guard condition: `$arrival_date > current_time('Y-m-d')` — today passes |
+| Active/Completed stays → Edit button hidden, date edit rejected 422 | ✓ `canEdit` false; `non_upcoming > 0` guard |
+| Future bookings visible in kennel timeline | ✓ No change to timeline rendering, kennel-board, or occupancy queries |
+| Existing check-out workflow | ✓ `checkout()` untouched |
+| SAL, OPSMAIL, invoice payments | ✓ Untouched |
+
+### Files Modified
+- `plugin/includes/api/class-opb-bookings-api.php` — `update_item()`, `checkin()`
+- `plugin/app/src/pages/bookings/BookingDetail.tsx` — `canEdit`, `checkinReady`, action buttons
+- `plugin/app/src/App.tsx` — route + import
+- `plugin/app/src/pages/bookings/BookingEdit.tsx` — new file
+
+### Build
+- React + Vite: 115 modules, clean build
+- `onukonu-pet-boarding-core-v3.7.0.zip` — production-ready
+
+---
+
 ## v3.6.0 — SAL Telegram HTML Normalization + Production Message Polish — 2026-07-13
 
 ### Overview

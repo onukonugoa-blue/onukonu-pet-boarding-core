@@ -10,6 +10,7 @@ import PetForm from './pages/pets/PetForm'
 import BookingList from './pages/bookings/BookingList'
 import BookingDetail from './pages/bookings/BookingDetail'
 import BookingCreate from './pages/bookings/BookingCreate'
+import BookingEdit from './pages/bookings/BookingEdit'
 import CheckIn from './pages/bookings/CheckIn'
 import CheckOut from './pages/bookings/CheckOut'
 import OccupancyBoard from './pages/OccupancyBoard'
@@ -50,6 +51,7 @@ export default function App() {
         <Route path="/bookings"                element={<BookingList />} />
         <Route path="/bookings/new"            element={<BookingCreate />} />
         <Route path="/bookings/:id"            element={<BookingDetail />} />
+        <Route path="/bookings/:id/edit"       element={<BookingEdit />} />
         <Route path="/bookings/:id/checkin"    element={<CheckIn />} />
         <Route path="/bookings/:id/checkout"   element={<CheckOut />} />
         <Route path="/kennel"                  element={<OccupancyBoard />} />

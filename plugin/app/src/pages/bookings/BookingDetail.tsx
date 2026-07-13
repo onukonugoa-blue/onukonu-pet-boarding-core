@@ -32,6 +32,15 @@ export default function BookingDetail() {
   const isCancelled  = booking.status === 'Cancelled'
   const canCheckin   = !isCancelled && booking.stays?.some((s) => s.status === 'Upcoming')
   const canCheckout  = !isCancelled && booking.stays?.some((s) => s.status === 'Active')
+  const canEdit      = !isCancelled && (booking.stays?.length ?? 0) > 0 && booking.stays?.every((s) => s.status === 'Upcoming')
+
+  // Earliest scheduled arrival across all upcoming stays — used to enforce arrival-day check-in.
+  const today = new Date().toISOString().split('T')[0]
+  const earliestArrival = booking.stays
+    ?.filter((s) => s.status === 'Upcoming')
+    .map((s) => s.check_in_date)
+    .sort()[0] ?? ''
+  const checkinReady = canCheckin && !!earliestArrival && earliestArrival <= today
 
   const handleCancel = async () => {
     if (!confirm(
@@ -85,8 +94,25 @@ export default function BookingDetail() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {canCheckin  && <Link to={`/bookings/${id}/checkin`}  className="btn-primary">Check In</Link>}
-          {canCheckout && <Link to={`/bookings/${id}/checkout`} className="btn-primary">Check Out</Link>}
+          {canEdit && (
+            <Link to={`/bookings/${id}/edit`} className="btn-secondary">Edit Booking</Link>
+          )}
+          {canCheckin && checkinReady && (
+            <Link to={`/bookings/${id}/checkin`} className="btn-primary">Check In</Link>
+          )}
+          {canCheckin && !checkinReady && (
+            <button
+              disabled
+              className="btn-primary opacity-50 cursor-not-allowed"
+              title={`Arrival date: ${fmt.date(earliestArrival)}`}
+            >
+              Check In
+              <span className="block text-xs font-normal leading-tight">from {fmt.date(earliestArrival)}</span>
+            </button>
+          )}
+          {canCheckout && (
+            <Link to={`/bookings/${id}/checkout`} className="btn-primary">Check Out</Link>
+          )}
           {inv && booking.client_phone && !isCancelled && (
             <WhatsAppButton
               phone={booking.client_phone}

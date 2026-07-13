@@ -204,11 +204,69 @@ class OPB_Bookings_API extends OPB_REST_Base {
     public function update_item( $r ) {
         $check = $this->permission_manage('opb_manage_bookings',$r); if(is_wp_error($check)) return $check;
         global $wpdb;
-        $d = $r->get_json_params();
+        $d  = $r->get_json_params();
+        $id = (int)$r['id'];
+
+        // Booking-level metadata fields (always safe to update).
         $allowed = ['notes','additional_instruction','booking_source','service_types'];
         $update  = [];
         foreach($allowed as $k){ if(array_key_exists($k,$d)) $update[$k]=$d[$k]; }
-        if($update) $wpdb->update("{$wpdb->prefix}opb_bookings",$update,['id'=>(int)$r['id']]);
+        if($update) $wpdb->update("{$wpdb->prefix}opb_bookings",$update,['id'=>$id]);
+
+        // Stay date edits — only permitted when ALL stays are still Upcoming.
+        if (!empty($d['stays']) && is_array($d['stays'])) {
+
+            // Guard: refuse edit if any stay has been checked in or completed.
+            $non_upcoming = (int)$wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}opb_booking_stays
+                 WHERE booking_id = %d AND status != 'Upcoming'",
+                $id
+            ));
+            if ( $non_upcoming > 0 ) {
+                return $this->error(
+                    'checkin_in_progress',
+                    'Stay dates cannot be edited after a pet has been checked in.',
+                    422
+                );
+            }
+
+            $dates_changed = false;
+            foreach ( $d['stays'] as $stay_update ) {
+                $stay_id   = (int)( $stay_update['id']            ?? 0 );
+                $check_in  = sanitize_text_field( $stay_update['check_in_date']  ?? '' );
+                $check_out = sanitize_text_field( $stay_update['check_out_date'] ?? '' );
+                if ( ! $stay_id || ! $check_in || ! $check_out ) continue;
+
+                // Validate: check-out must be after check-in.
+                if ( $check_out <= $check_in ) {
+                    return $this->error( 'invalid_dates', 'Check-out date must be after check-in date.', 422 );
+                }
+
+                // Validate: stay must belong to this booking and be Upcoming.
+                $belongs = $wpdb->get_var($wpdb->prepare(
+                    "SELECT id FROM {$wpdb->prefix}opb_booking_stays
+                     WHERE id = %d AND booking_id = %d AND status = 'Upcoming'",
+                    $stay_id, $id
+                ));
+                if ( ! $belongs ) continue;
+
+                $wpdb->update(
+                    "{$wpdb->prefix}opb_booking_stays",
+                    [ 'check_in_date' => $check_in, 'check_out_date' => $check_out ],
+                    [ 'id' => $stay_id ]
+                );
+                $dates_changed = true;
+            }
+
+            // Recalculate projected invoice after date changes.
+            if ( $dates_changed ) {
+                $inv_id = (int)$wpdb->get_var($wpdb->prepare(
+                    "SELECT id FROM {$wpdb->prefix}opb_invoices WHERE booking_id = %d", $id
+                ));
+                if ( $inv_id ) OPB_Invoice_Generator::recalculate( $inv_id );
+            }
+        }
+
         return $this->get_item($r);
     }
 
@@ -221,10 +279,20 @@ class OPB_Bookings_API extends OPB_REST_Base {
         // stay_id is required — which pet to check in
         $stay_id = (int)($d['stay_id']??0);
         $where = $stay_id ? ['id'=>$stay_id,'booking_id'=>$id] : ['booking_id'=>$id,'status'=>'Upcoming'];
-        $stay  = $wpdb->get_row("SELECT id FROM {$wpdb->prefix}opb_booking_stays WHERE ".implode(' AND ',array_map(fn($k)=>"$k=%s",array_keys($where))),ARRAY_A,...array_values($where));
+        $stay  = $wpdb->get_row("SELECT id, check_in_date FROM {$wpdb->prefix}opb_booking_stays WHERE ".implode(' AND ',array_map(fn($k)=>"$k=%s",array_keys($where))),ARRAY_A,...array_values($where));
 
         $stay_id = $stay_id ?: ($stay['id']??0);
         if(!$stay_id) return $this->error('invalid','No upcoming stay found');
+
+        // Early check-in guard: server-side enforcement — cannot check in before the scheduled arrival date.
+        $arrival_date = $stay['check_in_date'] ?? '';
+        if ( $arrival_date && $arrival_date > current_time( 'Y-m-d' ) ) {
+            return $this->error(
+                'early_checkin',
+                'Check-in is not available until the scheduled arrival date (' . esc_html( $arrival_date ) . ').',
+                422
+            );
+        }
 
         $update_data = [
             'status'             => 'Active',
