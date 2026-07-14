@@ -349,7 +349,7 @@ class OPB_Admin_Page {
             $warnings = [];
             if ( ! $enabled )   $warnings[] = '<strong>OPSMAIL emission is disabled.</strong> Set <code>opsmail_enabled</code> to <code>1</code> in Customisation settings.';
             if ( ! $inbox_ok )  $warnings[] = '<strong>No inbox email configured.</strong> Set <code>opsmail_inbox_email</code> in Customisation → OPSMAIL.';
-            if ( ! $tg_ok )     $warnings[] = '<strong>Telegram not configured.</strong> Set <code>telegram_bot_token</code> and <code>telegram_chat_id</code> in Customisation → OPSMAIL.';
+            if ( ! $tg_ok )     $warnings[] = '<strong>Telegram not configured.</strong> Set <code>telegram_bot_token</code> in Customisation → OPSMAIL and <code>Telegram Chat ID</code> in Customisation → SAL.';
 
             if ( ! empty( $warnings ) ) {
                 echo '<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:12px 16px;margin-bottom:20px;color:#92400e">';

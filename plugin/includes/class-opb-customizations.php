@@ -362,7 +362,7 @@ Thank you! 🐾
         ],
         'telegram_chat_id' => [
             'category' => 'opsmail',
-            'label'    => 'Telegram Chat ID (Operations Group)',
+            'label'    => 'Telegram Chat ID — Legacy Fallback (set the authoritative ID in SAL → Telegram Chat ID)',
             'type'     => 'text',
             'default'  => '',
         ],
@@ -426,7 +426,7 @@ Thank you! 🐾
         ],
         'sal_telegram_chat_id' => [
             'category' => 'sal',
-            'label'    => 'SAL Reporting Chat ID (leave blank to use main Telegram Chat ID)',
+            'label'    => 'Telegram Chat ID — Authoritative (used for ALL notifications: SAL briefs, bookings, expenses, tasks, and all other events)',
             'type'     => 'text',
             'default'  => '',
         ],

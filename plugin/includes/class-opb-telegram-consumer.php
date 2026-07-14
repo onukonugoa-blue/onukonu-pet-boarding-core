@@ -451,6 +451,15 @@ class OPB_Telegram_Consumer {
 
     public static function chat_id(): string {
         try {
+            // Single authoritative source: SAL Customisation → Telegram Chat ID.
+            // Resolution order (mirrors OPB_SAL_API::sal_chat_id() — keep in sync):
+            //   1. sal_telegram_chat_id   — the field exposed in SAL Customisation UI
+            //   2. telegram_chat_id       — legacy fallback only; prefer SAL field
+            // Do NOT call OPB_SAL_API directly — it loads after this class.
+            $sal_id = trim( OPB_Customizations::get( 'sal_telegram_chat_id' ) );
+            if ( $sal_id !== '' ) {
+                return $sal_id;
+            }
             return trim( OPB_Customizations::get( 'telegram_chat_id' ) );
         } catch ( \Throwable $e ) {
             return '';

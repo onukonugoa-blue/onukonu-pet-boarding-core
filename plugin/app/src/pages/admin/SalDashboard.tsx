@@ -419,7 +419,7 @@ export default function SalDashboard() {
         <div style={{ display: 'grid', gap: 14 }}>
           <div>
             <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 4 }}>
-              SAL Reporting Chat ID
+              Telegram Chat ID
             </label>
             <input
               type="text"
@@ -433,10 +433,10 @@ export default function SalDashboard() {
             />
             <p style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
               {c.sal_telegram_chat_id
-                ? '✅ SAL-specific chat ID configured.'
+                ? '✅ Configured — all notifications (SAL briefs, bookings, expenses, tasks) will be delivered here.'
                 : c.sal_fallback_chat_id
-                ? `Will use main Telegram Chat ID (${c.sal_fallback_chat_id})`
-                : '⚠️ No chat ID configured. SAL cannot deliver briefs.'}
+                ? `Using legacy fallback Chat ID (${c.sal_fallback_chat_id}). Set this field to make it the explicit authoritative source.`
+                : '⚠️ No chat ID configured. No Telegram notifications will be delivered.'}
             </p>
           </div>
 
